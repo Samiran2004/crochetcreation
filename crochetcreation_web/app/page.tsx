@@ -256,6 +256,14 @@ export default function CrochetCreationPage() {
         .border-\\[\\#EADBDB\\]\\/60 { border-color: ${activeTheme.border60} !important; }
         .border-\\[\\#D9B4B4\\]\\/20 { border-color: ${activeTheme.primary20} !important; }
         .border-\\[\\#D9B4B4\\]\\/30 { border-color: ${activeTheme.primary30} !important; }
+        @keyframes wiggleEar {
+          0%, 100% { transform: rotate(0deg); }
+          50% { transform: rotate(-8deg); }
+        }
+        @keyframes wavePaw {
+          0%, 100% { transform: rotate(0deg); }
+          50% { transform: rotate(-25deg); }
+        }
       `}</style>
 
       {/* 0. Fullscreen Knitted Preloader */}
@@ -327,21 +335,21 @@ export default function CrochetCreationPage() {
         </div>
       )}
       
-      {/* 1. Header/Hero Panel (Dark Textured #6B5656) */}
-      <section className="relative lg:sticky lg:top-0 z-0 bg-crochet-charcoal text-[#FEF9F6] pt-6 pb-20 overflow-hidden h-[90vh] min-h-[700px] w-full flex flex-col justify-between">
-        
-        {/* Parallax inner wrapper */}
-        <div 
-          className="w-full flex-grow flex flex-col justify-between relative"
-          style={{ transform: `translate3d(0, ${scrollY * 0.3}px, 0)` }}
-        >
-        
-        {/* Top Navigation */}
-        <div className="max-w-7xl mx-auto px-6 flex items-center justify-between relative z-20">
+      {/* Premium Floating Sticky Navigation Bar */}
+      <header 
+        className={`fixed top-0 left-0 w-full z-50 transition-all duration-300 ${scrollY > 20 ? 'backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.08)] border-b border-[#FEF9F6]/10 py-3.5' : 'bg-transparent py-6'}`}
+        style={{
+          backgroundColor: scrollY > 20 ? `${activeTheme.primaryDark}E6` : 'transparent'
+        }}
+      >
+        <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
           
           {/* Logo */}
-          <div className="flex items-center gap-2.5">
-            <div className="relative w-9 h-9 rounded-full overflow-hidden border border-[#D9B4B4]/30 shadow-sm bg-white flex-shrink-0">
+          <div 
+            className="flex items-center gap-2.5 group cursor-pointer select-none"
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          >
+            <div className="relative w-9 h-9 rounded-full overflow-hidden border border-[#D9B4B4]/30 shadow-sm bg-white flex-shrink-0 group-hover:rotate-12 group-hover:scale-105 transition-all duration-300">
               <Image 
                 src={IMAGES.logo} 
                 alt="CrochetCreation Logo" 
@@ -350,26 +358,26 @@ export default function CrochetCreationPage() {
                 className="object-cover" 
               />
             </div>
-            <span className="text-xl md:text-2xl font-bold tracking-widest text-[#FEF9F6]">
+            <span className="text-xl md:text-2xl font-bold tracking-widest text-[#FEF9F6] font-display">
               CrochetCreation
             </span>
           </div>
 
           {/* Desktop Nav */}
-          <nav className="hidden lg:flex items-center gap-8 text-xs font-semibold tracking-widest uppercase">
-            <a href="#home" className="hover:text-[#D9B4B4] transition-colors">HOME</a>
+          <nav className="hidden lg:flex items-center gap-8 text-xs font-semibold tracking-widest uppercase text-[#FEF9F6]">
+            <a href="#home" className="relative py-1 hover:text-[#D9B4B4] transition-all duration-300 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1.5px] after:bg-[#D9B4B4] hover:after:w-full after:transition-all after:duration-300">HOME</a>
             <span className="relative">
-              <a href="#shop" className="hover:text-[#D9B4B4] transition-colors">SHOP</a>
-              <span className="absolute -top-3 -right-6 bg-[#D9B4B4] text-[#6B5656] text-[8px] font-black px-1.5 py-0.5 rounded-full">NEW</span>
+              <a href="#shop" className="relative py-1 hover:text-[#D9B4B4] transition-all duration-300 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1.5px] after:bg-[#D9B4B4] hover:after:w-full after:transition-all after:duration-300">SHOP</a>
+              <span className="absolute -top-3 -right-6 bg-[#D9B4B4] text-[#6B5656] text-[8px] font-black px-1.5 py-0.5 rounded-full animate-bounce">NEW</span>
             </span>
-            <a href="#blog" className="hover:text-[#D9B4B4] transition-colors">BLOG</a>
-            <a href="#pages" className="hover:text-[#D9B4B4] transition-colors">PAGES</a>
-            <a href="#portfolio" className="hover:text-[#D9B4B4] transition-colors">PORTFOLIO</a>
-            <a href="#elements" className="hover:text-[#D9B4B4] transition-colors">ELEMENTS</a>
+            <a href="#blog" className="relative py-1 hover:text-[#D9B4B4] transition-all duration-300 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1.5px] after:bg-[#D9B4B4] hover:after:w-full after:transition-all after:duration-300">BLOG</a>
+            <a href="#pages" className="relative py-1 hover:text-[#D9B4B4] transition-all duration-300 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1.5px] after:bg-[#D9B4B4] hover:after:w-full after:transition-all after:duration-300">PAGES</a>
+            <a href="#portfolio" className="relative py-1 hover:text-[#D9B4B4] transition-all duration-300 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1.5px] after:bg-[#D9B4B4] hover:after:w-full after:transition-all after:duration-300">PORTFOLIO</a>
+            <a href="#elements" className="relative py-1 hover:text-[#D9B4B4] transition-all duration-300 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1.5px] after:bg-[#D9B4B4] hover:after:w-full after:transition-all after:duration-300">ELEMENTS</a>
           </nav>
 
           {/* Icons & Utility */}
-          <div className="hidden lg:flex items-center gap-4 text-xs font-medium tracking-wider">
+          <div className="hidden lg:flex items-center gap-4 text-xs font-medium tracking-wider text-[#FEF9F6]">
             <div 
               id="header-cart-icon" 
               className={`flex items-center gap-1.5 hover:text-[#D9B4B4] cursor-pointer transition-transform duration-300 ${cartBouncing ? 'scale-110 text-[#D9B4B4]' : ''}`}
@@ -378,7 +386,7 @@ export default function CrochetCreationPage() {
               <span>{cartItemsCount} items</span>
             </div>
             <span className="text-stone-400">|</span>
-            <button className="hover:text-[#D9B4B4]">
+            <button className="hover:text-[#D9B4B4] transition-colors">
               <Search className="w-4 h-4" />
             </button>
             <span className="text-stone-400">|</span>
@@ -418,14 +426,19 @@ export default function CrochetCreationPage() {
 
         {/* Mobile Navigation Drawer */}
         {isMenuOpen && (
-          <div className="lg:hidden absolute top-18 left-0 w-full bg-crochet-charcoal border-b border-[#FEF9F6]/10 py-6 px-6 z-30 flex flex-col gap-4 text-sm font-semibold tracking-widest uppercase text-center shadow-lg">
-            <a href="#home" onClick={() => setIsMenuOpen(false)} className="py-2 hover:text-[#D9B4B4]">HOME</a>
-            <a href="#shop" onClick={() => setIsMenuOpen(false)} className="py-2 hover:text-[#D9B4B4]">SHOP</a>
-            <a href="#blog" onClick={() => setIsMenuOpen(false)} className="py-2 hover:text-[#D9B4B4]">BLOG</a>
-            <a href="#pages" onClick={() => setIsMenuOpen(false)} className="py-2 hover:text-[#D9B4B4]">PAGES</a>
-            <a href="#portfolio" onClick={() => setIsMenuOpen(false)} className="py-2 hover:text-[#D9B4B4]">PORTFOLIO</a>
-            <a href="#elements" onClick={() => setIsMenuOpen(false)} className="py-2 hover:text-[#D9B4B4]">ELEMENTS</a>
-            <div className="flex items-center justify-center gap-4 pt-4 border-t border-[#FEF9F6]/10">
+          <div 
+            className="lg:hidden absolute top-full left-0 w-full border-b border-[#FEF9F6]/10 py-6 px-6 z-30 flex flex-col gap-4 text-sm font-semibold tracking-widest uppercase text-center shadow-2xl backdrop-blur-lg transition-all animate-in fade-in slide-in-from-top-4 duration-300"
+            style={{
+              backgroundColor: `${activeTheme.primaryDark}F2`
+            }}
+          >
+            <a href="#home" onClick={() => setIsMenuOpen(false)} className="py-2 hover:text-[#D9B4B4] transition-colors text-[#FEF9F6]">HOME</a>
+            <a href="#shop" onClick={() => setIsMenuOpen(false)} className="py-2 hover:text-[#D9B4B4] transition-colors text-[#FEF9F6]">SHOP</a>
+            <a href="#blog" onClick={() => setIsMenuOpen(false)} className="py-2 hover:text-[#D9B4B4] transition-colors text-[#FEF9F6]">BLOG</a>
+            <a href="#pages" onClick={() => setIsMenuOpen(false)} className="py-2 hover:text-[#D9B4B4] transition-colors text-[#FEF9F6]">PAGES</a>
+            <a href="#portfolio" onClick={() => setIsMenuOpen(false)} className="py-2 hover:text-[#D9B4B4] transition-colors text-[#FEF9F6]">PORTFOLIO</a>
+            <a href="#elements" onClick={() => setIsMenuOpen(false)} className="py-2 hover:text-[#D9B4B4] transition-colors text-[#FEF9F6]">ELEMENTS</a>
+            <div className="flex items-center justify-center gap-4 pt-4 border-t border-[#FEF9F6]/10 text-[#FEF9F6]">
               <div 
                 id="mobile-cart-icon" 
                 className={`flex items-center gap-1.5 transition-transform duration-300 ${cartBouncing ? 'scale-110 text-[#D9B4B4]' : ''}`}
@@ -437,7 +450,7 @@ export default function CrochetCreationPage() {
               <Search className="w-4 h-4" />
             </div>
             {/* Mobile Color Palette Customizer */}
-            <div className="flex items-center justify-center gap-3 pt-3 border-t border-[#FEF9F6]/10">
+            <div className="flex items-center justify-center gap-3 pt-3 border-t border-[#FEF9F6]/10 text-[#FEF9F6]">
               <span className="text-[10px] text-stone-300 tracking-wider">THEME:</span>
               <div className="flex items-center gap-2">
                 <button 
@@ -460,6 +473,16 @@ export default function CrochetCreationPage() {
             </div>
           </div>
         )}
+      </header>
+
+      {/* 1. Header/Hero Panel (Dark Textured #6B5656) */}
+      <section className="relative lg:sticky lg:top-0 z-0 bg-crochet-charcoal text-[#FEF9F6] pt-24 pb-20 overflow-hidden h-[90vh] min-h-[700px] w-full flex flex-col justify-between">
+        
+        {/* Parallax inner wrapper */}
+        <div 
+          className="w-full flex-grow flex flex-col justify-between relative"
+          style={{ transform: `translate3d(0, ${scrollY * 0.3}px, 0)` }}
+        >
 
         {/* Left Decorative Column (Pink ribbon, spool, buttons) */}
         <div className="hidden md:flex absolute left-8 top-24 w-36 flex-col items-center gap-6 select-none pointer-events-none z-10">
@@ -544,15 +567,77 @@ export default function CrochetCreationPage() {
           </button>
 
           {/* Heart shaped yarn ball */}
-          <div className="mt-12 md:mt-16 w-56 h-56 md:w-64 md:h-64 relative animate-pulse duration-[3000ms]">
+          <div className="mt-12 md:mt-16 w-56 h-56 md:w-64 md:h-64 relative">
             <Image 
               src={IMAGES.heroYarn} 
               alt="Marilyn Heart Yarn" 
               fill
               sizes="(max-width: 768px) 224px, 256px"
-              className="object-contain rounded-full shadow-2xl border-4 border-[#D9B4B4]/20"
+              className="object-contain rounded-full shadow-2xl border-4 border-[#D9B4B4]/20 animate-pulse duration-[3000ms]"
               priority
             />
+
+            {/* Cute Animated Outline Rabbit */}
+            <div 
+              className="absolute -bottom-6 -right-10 md:-right-14 w-20 h-20 md:w-24 md:h-24 z-30 drop-shadow-md transition-transform duration-300 ease-out"
+              style={{
+                transform: `translate(${Math.sin(scrollY * 0.006) * 35}px, ${Math.cos(scrollY * 0.006) * 15 - 5}px) rotate(${Math.sin(scrollY * 0.004) * 12}deg)`
+              }}
+            >
+              <svg 
+                viewBox="0 0 100 100" 
+                className="w-full h-full text-[#D9B4B4] fill-none stroke-current" 
+                strokeWidth="2.5" 
+                strokeLinecap="round" 
+                strokeLinejoin="round"
+              >
+                {/* Left Ear wiggling dynamically based on scroll */}
+                <path 
+                  d="M 40 42 C 37 28, 28 12, 33 8 C 38 4, 45 18, 43 38" 
+                  className="origin-[40px_42px]" 
+                  style={{
+                    transform: `rotate(${Math.sin(scrollY * 0.015) * 10}deg)`,
+                    transition: 'transform 0.1s ease-out'
+                  }}
+                />
+                {/* Right Ear wiggling dynamically based on scroll */}
+                <path 
+                  d="M 45 39 C 47 24, 53 8, 57 10 C 61 12, 55 28, 51 41" 
+                  className="origin-[45px_39px]" 
+                  style={{
+                    transform: `rotate(${Math.cos(scrollY * 0.015) * 10}deg)`,
+                    transition: 'transform 0.1s ease-out'
+                  }}
+                />
+                {/* Head & Face */}
+                <path d="M 36 48 C 28 48, 26 56, 32 62 C 36 66, 46 66, 50 62 C 56 56, 54 48, 48 48" />
+                {/* Cheeks */}
+                <path d="M 31 56 C 30 56, 29 57, 29 58" strokeWidth="1.5" className="animate-pulse" />
+                <path d="M 51 56 C 52 56, 53 57, 53 58" strokeWidth="1.5" className="animate-pulse" />
+                {/* Eyes */}
+                <circle cx="37" cy="53" r="1.5" fill="currentColor" stroke="none" />
+                <circle cx="45" cy="53" r="1.5" fill="currentColor" stroke="none" />
+                {/* Nose/Mouth */}
+                <path d="M 41 57 L 41.5 58 L 42 57" />
+                <path d="M 39 60 C 40.5 61.5, 41.5 60.5, 41.5 60 C 41.5 60.5, 42.5 61.5, 44 60" />
+                {/* Body */}
+                <path d="M 38 64 C 30 68, 25 78, 28 88 C 30 90, 40 90, 45 90" />
+                {/* Waving left arm */}
+                <path 
+                  d="M 32 66 C 24 62, 18 50, 22 46 C 26 42, 28 54, 32 60" 
+                  className="origin-[32px_66px] animate-[wavePaw_1.6s_infinite_ease-in-out]" 
+                />
+                {/* Resting right arm */}
+                <path d="M 44 66 C 48 68, 52 74, 50 78 C 48 82, 44 76, 42 70" />
+                {/* Paws */}
+                <path d="M 36 90 Q 38 84 40 90" />
+                <path d="M 44 90 Q 46 84 48 90" />
+                <path d="M 52 90 Q 54 84 56 90" />
+                {/* Back & Tail */}
+                <path d="M 48 64 C 56 68, 66 74, 66 84 C 66 88, 62 90, 53 90" />
+                <path d="M 66 82 C 70 82, 72 86, 68 88 C 66 89, 65 85, 66 82" />
+              </svg>
+            </div>
           </div>
         </div>
 
@@ -615,6 +700,46 @@ export default function CrochetCreationPage() {
                 {/* Crochet hook positioned dynamically at the stitching point */}
                 <g style={{ transform: 'rotate(-15deg) translate(2px, -2px)' }}>
                   <path d="M-6,-6 L12,12 M10,6 C10,6 14,3 11,-1" stroke="#D9B4B4" strokeWidth="2" strokeLinecap="round" fill="none" />
+                </g>
+
+                {/* Tiny outline rabbit riding the stitching hook */}
+                <g 
+                  style={{
+                    transform: `translate(12px, -18px) rotate(${Math.sin(scrollY * 0.02) * 12}deg)`,
+                    transformOrigin: '0px 0px',
+                    transition: 'transform 0.1s ease-out'
+                  }}
+                >
+                  <svg 
+                    viewBox="0 0 100 100" 
+                    width="20" 
+                    height="20" 
+                    className="text-[#6B5656] fill-none stroke-current overflow-visible" 
+                    strokeWidth="3.5"
+                    strokeLinecap="round" 
+                    strokeLinejoin="round"
+                  >
+                    {/* Ears */}
+                    <path d="M 40 42 C 37 28, 28 12, 33 8 C 38 4, 45 18, 43 38" />
+                    <path d="M 45 39 C 47 24, 53 8, 57 10 C 61 12, 55 28, 51 41" />
+                    {/* Head & Face */}
+                    <path d="M 36 48 C 28 48, 26 56, 32 62 C 36 66, 46 66, 50 62 C 56 56, 54 48, 48 48" />
+                    {/* Eyes */}
+                    <circle cx="37" cy="53" r="1.5" fill="currentColor" stroke="none" />
+                    <circle cx="45" cy="53" r="1.5" fill="currentColor" stroke="none" />
+                    {/* Body */}
+                    <path d="M 38 64 C 30 68, 25 78, 28 88 C 30 90, 40 90, 45 90" />
+                    {/* Waving left arm */}
+                    <path 
+                      d="M 32 66 C 24 62, 18 50, 22 46 C 26 42, 28 54, 32 60" 
+                      className="origin-[32px_66px] animate-[wavePaw_1.6s_infinite_ease-in-out]" 
+                    />
+                    {/* Resting right arm */}
+                    <path d="M 44 66 C 48 68, 52 74, 50 78 C 48 82, 44 76, 42 70" />
+                    <path d="M 48 64 C 56 68, 66 74, 66 84 C 66 88, 62 90, 53 90" />
+                    {/* Tail */}
+                    <circle cx="66" cy="84" r="3" fill="#6B5656" stroke="none" />
+                  </svg>
                 </g>
               </g>
             )}
