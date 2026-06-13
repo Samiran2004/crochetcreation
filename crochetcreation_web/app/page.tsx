@@ -19,6 +19,18 @@ import {
   X
 } from 'lucide-react';
 
+// Local image assets — copied directly into public/assets/
+const IMAGES = {
+  heroYarn: '/assets/marilyn_hero_yarn.png',
+  craftingTools: '/assets/marilyn_crafting_tools.png',
+  stackedSweaters: '/assets/marilyn_stacked_sweaters.png',
+  womanKnitting: '/assets/marilyn_woman_knitting.png',
+  knitTexture: '/assets/marilyn_knit_texture.png',
+  customerAlice: '/assets/marilyn_customer_alice.png',
+  logo: '/assets/crochet_creation_logo.png',
+};
+
+
 export default function CrochetCreationPage() {
   const [activeFilter, setActiveFilter] = useState('TOYS');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -31,19 +43,24 @@ export default function CrochetCreationPage() {
   const [pointerPos, setPointerPos] = useState({ x: 20, y: 0 });
   const pathRef = useRef<SVGPathElement>(null);
 
-  // Generates a smooth, flowing sine wave path that weaves down the side margins
+  // Generates a smooth, flowing crochet chain stitch path (interlocking loops)
   const crochetPathD = useMemo(() => {
     let d = "M 20 0";
-    const step = 20;
-    const totalPoints = 280; // 280 * 20 = 5600 height
-    for (let i = 1; i <= totalPoints; i++) {
+    const step = 40;
+    const totalPoints = 140; // 140 * 40 = 5600 height
+    for (let i = 0; i < totalPoints; i++) {
       const y = i * step;
-      // Smooth sine wave: x moves between 5 and 35
-      const x = 20 + 15 * Math.sin(y * (Math.PI / 200));
-      d += ` L ${x.toFixed(1)} ${y}`;
+      if (i % 2 === 0) {
+        // Loop sweeping right and crossing back to center
+        d += ` C 55 ${(y + 12).toFixed(1)}, -15 ${(y + 28).toFixed(1)}, 20 ${y + step}`;
+      } else {
+        // Loop sweeping left and crossing back to center
+        d += ` C -15 ${(y + 12).toFixed(1)}, 55 ${(y + 28).toFixed(1)}, 20 ${y + step}`;
+      }
     }
     return d;
   }, []);
+
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -115,10 +132,18 @@ export default function CrochetCreationPage() {
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between relative z-20">
           
           {/* Logo */}
-          <div className="flex items-center gap-2">
-            <span className="text-2xl font-bold tracking-widest text-[#FEF9F6] flex items-center gap-1">
+          <div className="flex items-center gap-2.5">
+            <div className="relative w-9 h-9 rounded-full overflow-hidden border border-[#D9B4B4]/30 shadow-sm bg-white flex-shrink-0">
+              <Image 
+                src={IMAGES.logo} 
+                alt="CrochetCreation Logo" 
+                fill 
+                sizes="36px"
+                className="object-cover" 
+              />
+            </div>
+            <span className="text-xl md:text-2xl font-bold tracking-widest text-[#FEF9F6]">
               CrochetCreation
-              <Heart className="w-3.5 h-3.5 fill-[#D9B4B4] text-[#D9B4B4] inline" />
             </span>
           </div>
 
@@ -261,9 +286,10 @@ export default function CrochetCreationPage() {
           {/* Heart shaped yarn ball */}
           <div className="mt-12 md:mt-16 w-56 h-56 md:w-64 md:h-64 relative animate-pulse duration-[3000ms]">
             <Image 
-              src="/assets/marilyn_hero_yarn.png" 
+              src={IMAGES.heroYarn} 
               alt="Marilyn Heart Yarn" 
               fill
+              sizes="(max-width: 768px) 224px, 256px"
               className="object-contain rounded-full shadow-2xl border-4 border-[#D9B4B4]/20"
               priority
             />
@@ -300,32 +326,39 @@ export default function CrochetCreationPage() {
               d={crochetPathD}
               fill="none" 
               stroke="url(#thread-gradient)" 
-              strokeWidth="3.2" 
+              strokeWidth="4" 
               strokeLinecap="round"
-              strokeDasharray="6 4"
               mask="url(#scroll-mask)"
               style={{
-                filter: 'drop-shadow(0 0 5px rgba(217, 180, 180, 0.95)) drop-shadow(0 0 10px rgba(107, 86, 86, 0.5))',
+                filter: 'drop-shadow(0 0 6px rgba(217, 180, 180, 0.95)) drop-shadow(0 0 12px rgba(107, 86, 86, 0.6))',
               }}
             />
             {/* Thread active tip (Yarn Ball / Crochet Needle Core) */}
             {scrollProgress > 0.01 && scrollProgress < 0.99 && (
               <g 
                 transform={`translate(${pointerPos.x}, ${pointerPos.y})`}
-                style={{ transition: 'transform 0.08s ease-out' }}
+                style={{ transition: 'transform 0.05s ease-out' }}
               >
                 {/* Glowing Aura */}
-                <circle r="14" fill="#D9B4B4" className="animate-ping opacity-40" />
-                {/* Yarn ball body */}
-                <circle r="8" fill="#6B5656" stroke="#FEF9F6" strokeWidth="1" />
-                {/* Yarn strands overlay to make it look like a real yarn ball */}
-                <path d="M-6,-4 Q0,-8 6,-4 M-8,0 Q0,-4 8,0 M-6,4 Q0,8 6,4 M-4,-6 Q4,0 -4,6" stroke="#FEF9F6" strokeWidth="0.8" fill="none" />
-                {/* Thread center core */}
-                <circle r="3" fill="#D9B4B4" />
-                {/* Little crochet hook path overlay */}
-                <path d="M-4,-4 L8,8 M6,2 C6,2 9,0 7,-3" stroke="#FEF9F6" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+                <circle r="16" fill="#D9B4B4" className="animate-ping opacity-30" />
+                
+                {/* Rotating Yarn Ball Group */}
+                <g style={{ transform: `rotate(${scrollY * 0.7}deg)`, transformOrigin: '0px 0px', transition: 'transform 0.05s ease-out' }}>
+                  {/* Yarn ball body */}
+                  <circle r="10" fill="#6B5656" stroke="#FEF9F6" strokeWidth="1.2" />
+                  {/* Yarn strands overlay to make it look like a real yarn ball */}
+                  <path d="M-8,-5 Q0,-10 8,-5 M-10,0 Q0,-5 10,0 M-8,5 Q0,10 8,5 M-5,-8 Q5,0 -5,8" stroke="#FEF9F6" strokeWidth="0.9" fill="none" opacity="0.8" />
+                  {/* Thread center core */}
+                  <circle r="3.5" fill="#D9B4B4" />
+                </g>
+
+                {/* Crochet hook positioned dynamically at the stitching point */}
+                <g style={{ transform: 'rotate(-15deg) translate(2px, -2px)' }}>
+                  <path d="M-6,-6 L12,12 M10,6 C10,6 14,3 11,-1" stroke="#D9B4B4" strokeWidth="2" strokeLinecap="round" fill="none" />
+                </g>
               </g>
             )}
+
 
             {/* 1. Crochet Flower Motif at y = 800 */}
             <g 
@@ -532,9 +565,10 @@ export default function CrochetCreationPage() {
           <div className="bg-white border border-[#EADBDB] rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group">
             <div className="h-64 bg-amber-50/20 relative overflow-hidden">
               <Image 
-                src="/assets/marilyn_crafting_tools.png" 
+                src={IMAGES.craftingTools} 
                 alt="Knitted Teddy Bear" 
                 fill 
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 380px"
                 className="object-cover group-hover:scale-105 transition-transform duration-500" 
               />
               <span className="absolute top-4 left-4 bg-[#D9B4B4] text-[#6B5656] text-[9px] font-black tracking-wider uppercase px-2.5 py-1 rounded-full shadow-sm">
@@ -560,9 +594,10 @@ export default function CrochetCreationPage() {
           <div className="bg-white border border-[#EADBDB] rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group">
             <div className="h-64 bg-amber-50/20 relative overflow-hidden">
               <Image 
-                src="/assets/marilyn_stacked_sweaters.png" 
+                src={IMAGES.stackedSweaters} 
                 alt="Pastel Sweaters" 
                 fill 
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 380px"
                 className="object-cover group-hover:scale-105 transition-transform duration-500" 
               />
               <span className="absolute top-4 left-4 bg-[#6B5656] text-[#FEF9F6] text-[9px] font-black tracking-wider uppercase px-2.5 py-1 rounded-full shadow-sm">
@@ -588,9 +623,10 @@ export default function CrochetCreationPage() {
           <div className="bg-white border border-[#EADBDB] rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group">
             <div className="h-64 bg-amber-50/20 relative overflow-hidden">
               <Image 
-                src="/assets/marilyn_hero_yarn.png" 
+                src={IMAGES.heroYarn} 
                 alt="Heart Yarn Ball" 
                 fill 
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 380px"
                 className="object-cover group-hover:scale-105 transition-transform duration-500" 
               />
               <span className="absolute top-4 left-4 bg-[#D9B4B4] text-[#6B5656] text-[9px] font-black tracking-wider uppercase px-2.5 py-1 rounded-full shadow-sm">
@@ -624,9 +660,10 @@ export default function CrochetCreationPage() {
             {/* Top: Crafting Tools Image */}
             <div className="h-56 relative">
               <Image 
-                src="/assets/marilyn_crafting_tools.png" 
+                src={IMAGES.craftingTools} 
                 alt="Crafting Tools" 
                 fill 
+                sizes="(max-width: 768px) 100vw, 50vw"
                 className="object-cover" 
               />
             </div>
@@ -656,9 +693,10 @@ export default function CrochetCreationPage() {
           <div className="flex flex-col h-full rounded-2xl overflow-hidden border border-[#EADBDB] shadow-sm relative group min-h-[500px]">
             {/* Main Photo of Woman Knitting */}
             <Image 
-              src="/assets/marilyn_woman_knitting.png" 
+              src={IMAGES.womanKnitting} 
               alt="Marilyn Knitting" 
               fill 
+              sizes="(max-width: 768px) 100vw, 50vw"
               className="object-cover" 
             />
             {/* Hover Dark Text Overlay at Bottom */}
@@ -724,9 +762,10 @@ export default function CrochetCreationPage() {
             {/* Stacked Sweaters Image */}
             <div className="h-96 relative rounded-2xl overflow-hidden border border-[#EADBDB] shadow-md">
               <Image 
-                src="/assets/marilyn_stacked_sweaters.png" 
+                src={IMAGES.stackedSweaters} 
                 alt="Stacked Sweaters" 
                 fill 
+                sizes="(max-width: 1024px) 100vw, 58vw"
                 className="object-cover" 
               />
             </div>
@@ -758,9 +797,10 @@ export default function CrochetCreationPage() {
         {/* Full Knit Background */}
         <div className="absolute inset-0 z-0">
           <Image 
-            src="/assets/marilyn_knit_texture.png" 
+            src={IMAGES.knitTexture} 
             alt="Knit background" 
             fill 
+            sizes="100vw"
             className="object-cover opacity-20 filter grayscale" 
           />
           <div className="absolute inset-0 bg-[#FEF9F6]/90 mix-blend-overlay" />
@@ -775,9 +815,10 @@ export default function CrochetCreationPage() {
             <div className="relative w-20 h-20 rounded-full p-1 border-2 border-[#D9B4B4]">
               <div className="w-full h-full relative rounded-full overflow-hidden">
                 <Image 
-                  src="/assets/marilyn_customer_alice.png" 
+                  src={IMAGES.customerAlice} 
                   alt="Alice Review" 
                   fill 
+                  sizes="80px"
                   className="object-cover" 
                 />
               </div>
@@ -810,9 +851,18 @@ export default function CrochetCreationPage() {
           
           {/* Left Side: Logo & Question */}
           <div className="lg:col-span-7 space-y-6">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
+              <div className="relative w-8 h-8 rounded-full overflow-hidden border border-[#D9B4B4]/30 shadow-sm bg-white flex-shrink-0">
+                <Image 
+                  src={IMAGES.logo} 
+                  alt="CrochetCreation Logo" 
+                  fill 
+                  sizes="32px"
+                  className="object-cover" 
+                />
+              </div>
               <span className="text-xl font-bold tracking-widest text-[#FEF9F6]">
-                CrochetCreation <Heart className="w-3.5 h-3.5 fill-[#D9B4B4] text-[#D9B4B4] inline" />
+                CrochetCreation
               </span>
             </div>
             <p className="text-sm font-light text-stone-300 max-w-xl leading-relaxed">
@@ -845,9 +895,10 @@ export default function CrochetCreationPage() {
             <div className="flex items-center gap-4 relative">
               <div className="w-24 h-24 relative rounded-full overflow-hidden border border-[#D9B4B4]/20 shadow-md">
                 <Image 
-                  src="/assets/marilyn_hero_yarn.png" 
+                  src={IMAGES.heroYarn} 
                   alt="Marilyn Footer Yarn" 
                   fill 
+                  sizes="96px"
                   className="object-cover" 
                 />
               </div>
