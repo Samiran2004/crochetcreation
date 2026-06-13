@@ -4,31 +4,58 @@
 
 @layer base {
   :root {
-    --background: 30 50% 98%; /* Warm cream/ivory */
-    --foreground: 20 40% 12%; /* Cozy charcoal-brown */
+    --background: #FEF9F6;
+    --foreground: #2D2525;
+    
+    --primary: #D9B4B4;
+    --primary-foreground: #6B5656;
+    
+    --secondary: #6B5656;
+    --secondary-foreground: #FEF9F6;
+    
+    --muted: #F3EAE6;
+    --muted-foreground: #7D6B6B;
+    
+    --border: #EADBDB;
+    --input: #EADBDB;
+    --ring: #D9B4B4;
+    
+    --radius: 0.5rem;
+  }
 
-    --primary: 22 75% 50%; /* Warm terracotta/rust */
-    --primary-foreground: 30 50% 98%;
-
-    --secondary: 30 35% 90%; /* Soft sandy beige */
-    --secondary-foreground: 20 40% 20%;
-
-    --muted: 30 30% 95%;
-    --muted-foreground: 20 20% 45%;
-
-    --border: 22 30% 88%;
-    --input: 22 30% 88%;
-    --ring: 22 75% 50%;
-
-    --radius: 0.75rem;
+  body {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    background-color: var(--background);
+    color: var(--foreground);
   }
 }
 
-body {
-  background-color: hsl(var(--background));
-  color: hsl(var(--foreground));
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  overflow-x: hidden;
+/* Dusty charcoal-purple textured panel */
+.bg-crochet-charcoal {
+  background-color: #6B5656;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 0),
+                    radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 0);
+  background-size: 12px 12px;
+  background-position: 0 0, 6px 6px;
+}
+
+/* Stripe pattern for filter bars and accents */
+.bg-crochet-stripe {
+  background: repeating-linear-gradient(
+    -45deg,
+    #EAD8D8,
+    #EAD8D8 8px,
+    #E3CECE 8px,
+    #E3CECE 16px
+  );
+}
+
+/* Subtle wood grain background for panels */
+.bg-crochet-wood {
+  background-color: #4C3C3C;
+  background-image: linear-gradient(0deg, rgba(255,255,255,0.03) 50%, transparent 50%),
+                    linear-gradient(90deg, rgba(255,255,255,0.03) 50%, transparent 50%);
+  background-size: 20px 20px;
 }
 
 /* Custom Scrollbars */
@@ -42,10 +69,10 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: hsla(22, 30%, 50%, 0.2);
+  background: rgba(107, 86, 86, 0.2);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: hsla(22, 30%, 50%, 0.4);
+  background: rgba(107, 86, 86, 0.4);
 }
