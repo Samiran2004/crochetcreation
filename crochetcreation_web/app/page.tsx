@@ -43,6 +43,124 @@ export default function CrochetCreationPage() {
   const [pointerPos, setPointerPos] = useState({ x: 20, y: 0 });
   const pathRef = useRef<SVGPathElement>(null);
 
+  // New interactive feature states
+  const [themeColor, setThemeColor] = useState('rose');
+  const [cartItemsCount, setCartItemsCount] = useState(2);
+  const [cartBouncing, setCartBouncing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [selectedTexture, setSelectedTexture] = useState<string | null>(null);
+
+  // Theme configuration
+  const THEME_COLORS = useMemo(() => ({
+    rose: {
+      primary: '#D9B4B4',
+      primaryDark: '#6B5656',
+      accent: '#B67E7E',
+      bg: '#FEF9F6',
+      border: '#EADBDB',
+      border30: 'rgba(234, 219, 219, 0.3)',
+      border50: 'rgba(234, 219, 219, 0.5)',
+      border60: 'rgba(234, 219, 219, 0.6)',
+      primary20: 'rgba(217, 180, 180, 0.2)',
+      primary30: 'rgba(217, 180, 180, 0.3)',
+    },
+    mustard: {
+      primary: '#E6C17A',
+      primaryDark: '#5C4A2B',
+      accent: '#C79E50',
+      bg: '#FAF8F2',
+      border: '#EBE2CD',
+      border30: 'rgba(235, 226, 205, 0.3)',
+      border50: 'rgba(235, 226, 205, 0.5)',
+      border60: 'rgba(235, 226, 205, 0.6)',
+      primary20: 'rgba(230, 193, 122, 0.2)',
+      primary30: 'rgba(230, 193, 122, 0.3)',
+    },
+    green: {
+      primary: '#A8BC98',
+      primaryDark: '#3E4C34',
+      accent: '#839E6F',
+      bg: '#F6F8F3',
+      border: '#DFE5D9',
+      border30: 'rgba(223, 229, 217, 0.3)',
+      border50: 'rgba(223, 229, 217, 0.5)',
+      border60: 'rgba(223, 229, 217, 0.6)',
+      primary20: 'rgba(168, 188, 152, 0.2)',
+      primary30: 'rgba(168, 188, 152, 0.3)',
+    },
+    teal: {
+      primary: '#9CBEC2',
+      primaryDark: '#324C4F',
+      accent: '#75A2A7',
+      bg: '#F3F7F8',
+      border: '#D8E5E7',
+      border30: 'rgba(216, 229, 231, 0.3)',
+      border50: 'rgba(216, 229, 231, 0.5)',
+      border60: 'rgba(216, 229, 231, 0.6)',
+      primary20: 'rgba(156, 190, 194, 0.2)',
+      primary30: 'rgba(156, 190, 194, 0.3)',
+    }
+  }), []);
+
+  const activeTheme = useMemo(() => {
+    return THEME_COLORS[themeColor as keyof typeof THEME_COLORS] || THEME_COLORS.rose;
+  }, [themeColor, THEME_COLORS]);
+
+  // Loading timeout
+  useEffect(() => {
+    const loadTimer = setTimeout(() => {
+      setLoading(false);
+    }, 1800);
+
+    return () => {
+      clearTimeout(loadTimer);
+    };
+  }, []);
+
+  // Add to cart animation trigger
+  const handleAddToCart = (e: React.MouseEvent<HTMLButtonElement>) => {
+    setCartItemsCount((prev) => prev + 1);
+    setCartBouncing(true);
+    setTimeout(() => setCartBouncing(false), 800);
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const startX = rect.left + rect.width / 2;
+    const startY = rect.top + rect.height / 2;
+
+    const cartIcon = document.getElementById('header-cart-icon') || document.getElementById('mobile-cart-icon');
+    if (!cartIcon) return;
+    const cartRect = cartIcon.getBoundingClientRect();
+    const endX = cartRect.left + cartRect.width / 2;
+    const endY = cartRect.top + cartRect.height / 2;
+
+    const particle = document.createElement('div');
+    particle.className = 'fixed pointer-events-none z-[9999] flex items-center justify-center';
+    particle.style.left = `${startX}px`;
+    particle.style.top = `${startY}px`;
+    particle.innerHTML = `
+      <div class="w-6 h-6 rounded-full flex items-center justify-center text-xs animate-spin" style="background-color: ${activeTheme.primary}; border: 1px solid rgba(0,0,0,0.1); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
+        🧶
+      </div>
+    `;
+
+    document.body.appendChild(particle);
+
+    const keyframes = [
+      { left: `${startX}px`, top: `${startY}px`, transform: 'scale(1) rotate(0deg)' },
+      { left: `${(startX + endX) / 2}px`, top: `${Math.min(startY, endY) - 100}px`, transform: 'scale(1.3) rotate(180deg)' },
+      { left: `${endX}px`, top: `${endY}px`, transform: 'scale(0.2) rotate(360deg)' }
+    ];
+
+    const animation = particle.animate(keyframes, {
+      duration: 750,
+      easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+    });
+
+    animation.onfinish = () => {
+      particle.remove();
+    };
+  };
+
   // Generates a smooth, flowing crochet chain stitch path (interlocking loops)
   const crochetPathD = useMemo(() => {
     let d = "M 20 0";
@@ -119,6 +237,96 @@ export default function CrochetCreationPage() {
   return (
     <div className="min-h-screen flex flex-col relative bg-[#FEF9F6]">
       
+      {/* Dynamic Style Overrides for instant skinning */}
+      <style>{`
+        :root {
+          --primary-color: ${activeTheme.primary};
+          --primary-dark: ${activeTheme.primaryDark};
+          --accent-color: ${activeTheme.accent};
+          --bg-color: ${activeTheme.bg};
+          --border-color: ${activeTheme.border};
+        }
+        .bg-\\[\\#D9B4B4\\] { background-color: var(--primary-color) !important; }
+        .text-\\[\\#6B5656\\] { color: var(--primary-dark) !important; }
+        .bg-\\[\\#6B5656\\] { background-color: var(--primary-dark) !important; }
+        .text-\\[\\#D9B4B4\\] { color: var(--primary-color) !important; }
+        .border-\\[\\#EADBDB\\] { border-color: var(--border-color) !important; }
+        .border-\\[\\#EADBDB\\]\\/30 { border-color: ${activeTheme.border30} !important; }
+        .border-\\[\\#EADBDB\\]\\/50 { border-color: ${activeTheme.border50} !important; }
+        .border-\\[\\#EADBDB\\]\\/60 { border-color: ${activeTheme.border60} !important; }
+        .border-\\[\\#D9B4B4\\]\\/20 { border-color: ${activeTheme.primary20} !important; }
+        .border-\\[\\#D9B4B4\\]\\/30 { border-color: ${activeTheme.primary30} !important; }
+      `}</style>
+
+      {/* 0. Fullscreen Knitted Preloader */}
+      {loading && (
+        <div 
+          className="fixed inset-0 z-[10000] bg-crochet-charcoal flex flex-col items-center justify-center transition-opacity duration-700 ease-in-out" 
+          style={{ opacity: loading ? 1 : 0 }}
+        >
+          <div className="relative flex flex-col items-center">
+            <svg viewBox="0 0 100 100" className="w-24 h-24 text-[#D9B4B4] animate-pulse">
+              <path
+                d="M 50 30 C 50 30, 35 15, 20 30 C 5 45, 20 75, 50 90 C 80 75, 95 45, 80 30 C 65 15, 50 30, 50 30 Z"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="3.5"
+                strokeLinecap="round"
+                strokeDasharray="300"
+                strokeDashoffset="300"
+                className="animate-draw-path"
+              />
+            </svg>
+            <span className="text-xl font-bold tracking-widest text-[#FEF9F6] mt-4 uppercase animate-pulse">
+              CrochetCreation
+            </span>
+            <span className="text-[10px] tracking-widest text-[#D9B4B4] uppercase mt-1">
+              Knitting with love...
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* 0. Texture Reveal Magnifying Modal */}
+      {selectedTexture && (
+        <div 
+          className="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 cursor-pointer"
+          onClick={() => setSelectedTexture(null)}
+        >
+          <div 
+            className="bg-white rounded-3xl p-6 max-w-lg w-full relative shadow-2xl border border-stone-100 flex flex-col items-center text-center cursor-default animate-scale-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button 
+              className="absolute top-4 right-4 text-stone-400 hover:text-stone-600 p-1.5 rounded-full hover:bg-stone-50 transition-colors"
+              onClick={() => setSelectedTexture(null)}
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <span className="text-[10px] font-bold text-[#D9B4B4] uppercase tracking-widest mb-1">Texture Magnifier</span>
+            <h4 className="text-lg font-black text-[#6B5656] mb-4">Detailed Stitch Pattern</h4>
+            
+            {/* The Lens Container */}
+            <div className="relative w-64 h-64 rounded-full overflow-hidden border-4 border-[#D9B4B4] shadow-inner bg-stone-50 group">
+              <Image 
+                src={selectedTexture} 
+                alt="Zoomed knit texture" 
+                fill 
+                sizes="256px"
+                className="object-cover" 
+              />
+              {/* Realistic glass lens reflection */}
+              <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/20 to-white/40 pointer-events-none"></div>
+              <div className="absolute top-4 left-4 w-12 h-12 rounded-full bg-white/25 blur-sm pointer-events-none"></div>
+            </div>
+            
+            <p className="text-xs text-stone-500 max-w-sm mt-6 leading-relaxed">
+              Every loop and stitch is handmade using premium organic yarns. Click to close.
+            </p>
+          </div>
+        </div>
+      )}
+      
       {/* 1. Header/Hero Panel (Dark Textured #6B5656) */}
       <section className="relative lg:sticky lg:top-0 z-0 bg-crochet-charcoal text-[#FEF9F6] pt-6 pb-20 overflow-hidden h-[90vh] min-h-[700px] w-full flex flex-col justify-between">
         
@@ -162,14 +370,41 @@ export default function CrochetCreationPage() {
 
           {/* Icons & Utility */}
           <div className="hidden lg:flex items-center gap-4 text-xs font-medium tracking-wider">
-            <div className="flex items-center gap-1.5 hover:text-[#D9B4B4] cursor-pointer">
-              <ShoppingBag className="w-4 h-4 text-[#D9B4B4]" />
-              <span>2 items</span>
+            <div 
+              id="header-cart-icon" 
+              className={`flex items-center gap-1.5 hover:text-[#D9B4B4] cursor-pointer transition-transform duration-300 ${cartBouncing ? 'scale-110 text-[#D9B4B4]' : ''}`}
+            >
+              <ShoppingBag className={`w-4 h-4 text-[#D9B4B4] ${cartBouncing ? 'animate-bounce' : ''}`} />
+              <span>{cartItemsCount} items</span>
             </div>
             <span className="text-stone-400">|</span>
             <button className="hover:text-[#D9B4B4]">
               <Search className="w-4 h-4" />
             </button>
+            <span className="text-stone-400">|</span>
+            {/* Color Palette Customizer */}
+            <div className="flex items-center gap-1.5 ml-1">
+              <button 
+                onClick={() => setThemeColor('rose')} 
+                title="Rose Pink"
+                className={`w-3.5 h-3.5 rounded-full bg-[#D9B4B4] border ${themeColor === 'rose' ? 'border-[#FEF9F6] scale-125' : 'border-transparent'} hover:scale-110 transition-transform`}
+              />
+              <button 
+                onClick={() => setThemeColor('mustard')} 
+                title="Mustard Gold"
+                className={`w-3.5 h-3.5 rounded-full bg-[#E6C17A] border ${themeColor === 'mustard' ? 'border-[#FEF9F6] scale-125' : 'border-transparent'} hover:scale-110 transition-transform`}
+              />
+              <button 
+                onClick={() => setThemeColor('green')} 
+                title="Forest Green"
+                className={`w-3.5 h-3.5 rounded-full bg-[#A8BC98] border ${themeColor === 'green' ? 'border-[#FEF9F6] scale-125' : 'border-transparent'} hover:scale-110 transition-transform`}
+              />
+              <button 
+                onClick={() => setThemeColor('teal')} 
+                title="Calm Teal"
+                className={`w-3.5 h-3.5 rounded-full bg-[#9CBEC2] border ${themeColor === 'teal' ? 'border-[#FEF9F6] scale-125' : 'border-transparent'} hover:scale-110 transition-transform`}
+              />
+            </div>
           </div>
 
           {/* Mobile Menu Button */}
@@ -191,12 +426,37 @@ export default function CrochetCreationPage() {
             <a href="#portfolio" onClick={() => setIsMenuOpen(false)} className="py-2 hover:text-[#D9B4B4]">PORTFOLIO</a>
             <a href="#elements" onClick={() => setIsMenuOpen(false)} className="py-2 hover:text-[#D9B4B4]">ELEMENTS</a>
             <div className="flex items-center justify-center gap-4 pt-4 border-t border-[#FEF9F6]/10">
-              <div className="flex items-center gap-1">
-                <ShoppingBag className="w-4 h-4 text-[#D9B4B4]" />
-                <span>2 items</span>
+              <div 
+                id="mobile-cart-icon" 
+                className={`flex items-center gap-1.5 transition-transform duration-300 ${cartBouncing ? 'scale-110 text-[#D9B4B4]' : ''}`}
+              >
+                <ShoppingBag className={`w-4 h-4 text-[#D9B4B4] ${cartBouncing ? 'animate-bounce' : ''}`} />
+                <span>{cartItemsCount} items</span>
               </div>
               <span>|</span>
               <Search className="w-4 h-4" />
+            </div>
+            {/* Mobile Color Palette Customizer */}
+            <div className="flex items-center justify-center gap-3 pt-3 border-t border-[#FEF9F6]/10">
+              <span className="text-[10px] text-stone-300 tracking-wider">THEME:</span>
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => setThemeColor('rose')} 
+                  className={`w-4 h-4 rounded-full bg-[#D9B4B4] border ${themeColor === 'rose' ? 'border-[#FEF9F6] scale-125' : 'border-transparent'} transition-transform`}
+                />
+                <button 
+                  onClick={() => setThemeColor('mustard')} 
+                  className={`w-4 h-4 rounded-full bg-[#E6C17A] border ${themeColor === 'mustard' ? 'border-[#FEF9F6] scale-125' : 'border-transparent'} transition-transform`}
+                />
+                <button 
+                  onClick={() => setThemeColor('green')} 
+                  className={`w-4 h-4 rounded-full bg-[#A8BC98] border ${themeColor === 'green' ? 'border-[#FEF9F6] scale-125' : 'border-transparent'} transition-transform`}
+                />
+                <button 
+                  onClick={() => setThemeColor('teal')} 
+                  className={`w-4 h-4 rounded-full bg-[#9CBEC2] border ${themeColor === 'teal' ? 'border-[#FEF9F6] scale-125' : 'border-transparent'} transition-transform`}
+                />
+              </div>
             </div>
           </div>
         )}
@@ -277,7 +537,7 @@ export default function CrochetCreationPage() {
           </p>
 
           <button 
-            onClick={() => setCustomRequestModal(true)}
+            onClick={() => document.getElementById('shop')?.scrollIntoView({ behavior: 'smooth' })}
             className="border-2 border-[#D9B4B4] hover:bg-[#D9B4B4] hover:text-[#6B5656] text-[#D9B4B4] text-xs uppercase tracking-widest font-bold px-8 py-3.5 rounded-full transition-all duration-300 active:scale-95 shadow-lg"
           >
             View all products
@@ -563,7 +823,7 @@ export default function CrochetCreationPage() {
           
           {/* Product 1 */}
           <div className="bg-white border border-[#EADBDB] rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group">
-            <div className="h-64 bg-amber-50/20 relative overflow-hidden">
+            <div className="h-64 bg-amber-50/20 relative overflow-hidden group cursor-pointer" onClick={() => setSelectedTexture(IMAGES.knitTexture)}>
               <Image 
                 src={IMAGES.craftingTools} 
                 alt="Knitted Teddy Bear" 
@@ -571,9 +831,15 @@ export default function CrochetCreationPage() {
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 380px"
                 className="object-cover group-hover:scale-105 transition-transform duration-500" 
               />
-              <span className="absolute top-4 left-4 bg-[#D9B4B4] text-[#6B5656] text-[9px] font-black tracking-wider uppercase px-2.5 py-1 rounded-full shadow-sm">
+              <span className="absolute top-4 left-4 bg-[#D9B4B4] text-[#6B5656] text-[9px] font-black tracking-wider uppercase px-2.5 py-1 rounded-full shadow-sm z-10">
                 POPULAR
               </span>
+              <div className="absolute inset-0 bg-[#6B5656]/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center z-10">
+                <div className="bg-white/95 backdrop-blur-sm text-[#6B5656] text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-full shadow-md transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300 flex items-center gap-1.5">
+                  <Search className="w-3.5 h-3.5 text-[#D9B4B4]" />
+                  View Texture
+                </div>
+              </div>
             </div>
             <div className="p-6 flex flex-col justify-between border-t border-[#EADBDB]/50">
               <div>
@@ -583,7 +849,10 @@ export default function CrochetCreationPage() {
               </div>
               <div className="flex items-center justify-between mt-6 pt-4 border-t border-stone-50">
                 <span className="text-lg font-black text-[#6B5656]">$24.99</span>
-                <button className="bg-[#6B5656] hover:bg-[#D9B4B4] hover:text-[#6B5656] text-white p-2.5 rounded-full transition-colors active:scale-95 shadow">
+                <button 
+                  onClick={handleAddToCart}
+                  className="bg-[#6B5656] hover:bg-[#D9B4B4] hover:text-[#6B5656] text-white p-2.5 rounded-full transition-colors active:scale-95 shadow"
+                >
                   <ShoppingBag className="w-4 h-4" />
                 </button>
               </div>
@@ -592,7 +861,7 @@ export default function CrochetCreationPage() {
 
           {/* Product 2 */}
           <div className="bg-white border border-[#EADBDB] rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group">
-            <div className="h-64 bg-amber-50/20 relative overflow-hidden">
+            <div className="h-64 bg-amber-50/20 relative overflow-hidden group cursor-pointer" onClick={() => setSelectedTexture(IMAGES.knitTexture)}>
               <Image 
                 src={IMAGES.stackedSweaters} 
                 alt="Pastel Sweaters" 
@@ -600,9 +869,15 @@ export default function CrochetCreationPage() {
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 380px"
                 className="object-cover group-hover:scale-105 transition-transform duration-500" 
               />
-              <span className="absolute top-4 left-4 bg-[#6B5656] text-[#FEF9F6] text-[9px] font-black tracking-wider uppercase px-2.5 py-1 rounded-full shadow-sm">
+              <span className="absolute top-4 left-4 bg-[#6B5656] text-[#FEF9F6] text-[9px] font-black tracking-wider uppercase px-2.5 py-1 rounded-full shadow-sm z-10">
                 HANDMADE
               </span>
+              <div className="absolute inset-0 bg-[#6B5656]/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center z-10">
+                <div className="bg-white/95 backdrop-blur-sm text-[#6B5656] text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-full shadow-md transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300 flex items-center gap-1.5">
+                  <Search className="w-3.5 h-3.5 text-[#D9B4B4]" />
+                  View Texture
+                </div>
+              </div>
             </div>
             <div className="p-6 flex flex-col justify-between border-t border-[#EADBDB]/50">
               <div>
@@ -612,7 +887,10 @@ export default function CrochetCreationPage() {
               </div>
               <div className="flex items-center justify-between mt-6 pt-4 border-t border-stone-50">
                 <span className="text-lg font-black text-[#6B5656]">$89.00</span>
-                <button className="bg-[#6B5656] hover:bg-[#D9B4B4] hover:text-[#6B5656] text-white p-2.5 rounded-full transition-colors active:scale-95 shadow">
+                <button 
+                  onClick={handleAddToCart}
+                  className="bg-[#6B5656] hover:bg-[#D9B4B4] hover:text-[#6B5656] text-white p-2.5 rounded-full transition-colors active:scale-95 shadow"
+                >
                   <ShoppingBag className="w-4 h-4" />
                 </button>
               </div>
@@ -621,7 +899,7 @@ export default function CrochetCreationPage() {
 
           {/* Product 3 */}
           <div className="bg-white border border-[#EADBDB] rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group">
-            <div className="h-64 bg-amber-50/20 relative overflow-hidden">
+            <div className="h-64 bg-amber-50/20 relative overflow-hidden group cursor-pointer" onClick={() => setSelectedTexture(IMAGES.knitTexture)}>
               <Image 
                 src={IMAGES.heroYarn} 
                 alt="Heart Yarn Ball" 
@@ -629,9 +907,15 @@ export default function CrochetCreationPage() {
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 380px"
                 className="object-cover group-hover:scale-105 transition-transform duration-500" 
               />
-              <span className="absolute top-4 left-4 bg-[#D9B4B4] text-[#6B5656] text-[9px] font-black tracking-wider uppercase px-2.5 py-1 rounded-full shadow-sm">
+              <span className="absolute top-4 left-4 bg-[#D9B4B4] text-[#6B5656] text-[9px] font-black tracking-wider uppercase px-2.5 py-1 rounded-full shadow-sm z-10">
                 NEW RELEASE
               </span>
+              <div className="absolute inset-0 bg-[#6B5656]/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center z-10">
+                <div className="bg-white/95 backdrop-blur-sm text-[#6B5656] text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-full shadow-md transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300 flex items-center gap-1.5">
+                  <Search className="w-3.5 h-3.5 text-[#D9B4B4]" />
+                  View Texture
+                </div>
+              </div>
             </div>
             <div className="p-6 flex flex-col justify-between border-t border-[#EADBDB]/50">
               <div>
@@ -641,7 +925,10 @@ export default function CrochetCreationPage() {
               </div>
               <div className="flex items-center justify-between mt-6 pt-4 border-t border-stone-50">
                 <span className="text-lg font-black text-[#6B5656]">$18.50</span>
-                <button className="bg-[#6B5656] hover:bg-[#D9B4B4] hover:text-[#6B5656] text-white p-2.5 rounded-full transition-colors active:scale-95 shadow">
+                <button 
+                  onClick={handleAddToCart}
+                  className="bg-[#6B5656] hover:bg-[#D9B4B4] hover:text-[#6B5656] text-white p-2.5 rounded-full transition-colors active:scale-95 shadow"
+                >
                   <ShoppingBag className="w-4 h-4" />
                 </button>
               </div>
