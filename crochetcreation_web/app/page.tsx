@@ -273,18 +273,43 @@ export default function CrochetCreationPage() {
           style={{ opacity: loading ? 1 : 0 }}
         >
           <div className="relative flex flex-col items-center">
-            <svg viewBox="0 0 100 100" className="w-24 h-24 text-[#D9B4B4] animate-pulse">
-              <path
-                d="M 50 30 C 50 30, 35 15, 20 30 C 5 45, 20 75, 50 90 C 80 75, 95 45, 80 30 C 65 15, 50 30, 50 30 Z"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="3.5"
+            <div className="w-24 h-24 relative text-[#D9B4B4] animate-bounce duration-[2000ms]">
+              <svg
+                viewBox="0 0 100 100"
+                className="w-full h-full fill-none stroke-current"
+                strokeWidth="3"
                 strokeLinecap="round"
-                strokeDasharray="300"
-                strokeDashoffset="300"
-                className="animate-draw-path"
-              />
-            </svg>
+                strokeLinejoin="round"
+              >
+                {/* Ears */}
+                <path d="M 40 42 C 37 28, 28 12, 33 8 C 38 4, 45 18, 43 38" />
+                <path d="M 45 39 C 47 24, 53 8, 57 10 C 61 12, 55 28, 51 41" />
+                {/* Head & Face */}
+                <path d="M 36 48 C 28 48, 26 56, 32 62 C 36 66, 46 66, 50 62 C 56 56, 54 48, 48 48" />
+                {/* Eyes */}
+                <circle cx="37" cy="53" r="1.5" fill="currentColor" stroke="none" />
+                <circle cx="45" cy="53" r="1.5" fill="currentColor" stroke="none" />
+                {/* Nose/Mouth */}
+                <path d="M 41 57 L 41.5 58 L 42 57" />
+                <path d="M 39 60 C 40.5 61.5, 41.5 60.5, 41.5 60 C 41.5 60.5, 42.5 61.5, 44 60" />
+                {/* Body */}
+                <path d="M 38 64 C 30 68, 25 78, 28 88 C 30 90, 40 90, 45 90" />
+                {/* Waving left arm */}
+                <path
+                  d="M 32 66 C 24 62, 18 50, 22 46 C 26 42, 28 54, 32 60"
+                  className="origin-[32px_66px] animate-[wavePaw_1.6s_infinite_ease-in-out]"
+                />
+                {/* Resting right arm */}
+                <path d="M 44 66 C 48 68, 52 74, 50 78 C 48 82, 44 76, 42 70" />
+                {/* Paws */}
+                <path d="M 36 90 Q 38 84 40 90" />
+                <path d="M 44 90 Q 46 84 48 90" />
+                <path d="M 52 90 Q 54 84 56 90" />
+                {/* Back & Tail */}
+                <path d="M 48 64 C 56 68, 66 74, 66 84 C 66 88, 62 90, 53 90" />
+                <path d="M 66 82 C 70 82, 72 86, 68 88 C 66 89, 65 85, 66 82" />
+              </svg>
+            </div>
             <span className="text-xl font-bold tracking-widest text-[#FEF9F6] mt-4 uppercase animate-pulse">
               CrochetCreation
             </span>
