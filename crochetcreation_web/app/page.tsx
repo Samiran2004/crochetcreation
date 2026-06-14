@@ -16,7 +16,10 @@ import {
   ChevronRight,
   ArrowRight,
   Menu,
-  X
+  X,
+  User,
+  Lock,
+  LogOut
 } from 'lucide-react';
 
 // Local image assets — copied directly into public/assets/
@@ -50,6 +53,119 @@ export default function CrochetCreationPage() {
   const [loading, setLoading] = useState(true);
   const [selectedTexture, setSelectedTexture] = useState<string | null>(null);
   const [productsList, setProductsList] = useState<any[]>([]);
+
+  // Auth states
+  const [token, setToken] = useState<string | null>(null);
+  const [userProfile, setUserProfile] = useState<any | null>(null);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+  const [authFormData, setAuthFormData] = useState({
+    first_name: '',
+    last_name: '',
+    email: '',
+    mobile: '',
+    password: ''
+  });
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [authSuccessMsg, setAuthSuccessMsg] = useState<string | null>(null);
+  const [authLoading, setAuthLoading] = useState(false);
+
+  // Sync token and user profile on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedToken = localStorage.getItem('token');
+      const savedUser = localStorage.getItem('user');
+      if (savedToken) setToken(savedToken);
+      if (savedUser) {
+        try {
+          setUserProfile(JSON.parse(savedUser));
+        } catch (e) {
+          console.error("Failed to parse user profile:", e);
+        }
+      }
+    }
+  }, []);
+
+  const handleAuthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setAuthFormData(prev => ({
+      ...prev,
+      [e.target.name]: e.target.value
+    }));
+  };
+
+  const handleAuthSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError(null);
+    setAuthSuccessMsg(null);
+    setAuthLoading(true);
+
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://crochetcreation.onrender.com';
+
+    try {
+      if (authMode === 'register') {
+        const res = await fetch(`${apiUrl}/api/auth/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            first_name: authFormData.first_name,
+            last_name: authFormData.last_name,
+            email: authFormData.email,
+            mobile: authFormData.mobile,
+            password: authFormData.password
+          })
+        });
+
+        if (!res.ok) {
+          const errData = await res.json();
+          throw new Error(errData.detail || 'Registration failed. Please check inputs.');
+        }
+
+        setAuthSuccessMsg("Account created! Please log in.");
+        setAuthMode('login');
+        setAuthFormData(prev => ({ ...prev, password: '' }));
+      } else {
+        const bodyData = new URLSearchParams();
+        bodyData.append('username', authFormData.email);
+        bodyData.append('password', authFormData.password);
+
+        const res = await fetch(`${apiUrl}/api/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: bodyData.toString()
+        });
+
+        if (!res.ok) {
+          const errData = await res.json();
+          throw new Error(errData.detail || 'Incorrect email/mobile or password.');
+        }
+
+        const data = await res.json();
+        setToken(data.access_token);
+        localStorage.setItem('token', data.access_token);
+
+        const userObj = data.user || {
+          email: authFormData.email,
+          first_name: authFormData.email.split('@')[0]
+        };
+        setUserProfile(userObj);
+        localStorage.setItem('user', JSON.stringify(userObj));
+
+        setAuthModalOpen(false);
+        setAuthFormData({ first_name: '', last_name: '', email: '', mobile: '', password: '' });
+      }
+    } catch (err: any) {
+      setAuthError(err.message || 'Something went wrong.');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleLogout = () => {
+    setToken(null);
+    setUserProfile(null);
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+  };
 
   const defaultProducts = useMemo(() => [
     {
@@ -473,6 +589,33 @@ export default function CrochetCreationPage() {
               <Search className="w-4 h-4" />
             </button>
             <span className="text-stone-400">|</span>
+            {/* User Profile / Auth Button */}
+            {token && userProfile ? (
+              <div className="flex items-center gap-1.5 text-stone-250 transition-colors">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-stone-300">Hi, {userProfile.first_name}</span>
+                <button
+                  onClick={handleLogout}
+                  title="Logout"
+                  className="hover:text-[#D9B4B4] transition-colors p-1"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => {
+                  setAuthError(null);
+                  setAuthSuccessMsg(null);
+                  setAuthModalOpen(true);
+                }}
+                title="Login / Register"
+                className="hover:text-[#D9B4B4] transition-colors p-1 flex items-center gap-1"
+              >
+                <User className="w-4 h-4" />
+                <span className="text-[10px] font-bold">LOGIN</span>
+              </button>
+            )}
+            <span className="text-stone-400">|</span>
             {/* Color Palette Customizer */}
             <div className="flex items-center gap-1.5 ml-1">
               <button
@@ -531,6 +674,36 @@ export default function CrochetCreationPage() {
               </div>
               <span>|</span>
               <Search className="w-4 h-4" />
+              <span>|</span>
+              {token && userProfile ? (
+                <div className="flex items-center gap-1.5 text-stone-250 transition-colors">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-stone-300">Hi, {userProfile.first_name}</span>
+                  <button
+                    onClick={() => {
+                      handleLogout();
+                      setIsMenuOpen(false);
+                    }}
+                    title="Logout"
+                    className="hover:text-[#D9B4B4] transition-colors p-1"
+                  >
+                    <LogOut className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => {
+                    setAuthError(null);
+                    setAuthSuccessMsg(null);
+                    setAuthModalOpen(true);
+                    setIsMenuOpen(false);
+                  }}
+                  title="Login / Register"
+                  className="hover:text-[#D9B4B4] transition-colors p-1 flex items-center gap-1"
+                >
+                  <User className="w-4 h-4" />
+                  <span className="text-[10px] font-bold">LOGIN</span>
+                </button>
+              )}
             </div>
             {/* Mobile Color Palette Customizer */}
             <div className="flex items-center justify-center gap-3 pt-3 border-t border-[#FEF9F6]/10 text-[#FEF9F6]">
@@ -1412,6 +1585,155 @@ export default function CrochetCreationPage() {
                 </button>
               </form>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Interactive Login/Registration Modal */}
+      {authModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-950/70 backdrop-blur-sm">
+          <div className="bg-[#FEF9F6] border border-[#EADBDB] rounded-3xl max-w-md w-full p-8 shadow-2xl relative animate-scale-in">
+            <button
+              onClick={() => setAuthModalOpen(false)}
+              className="absolute top-4 right-4 text-stone-500 hover:text-stone-800 p-1 text-sm font-bold"
+            >
+              ✕
+            </button>
+            <div className="text-center space-y-2 mb-6">
+              <div className="w-12 h-12 rounded-full bg-[#D9B4B4]/20 flex items-center justify-center mx-auto text-[#D9B4B4]">
+                <User className="w-6 h-6" />
+              </div>
+              <h3 className="text-xl font-bold text-[#6B5656]">Crochet Account</h3>
+              <p className="text-xs text-stone-500">Access your custom orders and exclusive patterns.</p>
+            </div>
+
+            {/* Tab Swapper */}
+            <div className="flex border-b border-[#EADBDB] mb-6">
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode('login');
+                  setAuthError(null);
+                  setAuthSuccessMsg(null);
+                }}
+                className={`flex-1 pb-3 text-xs font-black tracking-widest uppercase text-center transition-colors ${authMode === 'login' ? 'border-b-2 border-[#6B5656] text-[#6B5656]' : 'text-stone-400 hover:text-stone-600'}`}
+              >
+                Login
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode('register');
+                  setAuthError(null);
+                  setAuthSuccessMsg(null);
+                }}
+                className={`flex-1 pb-3 text-xs font-black tracking-widest uppercase text-center transition-colors ${authMode === 'register' ? 'border-b-2 border-[#6B5656] text-[#6B5656]' : 'text-stone-400 hover:text-stone-600'}`}
+              >
+                Register
+              </button>
+            </div>
+
+            {authError && (
+              <div className="mb-4 p-3 bg-rose-50 border border-rose-100 text-rose-700 text-xs rounded-xl font-medium">
+                ⚠️ {authError}
+              </div>
+            )}
+
+            {authSuccessMsg && (
+              <div className="mb-4 p-3 bg-emerald-50 border border-emerald-100 text-emerald-700 text-xs rounded-xl font-medium">
+                ✨ {authSuccessMsg}
+              </div>
+            )}
+
+            <form onSubmit={handleAuthSubmit} className="space-y-4">
+              {authMode === 'register' ? (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">First Name</label>
+                      <input
+                        type="text"
+                        name="first_name"
+                        required
+                        value={authFormData.first_name}
+                        onChange={handleAuthChange}
+                        placeholder="John"
+                        className="w-full bg-stone-50 border border-stone-200 px-4 py-2.5 rounded-xl text-sm focus:outline-none focus:border-[#D9B4B4] text-stone-850"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Last Name</label>
+                      <input
+                        type="text"
+                        name="last_name"
+                        required
+                        value={authFormData.last_name}
+                        onChange={handleAuthChange}
+                        placeholder="Doe"
+                        className="w-full bg-stone-50 border border-stone-200 px-4 py-2.5 rounded-xl text-sm focus:outline-none focus:border-[#D9B4B4] text-stone-850"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Mobile Number</label>
+                    <input
+                      type="tel"
+                      name="mobile"
+                      required
+                      value={authFormData.mobile}
+                      onChange={handleAuthChange}
+                      placeholder="+15550000000"
+                      className="w-full bg-stone-50 border border-stone-200 px-4 py-2.5 rounded-xl text-sm focus:outline-none focus:border-[#D9B4B4] text-stone-850"
+                    />
+                  </div>
+                </>
+              ) : null}
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">
+                  {authMode === 'login' ? 'Email or Mobile Number' : 'Email Address'}
+                </label>
+                <input
+                  type={authMode === 'login' ? 'text' : 'email'}
+                  name="email"
+                  required
+                  value={authFormData.email}
+                  onChange={handleAuthChange}
+                  placeholder={authMode === 'login' ? 'name@domain.com or +15550000000' : 'name@domain.com'}
+                  className="w-full bg-stone-50 border border-stone-200 px-4 py-2.5 rounded-xl text-sm focus:outline-none focus:border-[#D9B4B4] text-stone-850"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Password</label>
+                <input
+                  type="password"
+                  name="password"
+                  required
+                  value={authFormData.password}
+                  onChange={handleAuthChange}
+                  placeholder="••••••••"
+                  className="w-full bg-stone-50 border border-stone-200 px-4 py-2.5 rounded-xl text-sm focus:outline-none focus:border-[#D9B4B4] text-stone-850"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={authLoading}
+                className="w-full bg-[#6B5656] hover:bg-[#D9B4B4] hover:text-[#6B5656] text-white font-bold py-3.5 rounded-xl text-xs tracking-widest uppercase mt-4 transition-all duration-350 active:scale-95 shadow-md flex items-center justify-center gap-2"
+              >
+                {authLoading ? (
+                  <>
+                    <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                    Processing...
+                  </>
+                ) : authMode === 'login' ? (
+                  'Sign In'
+                ) : (
+                  'Create Account'
+                )}
+              </button>
+            </form>
           </div>
         </div>
       )}

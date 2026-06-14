@@ -11,5 +11,9 @@ class Settings:
     CLOUDINARY_CLOUD_NAME: str = os.getenv("CLOUDINARY_CLOUD_NAME", "")
     CLOUDINARY_API_KEY: str = os.getenv("CLOUDINARY_API_KEY", "")
     CLOUDINARY_API_SECRET: str = os.getenv("CLOUDINARY_API_SECRET", "")
+    
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "7b0d77be361fcd68169992fbb9a1a8c0d9a6c9cf1c26b3c9597282672323f46f")
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
 
 settings = Settings()
