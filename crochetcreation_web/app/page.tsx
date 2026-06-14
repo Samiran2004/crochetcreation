@@ -311,7 +311,7 @@ export default function CrochetCreationPage() {
               </svg>
             </div>
             <span className="text-xl font-bold tracking-widest text-[#FEF9F6] mt-4 uppercase animate-pulse">
-              CrochetCreation
+              Crochet Creation
             </span>
             <span className="text-[10px] tracking-widest text-[#D9B4B4] uppercase mt-1">
               Knitting with love...
@@ -377,14 +377,14 @@ export default function CrochetCreationPage() {
             <div className="relative w-9 h-9 rounded-full overflow-hidden border border-[#D9B4B4]/30 shadow-sm bg-white flex-shrink-0 group-hover:rotate-12 group-hover:scale-105 transition-all duration-300">
               <Image
                 src={IMAGES.logo}
-                alt="CrochetCreation Logo"
+                alt="Crochet Creation Logo"
                 fill
                 sizes="36px"
                 className="object-cover"
               />
             </div>
             <span className="text-xl md:text-2xl font-bold tracking-widest text-[#FEF9F6] font-display">
-              CrochetCreation
+              Crochet Creation
             </span>
           </div>
 
@@ -501,7 +501,7 @@ export default function CrochetCreationPage() {
       </header>
 
       {/* 1. Header/Hero Panel (Dark Textured #6B5656) */}
-      <section className="relative lg:sticky lg:top-0 z-0 bg-crochet-charcoal text-[#FEF9F6] pt-24 pb-20 overflow-hidden h-[90vh] min-h-[700px] w-full flex flex-col justify-between">
+      <section id="home" className="relative lg:sticky lg:top-0 z-0 bg-crochet-charcoal text-[#FEF9F6] pt-24 pb-20 overflow-hidden h-[90vh] min-h-[700px] w-full flex flex-col justify-between scroll-mt-28">
 
         {/* Parallax inner wrapper */}
         <div
@@ -877,7 +877,7 @@ export default function CrochetCreationPage() {
         </div>
 
         {/* 2. Value Proposition (Cream Background) */}
-        <section className="py-20 md:py-28 pl-14 pr-6 md:px-12 bg-[#FEF9F6] border-b border-[#EADBDB]/50">
+        <section id="elements" className="py-20 md:py-28 pl-14 pr-6 md:px-12 bg-[#FEF9F6] border-b border-[#EADBDB]/50 scroll-mt-28">
           <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-y-16 gap-x-12">
 
             {/* Card 1 */}
@@ -938,7 +938,7 @@ export default function CrochetCreationPage() {
         </section>
 
         {/* 3. "Buy A Finished Product" Section */}
-        <section id="shop" className="py-20 pl-14 pr-6 md:px-12 max-w-7xl mx-auto w-full">
+        <section id="shop" className="py-20 pl-14 pr-6 md:px-12 max-w-7xl mx-auto w-full scroll-mt-28">
 
           {/* Title row */}
           <div className="flex items-center justify-between mb-8 border-b border-[#EADBDB] pb-4">
@@ -956,8 +956,8 @@ export default function CrochetCreationPage() {
                   key={filter}
                   onClick={() => setActiveFilter(filter)}
                   className={`text-[10px] font-black uppercase tracking-widest transition-all px-3 py-1 rounded ${activeFilter === filter
-                      ? 'bg-[#6B5656] text-[#FEF9F6] shadow-sm'
-                      : 'text-[#6B5656] hover:text-black'
+                    ? 'bg-[#6B5656] text-[#FEF9F6] shadow-sm'
+                    : 'text-[#6B5656] hover:text-black'
                     }`}
                 >
                   {filter}
@@ -1088,7 +1088,7 @@ export default function CrochetCreationPage() {
         </section>
 
         {/* 4. "Do It Yourself" (DIY) Section */}
-        <section className="py-12 bg-stone-100/30 border-y border-[#EADBDB]/30">
+        <section id="blog" className="py-12 bg-stone-100/30 border-y border-[#EADBDB]/30 scroll-mt-28">
           <div className="max-w-7xl mx-auto pl-14 pr-6 md:px-12 grid grid-cols-1 md:grid-cols-2 gap-8">
 
             {/* Left Column Block */}
@@ -1121,7 +1121,7 @@ export default function CrochetCreationPage() {
               </div>
               {/* Bottom: Wood textured decorative bar */}
               <div className="bg-crochet-wood h-14 flex items-center justify-center border-t border-stone-800">
-                <span className="text-[10px] uppercase font-bold tracking-widest text-amber-200/50">CROCHETCREATION WORKSHOP</span>
+                <span className="text-[10px] uppercase font-bold tracking-widest text-amber-200/50">Crochet Creation WORKSHOP</span>
               </div>
             </div>
 
@@ -1138,10 +1138,10 @@ export default function CrochetCreationPage() {
               {/* Hover Dark Text Overlay at Bottom */}
               <div className="absolute bottom-0 left-0 w-full bg-crochet-charcoal/95 text-[#FEF9F6] p-6 border-t border-[#D9B4B4]/20 flex items-center justify-between">
                 <div className="space-y-1">
-                  <span className="text-[8px] font-black tracking-wider uppercase text-[#D9B4B4]">LEARN FROM CROCHETCREATION</span>
+                  <span className="text-[8px] font-black tracking-wider uppercase text-[#D9B4B4]">LEARN FROM Crochet Creation</span>
                   <p className="text-xs text-stone-300">Discover masterclasses for all experience levels.</p>
                 </div>
-                <a href="#about" className="text-xs font-black uppercase tracking-widest text-[#D9B4B4] hover:text-[#FEF9F6] flex items-center gap-1 transition-colors">
+                <a href="#pages" className="text-xs font-black uppercase tracking-widest text-[#D9B4B4] hover:text-[#FEF9F6] flex items-center gap-1 transition-colors">
                   SEE MORE <ChevronRight className="w-4 h-4" />
                 </a>
               </div>
@@ -1151,7 +1151,7 @@ export default function CrochetCreationPage() {
         </section>
 
         {/* 5. "Crochet and Hand Knitting" Section */}
-        <section id="about" className="py-24 pl-14 pr-6 md:px-12 max-w-7xl mx-auto w-full">
+        <section id="pages" className="py-24 pl-14 pr-6 md:px-12 max-w-7xl mx-auto w-full scroll-mt-28">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
 
             {/* Left Column (Text & Buttons) */}
@@ -1210,7 +1210,7 @@ export default function CrochetCreationPage() {
               <div className="space-y-8 bg-white p-8 rounded-2xl border border-[#EADBDB]/60 shadow-sm leading-relaxed text-stone-600">
                 <div className="space-y-4">
                   <h4 className="text-lg font-bold text-[#6B5656] flex items-center gap-2">
-                    <span className="w-6 h-0.5 bg-[#D9B4B4]"></span> Hi, Welcome to CrochetCreation
+                    <span className="w-6 h-0.5 bg-[#D9B4B4]"></span> Hi, Welcome to Crochet Creation
                   </h4>
                   <p className="text-sm">
                     I Started Crocheting In My First Year. Then, In Parallel With My Basic Education, I Received A Second Higher Education. And In The Break Between Classes I Managed To Go To Knitting Courses. I Devoted Two Years To The Courses, After Which I Was Given A Certificate. But I Learned The Simplest Things There - Hold The Hook, Learned The Types Of Loops, Read The Diagrams.
@@ -1229,7 +1229,7 @@ export default function CrochetCreationPage() {
         </section>
 
         {/* 6. Customer Reviews (Knit Textured Background) */}
-        <section className="relative py-24 overflow-hidden text-center">
+        <section id="portfolio" className="relative py-24 overflow-hidden text-center scroll-mt-28">
           {/* Full Knit Background */}
           <div className="absolute inset-0 z-0">
             <Image
@@ -1291,14 +1291,14 @@ export default function CrochetCreationPage() {
                 <div className="relative w-8 h-8 rounded-full overflow-hidden border border-[#D9B4B4]/30 shadow-sm bg-white flex-shrink-0">
                   <Image
                     src={IMAGES.logo}
-                    alt="CrochetCreation Logo"
+                    alt="Crochet Creation Logo"
                     fill
                     sizes="32px"
                     className="object-cover"
                   />
                 </div>
                 <span className="text-xl font-bold tracking-widest text-[#FEF9F6]">
-                  CrochetCreation
+                  Crochet Creation
                 </span>
               </div>
               <p className="text-sm font-light text-stone-300 max-w-xl leading-relaxed">
@@ -1338,7 +1338,7 @@ export default function CrochetCreationPage() {
                     className="object-cover"
                   />
                 </div>
-                <span className="text-[10px] font-black tracking-widest text-[#D9B4B4] uppercase">CROCHETCREATION HANDMADE</span>
+                <span className="text-[10px] font-black tracking-widest text-[#D9B4B4] uppercase">Crochet Creation HANDMADE</span>
               </div>
 
             </div>
@@ -1346,7 +1346,7 @@ export default function CrochetCreationPage() {
 
           {/* Footer legal bar */}
           <div className="max-w-7xl mx-auto pl-14 pr-6 md:px-12 border-t border-[#FEF9F6]/10 mt-12 pt-8 flex flex-col md:flex-row items-center justify-between text-[10px] text-stone-400 font-bold uppercase tracking-wider gap-4">
-            <span>© 2026 CrochetCreation Studio. All Rights Reserved.</span>
+            <span>© 2026 Crochet Creation Studio. All Rights Reserved.</span>
             <div className="flex items-center gap-2">
               <span>THANK YOU FOR WATCHING</span>
               <span className="text-rose-400">❤</span>
@@ -1368,7 +1368,7 @@ export default function CrochetCreationPage() {
             <div className="text-center space-y-2 mb-6">
               <span className="text-3xl">🎨</span>
               <h3 className="text-xl font-bold text-[#6B5656]">Request Custom Knits</h3>
-              <p className="text-xs text-stone-500">Provide details and CrochetCreation will contact you directly.</p>
+              <p className="text-xs text-stone-500">Provide details and Crochet Creation will contact you directly.</p>
             </div>
 
             {requestSubmitted ? (

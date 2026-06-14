@@ -2,7 +2,7 @@ import './globals.css';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'CrochetCreation | Handcrafted Knitwear & Crochet Studio',
+  title: 'Crochet Creation | Handcrafted Knitwear & Crochet Studio',
   description: 'A modern, feminine, artisanal e-commerce shop featuring bespoke crochet plushies, cozy apparel, and DIY masterclasses.',
 };
 

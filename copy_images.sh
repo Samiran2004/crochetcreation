@@ -1,8 +1,8 @@
 #!/bin/bash
 # Script to copy generated image assets into Next.js public/assets folder
-# Run this from the repository root (e.g. /home/samiransamanta/Projects/crochetcreation)
+# Run this from the repository root (e.g. /home/samiransamanta/Projects/Crochet Creation)
 
-ASSETS_DIR="crochetcreation_web/public/assets"
+ASSETS_DIR="Crochet Creation_web/public/assets"
 mkdir -p "$ASSETS_DIR"
 
 echo "Copying generated image assets into $ASSETS_DIR..."
