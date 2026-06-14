@@ -35,6 +35,16 @@ const IMAGES = {
 
 
 export default function CrochetCreationPage() {
+  const API_URL = useMemo(() => {
+    if (process.env.NEXT_PUBLIC_API_URL) {
+      return process.env.NEXT_PUBLIC_API_URL;
+    }
+    if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+      return 'http://localhost:8000';
+    }
+    return 'https://crochetcreation.onrender.com';
+  }, []);
+
   const [activeFilter, setActiveFilter] = useState('TOYS');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [customRequestModal, setCustomRequestModal] = useState(false);
@@ -99,7 +109,7 @@ export default function CrochetCreationPage() {
     setAuthSuccessMsg(null);
     setAuthLoading(true);
 
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://crochetcreation.onrender.com';
+    const apiUrl = API_URL;
 
     try {
       if (authMode === 'register') {
@@ -200,7 +210,7 @@ export default function CrochetCreationPage() {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://crochetcreation.onrender.com'}/api/products`);
+        const res = await fetch(`${API_URL}/api/products`);
         if (res.ok) {
           const data = await res.json();
           if (Array.isArray(data) && data.length > 0) {
