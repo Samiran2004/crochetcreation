@@ -37,6 +37,7 @@ async def register(user_in: UserCreate):
     # Prepare document for insertion
     user_dict = user_in.model_dump(exclude={"password"})
     user_dict["hashed_password"] = hashed_password
+    user_dict["is_admin"] = False
 
     # Insert document
     result = await db["users"].insert_one(user_dict)
@@ -68,6 +69,8 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    is_admin_user = user_dict.get("is_admin", False)
+
     # Create access token
     access_token = create_access_token(subject=user_dict["email"])
     return {
@@ -76,6 +79,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
         "user": {
             "email": user_dict["email"],
             "first_name": user_dict["first_name"],
-            "last_name": user_dict["last_name"]
+            "last_name": user_dict["last_name"],
+            "is_admin": is_admin_user
         }
     }

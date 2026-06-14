@@ -9,6 +9,7 @@ class UserBase(BaseModel):
     last_name: str = Field(..., min_length=1)
     email: EmailStr
     mobile: str = Field(..., min_length=1)
+    is_admin: bool = False
 
     @field_validator("mobile")
     @classmethod

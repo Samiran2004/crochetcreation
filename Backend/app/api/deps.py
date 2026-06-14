@@ -33,3 +33,11 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> UserInDB:
         raise credentials_exception
         
     return UserInDB(**user_dict)
+
+async def get_current_admin_user(current_user: UserInDB = Depends(get_current_user)) -> UserInDB:
+    if not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have administrative permissions to perform this action."
+        )
+    return current_user

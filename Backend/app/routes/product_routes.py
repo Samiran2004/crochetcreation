@@ -1,8 +1,11 @@
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException, status
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, status, Depends
 from typing import List
 from app.models.product import ProductModel
 from app.services.cloudinary_upload import upload_image_to_cloudinary
 from app.core.db import get_database
+from app.api.deps import get_current_admin_user
+from app.models.user import UserInDB
+from bson import ObjectId
 
 router = APIRouter(prefix="/api/products", tags=["products"])
 
@@ -12,7 +15,8 @@ async def create_product(
     description: str = Form(...),
     price: float = Form(...),
     category: str = Form(...),
-    image: UploadFile = File(...)
+    image: UploadFile = File(...),
+    current_admin: UserInDB = Depends(get_current_admin_user)
 ):
     try:
         # Upload image to Cloudinary
@@ -53,7 +57,7 @@ async def get_products():
         db = get_database()
         if db is None:
             raise HTTPException(
-                status_code=status.HTTP_530_SERVICE_UNAVAILABLE,
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Database connection is not initialized."
             )
             
@@ -65,4 +69,83 @@ async def get_products():
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to fetch products: {str(e)}"
+        )
+
+@router.put("/{product_id}", response_model=ProductModel)
+async def update_product(
+    product_id: str,
+    title: str = Form(None),
+    description: str = Form(None),
+    price: float = Form(None),
+    category: str = Form(None),
+    image: UploadFile = File(None),
+    current_admin: UserInDB = Depends(get_current_admin_user)
+):
+    db = get_database()
+    if db is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database connection is not initialized."
+        )
+        
+    try:
+        # Check if product exists
+        existing_product = await db["products"].find_one({"_id": ObjectId(product_id)})
+        if not existing_product:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Product not found"
+            )
+            
+        update_data = {}
+        if title is not None:
+            update_data["title"] = title
+        if description is not None:
+            update_data["description"] = description
+        if price is not None:
+            update_data["price"] = price
+        if category is not None:
+            update_data["category"] = category
+        if image is not None:
+            image_url = await upload_image_to_cloudinary(image)
+            update_data["image_url"] = image_url
+            
+        if update_data:
+            await db["products"].update_one({"_id": ObjectId(product_id)}, {"$set": update_data})
+            
+        updated_product = await db["products"].find_one({"_id": ObjectId(product_id)})
+        return updated_product
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update product: {str(e)}"
+        )
+
+@router.delete("/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_product(
+    product_id: str,
+    current_admin: UserInDB = Depends(get_current_admin_user)
+):
+    db = get_database()
+    if db is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database connection is not initialized."
+        )
+        
+    try:
+        # Check if product exists and delete it
+        result = await db["products"].delete_one({"_id": ObjectId(product_id)})
+        if result.deleted_count == 0:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Product not found"
+            )
+        return
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete product: {str(e)}"
         )

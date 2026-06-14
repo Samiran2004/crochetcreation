@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import {
   Heart,
   Gift,
@@ -44,6 +45,8 @@ export default function CrochetCreationPage() {
     }
     return 'https://crochetcreation.onrender.com';
   }, []);
+
+  const router = useRouter();
 
   const [activeFilter, setActiveFilter] = useState('TOYS');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -88,13 +91,17 @@ export default function CrochetCreationPage() {
       if (savedToken) setToken(savedToken);
       if (savedUser) {
         try {
-          setUserProfile(JSON.parse(savedUser));
+          const parsedUser = JSON.parse(savedUser);
+          setUserProfile(parsedUser);
+          if (parsedUser.is_admin) {
+            router.push('/admin/dashboard');
+          }
         } catch (e) {
           console.error("Failed to parse user profile:", e);
         }
       }
     }
-  }, []);
+  }, [router]);
 
   const handleAuthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setAuthFormData(prev => ({
@@ -155,13 +162,18 @@ export default function CrochetCreationPage() {
 
         const userObj = data.user || {
           email: authFormData.email,
-          first_name: authFormData.email.split('@')[0]
+          first_name: authFormData.email.split('@')[0],
+          is_admin: false
         };
         setUserProfile(userObj);
         localStorage.setItem('user', JSON.stringify(userObj));
 
         setAuthModalOpen(false);
         setAuthFormData({ first_name: '', last_name: '', email: '', mobile: '', password: '' });
+
+        if (userObj.is_admin) {
+          router.push('/admin/dashboard');
+        }
       }
     } catch (err: any) {
       setAuthError(err.message || 'Something went wrong.');
@@ -601,7 +613,15 @@ export default function CrochetCreationPage() {
             <span className="text-stone-400">|</span>
             {/* User Profile / Auth Button */}
             {token && userProfile ? (
-              <div className="flex items-center gap-1.5 text-stone-250 transition-colors">
+              <div className="flex items-center gap-2 text-stone-250 transition-colors">
+                {userProfile.is_admin && (
+                  <button
+                    onClick={() => router.push('/admin/dashboard')}
+                    className="mr-1 text-[9px] bg-[#6B5656] hover:bg-[#D9B4B4] hover:text-[#6B5656] text-white px-2 py-1 rounded font-bold uppercase tracking-wider transition-all duration-300"
+                  >
+                    Admin
+                  </button>
+                )}
                 <span className="text-[10px] font-bold uppercase tracking-wider text-stone-300">Hi, {userProfile.first_name}</span>
                 <button
                   onClick={handleLogout}
@@ -686,7 +706,18 @@ export default function CrochetCreationPage() {
               <Search className="w-4 h-4" />
               <span>|</span>
               {token && userProfile ? (
-                <div className="flex items-center gap-1.5 text-stone-250 transition-colors">
+                <div className="flex items-center gap-2 text-stone-250 transition-colors">
+                  {userProfile.is_admin && (
+                    <button
+                      onClick={() => {
+                        router.push('/admin/dashboard');
+                        setIsMenuOpen(false);
+                      }}
+                      className="mr-1 text-[9px] bg-[#6B5656] hover:bg-[#D9B4B4] hover:text-[#6B5656] text-white px-2 py-1 rounded font-bold uppercase tracking-wider transition-all duration-300"
+                    >
+                      Admin
+                    </button>
+                  )}
                   <span className="text-[10px] font-bold uppercase tracking-wider text-stone-300">Hi, {userProfile.first_name}</span>
                   <button
                     onClick={() => {
