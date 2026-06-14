@@ -1033,7 +1033,7 @@ export default function CrochetCreationPage() {
                   <div className="h-64 bg-amber-50/20 relative overflow-hidden group cursor-pointer" onClick={() => setSelectedTexture(IMAGES.knitTexture)}>
                     <Image
                       src={product.image_url || IMAGES.craftingTools}
-                      alt={product.name}
+                      alt={product.title || product.name}
                       fill
                       sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 380px"
                       className="object-cover group-hover:scale-105 transition-transform duration-500"
@@ -1051,7 +1051,7 @@ export default function CrochetCreationPage() {
                   <div className="p-6 flex flex-col justify-between border-t border-[#EADBDB]/50">
                     <div>
                       <span className="text-[9px] font-bold text-[#D9B4B4] uppercase tracking-widest">{product.category}</span>
-                      <h4 className="text-base font-bold text-[#6B5656] mt-1 mb-2">{product.name}</h4>
+                      <h4 className="text-base font-bold text-[#6B5656] mt-1 mb-2">{product.title || product.name}</h4>
                       <p className="text-xs text-stone-500 leading-relaxed">{product.description}</p>
                     </div>
                     <div className="flex items-center justify-between mt-6 pt-4 border-t border-stone-50">
