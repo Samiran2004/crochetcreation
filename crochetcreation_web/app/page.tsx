@@ -49,6 +49,64 @@ export default function CrochetCreationPage() {
   const [cartBouncing, setCartBouncing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selectedTexture, setSelectedTexture] = useState<string | null>(null);
+  const [productsList, setProductsList] = useState<any[]>([]);
+
+  const defaultProducts = useMemo(() => [
+    {
+      _id: '1',
+      category: 'TOYS',
+      name: 'Crochet Teddy Bear Amigurumi',
+      description: 'Handmade with premium cotton yarn, hypoallergenic padding.',
+      price: 24.99,
+      image_url: IMAGES.craftingTools,
+      badge: 'POPULAR'
+    },
+    {
+      _id: '2',
+      category: 'PULLOVERS',
+      name: 'Pastel Cozy Wool Cardigan',
+      description: 'Warm, loose-fit design crafted with soft organic merino wool.',
+      price: 89.00,
+      image_url: IMAGES.stackedSweaters,
+      badge: 'HANDMADE'
+    },
+    {
+      _id: '3',
+      category: 'ACCESSORIES',
+      name: 'Heart Crochet Yarn Basket',
+      description: 'Perfect desktop organizer for your needles, hooks, and yarns.',
+      price: 18.50,
+      image_url: IMAGES.heroYarn,
+      badge: 'NEW RELEASE'
+    }
+  ], []);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://crochetcreation.onrender.com'}/api/products`);
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) {
+            setProductsList(data);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch products:", err);
+      }
+    };
+    fetchProducts();
+  }, []);
+
+  const displayProducts = useMemo(() => {
+    const list = productsList.length > 0 ? productsList : defaultProducts;
+    return list.filter(p => {
+      const cat = (p.category || '').toUpperCase();
+      const filter = activeFilter.toUpperCase();
+      return cat === filter || (filter === 'TOYS' && cat.includes('TOY')) || (filter === 'ACCESSORIES' && cat.includes('ACCESSORY'));
+    });
+  }, [productsList, defaultProducts, activeFilter]);
+
 
   // Theme configuration
   const THEME_COLORS = useMemo(() => ({
@@ -969,121 +1027,52 @@ export default function CrochetCreationPage() {
 
           {/* Product Grid - 3 Columns */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-
-            {/* Product 1 */}
-            <div className="bg-white border border-[#EADBDB] rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group">
-              <div className="h-64 bg-amber-50/20 relative overflow-hidden group cursor-pointer" onClick={() => setSelectedTexture(IMAGES.knitTexture)}>
-                <Image
-                  src={IMAGES.craftingTools}
-                  alt="Knitted Teddy Bear"
-                  fill
-                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 380px"
-                  className="object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                <span className="absolute top-4 left-4 bg-[#D9B4B4] text-[#6B5656] text-[9px] font-black tracking-wider uppercase px-2.5 py-1 rounded-full shadow-sm z-10">
-                  POPULAR
-                </span>
-                <div className="absolute inset-0 bg-[#6B5656]/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center z-10">
-                  <div className="bg-white/95 backdrop-blur-sm text-[#6B5656] text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-full shadow-md transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300 flex items-center gap-1.5">
-                    <Search className="w-3.5 h-3.5 text-[#D9B4B4]" />
-                    View Texture
+            {displayProducts.length > 0 ? (
+              displayProducts.map((product) => (
+                <div key={product._id || product.id} className="bg-white border border-[#EADBDB] rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group">
+                  <div className="h-64 bg-amber-50/20 relative overflow-hidden group cursor-pointer" onClick={() => setSelectedTexture(IMAGES.knitTexture)}>
+                    <Image
+                      src={product.image_url || IMAGES.craftingTools}
+                      alt={product.name}
+                      fill
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 380px"
+                      className="object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <span className="absolute top-4 left-4 bg-[#D9B4B4] text-[#6B5656] text-[9px] font-black tracking-wider uppercase px-2.5 py-1 rounded-full shadow-sm z-10">
+                      {product.badge || 'HANDMADE'}
+                    </span>
+                    <div className="absolute inset-0 bg-[#6B5656]/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center z-10">
+                      <div className="bg-white/95 backdrop-blur-sm text-[#6B5656] text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-full shadow-md transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300 flex items-center gap-1.5">
+                        <Search className="w-3.5 h-3.5 text-[#D9B4B4]" />
+                        View Texture
+                      </div>
+                    </div>
+                  </div>
+                  <div className="p-6 flex flex-col justify-between border-t border-[#EADBDB]/50">
+                    <div>
+                      <span className="text-[9px] font-bold text-[#D9B4B4] uppercase tracking-widest">{product.category}</span>
+                      <h4 className="text-base font-bold text-[#6B5656] mt-1 mb-2">{product.name}</h4>
+                      <p className="text-xs text-stone-500 leading-relaxed">{product.description}</p>
+                    </div>
+                    <div className="flex items-center justify-between mt-6 pt-4 border-t border-stone-50">
+                      <span className="text-lg font-black text-[#6B5656]">${typeof product.price === 'number' ? product.price.toFixed(2) : product.price}</span>
+                      <button
+                        onClick={handleAddToCart}
+                        className="bg-[#6B5656] hover:bg-[#D9B4B4] hover:text-[#6B5656] text-white p-2.5 rounded-full transition-colors active:scale-95 shadow"
+                      >
+                        <ShoppingBag className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
+              ))
+            ) : (
+              <div className="col-span-full py-12 flex flex-col items-center justify-center bg-white border border-dashed border-[#EADBDB] rounded-2xl text-center">
+                <Scissors className="w-8 h-8 text-[#D9B4B4] mb-3 animate-bounce" />
+                <h4 className="text-base font-bold text-[#6B5656] mb-1">No products found in this category</h4>
+                <p className="text-xs text-stone-500">Add products using the backend API to see them here.</p>
               </div>
-              <div className="p-6 flex flex-col justify-between border-t border-[#EADBDB]/50">
-                <div>
-                  <span className="text-[9px] font-bold text-[#D9B4B4] uppercase tracking-widest">TOYS</span>
-                  <h4 className="text-base font-bold text-[#6B5656] mt-1 mb-2">Crochet Teddy Bear Amigurumi</h4>
-                  <p className="text-xs text-stone-500 leading-relaxed">Handmade with premium cotton yarn, hypoallergenic padding.</p>
-                </div>
-                <div className="flex items-center justify-between mt-6 pt-4 border-t border-stone-50">
-                  <span className="text-lg font-black text-[#6B5656]">$24.99</span>
-                  <button
-                    onClick={handleAddToCart}
-                    className="bg-[#6B5656] hover:bg-[#D9B4B4] hover:text-[#6B5656] text-white p-2.5 rounded-full transition-colors active:scale-95 shadow"
-                  >
-                    <ShoppingBag className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Product 2 */}
-            <div className="bg-white border border-[#EADBDB] rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group">
-              <div className="h-64 bg-amber-50/20 relative overflow-hidden group cursor-pointer" onClick={() => setSelectedTexture(IMAGES.knitTexture)}>
-                <Image
-                  src={IMAGES.stackedSweaters}
-                  alt="Pastel Sweaters"
-                  fill
-                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 380px"
-                  className="object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                <span className="absolute top-4 left-4 bg-[#6B5656] text-[#FEF9F6] text-[9px] font-black tracking-wider uppercase px-2.5 py-1 rounded-full shadow-sm z-10">
-                  HANDMADE
-                </span>
-                <div className="absolute inset-0 bg-[#6B5656]/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center z-10">
-                  <div className="bg-white/95 backdrop-blur-sm text-[#6B5656] text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-full shadow-md transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300 flex items-center gap-1.5">
-                    <Search className="w-3.5 h-3.5 text-[#D9B4B4]" />
-                    View Texture
-                  </div>
-                </div>
-              </div>
-              <div className="p-6 flex flex-col justify-between border-t border-[#EADBDB]/50">
-                <div>
-                  <span className="text-[9px] font-bold text-[#D9B4B4] uppercase tracking-widest">PULLOVERS</span>
-                  <h4 className="text-base font-bold text-[#6B5656] mt-1 mb-2">Pastel Cozy Wool Cardigan</h4>
-                  <p className="text-xs text-stone-500 leading-relaxed">Warm, loose-fit design crafted with soft organic merino wool.</p>
-                </div>
-                <div className="flex items-center justify-between mt-6 pt-4 border-t border-stone-50">
-                  <span className="text-lg font-black text-[#6B5656]">$89.00</span>
-                  <button
-                    onClick={handleAddToCart}
-                    className="bg-[#6B5656] hover:bg-[#D9B4B4] hover:text-[#6B5656] text-white p-2.5 rounded-full transition-colors active:scale-95 shadow"
-                  >
-                    <ShoppingBag className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Product 3 */}
-            <div className="bg-white border border-[#EADBDB] rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group">
-              <div className="h-64 bg-amber-50/20 relative overflow-hidden group cursor-pointer" onClick={() => setSelectedTexture(IMAGES.knitTexture)}>
-                <Image
-                  src={IMAGES.heroYarn}
-                  alt="Heart Yarn Ball"
-                  fill
-                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 380px"
-                  className="object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                <span className="absolute top-4 left-4 bg-[#D9B4B4] text-[#6B5656] text-[9px] font-black tracking-wider uppercase px-2.5 py-1 rounded-full shadow-sm z-10">
-                  NEW RELEASE
-                </span>
-                <div className="absolute inset-0 bg-[#6B5656]/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center z-10">
-                  <div className="bg-white/95 backdrop-blur-sm text-[#6B5656] text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-full shadow-md transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300 flex items-center gap-1.5">
-                    <Search className="w-3.5 h-3.5 text-[#D9B4B4]" />
-                    View Texture
-                  </div>
-                </div>
-              </div>
-              <div className="p-6 flex flex-col justify-between border-t border-[#EADBDB]/50">
-                <div>
-                  <span className="text-[9px] font-bold text-[#D9B4B4] uppercase tracking-widest">ACCESSORIES</span>
-                  <h4 className="text-base font-bold text-[#6B5656] mt-1 mb-2">Heart Crochet Yarn Basket</h4>
-                  <p className="text-xs text-stone-500 leading-relaxed">Perfect desktop organizer for your needles, hooks, and yarns.</p>
-                </div>
-                <div className="flex items-center justify-between mt-6 pt-4 border-t border-stone-50">
-                  <span className="text-lg font-black text-[#6B5656]">$18.50</span>
-                  <button
-                    onClick={handleAddToCart}
-                    className="bg-[#6B5656] hover:bg-[#D9B4B4] hover:text-[#6B5656] text-white p-2.5 rounded-full transition-colors active:scale-95 shadow"
-                  >
-                    <ShoppingBag className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
-
+            )}
           </div>
         </section>
 
