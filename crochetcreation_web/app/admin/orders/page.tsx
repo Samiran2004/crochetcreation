@@ -1,6 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+export const dynamic = 'force-dynamic';
+
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   ShoppingBag, 
   Clock, 
@@ -9,40 +11,131 @@ import {
   Search,
   Eye,
   Filter,
-  RefreshCw
+  RefreshCw,
+  Phone
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 interface Order {
   id: string;
   customer: string;
   email: string;
+  mobile: string;
   items: string;
-  amount: string;
+  amount: number;
   date: string;
   status: 'Delivered' | 'Pending' | 'Processing' | 'Cancelled';
   payment: string;
+  rawItems: any[];
 }
 
 export default function AdminOrders() {
+  const router = useRouter();
   const [filter, setFilter] = useState<'All' | 'Pending' | 'Processing' | 'Delivered' | 'Cancelled'>('All');
   const [searchQuery, setSearchQuery] = useState('');
-  
-  const initialOrders: Order[] = [
-    { id: 'ORD-9831', customer: 'Anuradha Roy', email: 'anuradha@gmail.com', items: 'Crochet Teddy Bear (1)', amount: '₹1,999.00', date: '2026-06-14 20:15', status: 'Delivered', payment: 'UPI' },
-    { id: 'ORD-9830', customer: 'Sayan Banerjee', email: 'sayan.b@yahoo.com', items: 'Warm Woolen Scarf (1), Coasters (4)', amount: '₹2,450.00', date: '2026-06-14 18:30', status: 'Pending', payment: 'Cash on Delivery' },
-    { id: 'ORD-9829', customer: 'Priyanka Das', email: 'das.priyanka@gmail.com', items: 'Crochet Hanging Planter (2)', amount: '₹1,299.00', date: '2026-06-14 15:45', status: 'Processing', payment: 'Card' },
-    { id: 'ORD-9828', customer: 'Rahul Sharma', email: 'rahul.sharma@outlook.com', items: 'Amigurumi Keychain Set (3)', amount: '₹899.00', date: '2026-06-13 11:20', status: 'Delivered', payment: 'UPI' },
-    { id: 'ORD-9827', customer: 'Nandini Sen', email: 'sen.nandini@gmail.com', items: 'Knitted Baby Blanket (1)', amount: '₹3,200.00', date: '2026-06-12 09:10', status: 'Delivered', payment: 'UPI' },
-    { id: 'ORD-9826', customer: 'Joydeep Ghosh', email: 'joydeep.g@gmail.com', items: 'Woolen Cozies (6)', amount: '₹1,150.00', date: '2026-06-11 14:00', status: 'Cancelled', payment: 'Card' },
-  ];
-
-  const [orders, setOrders] = useState<Order[]>(initialOrders);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
 
-  const handleUpdateStatus = (orderId: string, newStatus: 'Delivered' | 'Pending' | 'Processing' | 'Cancelled') => {
-    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
-    if (selectedOrder && selectedOrder.id === orderId) {
-      setSelectedOrder(prev => prev ? { ...prev, status: newStatus } : null);
+  const API_URL = useMemo(() => {
+    if (process.env.NEXT_PUBLIC_API_URL) {
+      return process.env.NEXT_PUBLIC_API_URL;
+    }
+    if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+      return 'http://localhost:8000';
+    }
+    return 'https://crochetcreation.onrender.com';
+  }, []);
+
+  const fetchOrders = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        router.push('/');
+        return;
+      }
+
+      const res = await fetch(`${API_URL}/api/orders`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const formattedOrders: Order[] = data.map((o: any) => ({
+          id: o._id || o.id,
+          customer: o.customer_name,
+          email: o.customer_email,
+          mobile: o.customer_mobile || "",
+          items: o.items.map((item: any) => `${item.title} (${item.quantity})`).join(', '),
+          amount: o.total_amount,
+          date: o.created_at ? new Date(o.created_at).toLocaleString() : 'Just now',
+          status: o.status,
+          payment: o.payment_method || 'COD',
+          rawItems: o.items || []
+        }));
+        setOrders(formattedOrders);
+        
+        // Re-sync selected order if any
+        if (selectedOrder) {
+          const updatedSelected = formattedOrders.find(fo => fo.id === selectedOrder.id);
+          if (updatedSelected) {
+            setSelectedOrder(updatedSelected);
+          }
+        }
+      } else {
+        if (res.status === 401 || res.status === 403) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          router.push('/');
+        } else {
+          setError("Failed to fetch orders.");
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch orders:", err);
+      setError("Failed to connect to backend server.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchOrders();
+  }, [API_URL, router]);
+
+  const handleUpdateStatus = async (orderId: string, newStatus: 'Delivered' | 'Pending' | 'Processing' | 'Cancelled') => {
+    setActionLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const res = await fetch(`${API_URL}/api/orders/${orderId}?status_update=${newStatus}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (res.ok) {
+        const updated = await res.json();
+        setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+        if (selectedOrder && selectedOrder.id === orderId) {
+          setSelectedOrder(prev => prev ? { ...prev, status: newStatus } : null);
+        }
+      } else {
+        alert("Failed to update status on server.");
+      }
+    } catch (err) {
+      console.error("Status update failed:", err);
+      alert("Error contacting server.");
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -63,7 +156,8 @@ export default function AdminOrders() {
     const matchesFilter = filter === 'All' || order.status === filter;
     const matchesSearch = order.customer.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          order.items.toLowerCase().includes(searchQuery.toLowerCase());
+                          order.items.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          order.email.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesFilter && matchesSearch;
   });
 
@@ -79,14 +173,21 @@ export default function AdminOrders() {
         </div>
         <div className="flex items-center gap-2">
           <button 
-            onClick={() => setOrders(initialOrders)}
+            onClick={fetchOrders}
             className="p-2.5 hover:bg-stone-50 border border-stone-200 rounded-xl transition-all"
-            title="Reset to Initial Data"
+            title="Refresh Orders List"
+            disabled={loading}
           >
-            <RefreshCw className="w-4 h-4 text-stone-600" />
+            <RefreshCw className={`w-4 h-4 text-stone-600 ${loading ? 'animate-spin' : ''}`} />
           </button>
         </div>
       </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-800 p-4 rounded-xl text-xs font-semibold">
+          {error}
+        </div>
+      )}
 
       {/* Summary KPI Panel */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -125,7 +226,7 @@ export default function AdminOrders() {
 
         {/* Search */}
         <div className="flex items-center bg-[#F7F5F2] border border-stone-200 px-3 py-1.5 rounded-xl gap-2 w-full md:w-64 focus-within:border-[#D9B4B4] transition-all">
-          <Search className="w-3.5 h-3.5 text-stone-450" />
+          <Search className="w-3.5 h-3.5 text-stone-455" />
           <input
             type="text"
             placeholder="Search by ID, name, item..."
@@ -140,57 +241,63 @@ export default function AdminOrders() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         {/* Orders Table list */}
         <div className="bg-white border border-stone-200 rounded-2xl shadow-sm overflow-hidden lg:col-span-2">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-stone-100 text-[10px] font-bold text-stone-400 uppercase tracking-wider bg-stone-50/50">
-                  <th className="py-3 px-4">Order ID</th>
-                  <th className="py-3 px-4">Customer</th>
-                  <th className="py-3 px-4">Date</th>
-                  <th className="py-3 px-4">Amount</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4 text-right">View</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-stone-100 text-xs">
-                {filteredOrders.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="py-8 text-center text-stone-400 font-medium">
-                      No matching records found.
-                    </td>
+          {loading ? (
+            <div className="text-center py-12 text-stone-500 text-xs font-semibold">
+              Loading orders...
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-stone-100 text-[10px] font-bold text-stone-400 uppercase tracking-wider bg-stone-50/50">
+                    <th className="py-3 px-4">Order ID</th>
+                    <th className="py-3 px-4">Customer</th>
+                    <th className="py-3 px-4">Date</th>
+                    <th className="py-3 px-4">Amount</th>
+                    <th className="py-3 px-4">Status</th>
+                    <th className="py-3 px-4 text-right">View</th>
                   </tr>
-                ) : (
-                  filteredOrders.map((order) => (
-                    <tr 
-                      key={order.id} 
-                      onClick={() => setSelectedOrder(order)}
-                      className={`cursor-pointer transition-colors ${
-                        selectedOrder?.id === order.id ? 'bg-stone-50' : 'hover:bg-stone-50/50'
-                      }`}
-                    >
-                      <td className="py-3.5 px-4 font-bold text-[#6B5656]">{order.id}</td>
-                      <td className="py-3.5 px-4">
-                        <div className="font-semibold text-stone-850">{order.customer}</div>
-                        <div className="text-[10px] text-stone-400 truncate max-w-[120px]">{order.email}</div>
-                      </td>
-                      <td className="py-3.5 px-4 text-stone-500">{order.date.split(' ')[0]}</td>
-                      <td className="py-3.5 px-4 font-bold text-stone-800">{order.amount}</td>
-                      <td className="py-3.5 px-4">
-                        <span className={`px-2 py-0.5 border rounded-full text-[9px] font-bold uppercase tracking-wider ${getStatusBadge(order.status)}`}>
-                          {order.status}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 text-right">
-                        <button className="p-1 hover:bg-stone-100 rounded-lg text-stone-450 hover:text-stone-700 transition-colors">
-                          <Eye className="w-4 h-4" />
-                        </button>
+                </thead>
+                <tbody className="divide-y divide-stone-100 text-xs">
+                  {filteredOrders.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-8 text-center text-stone-400 font-medium">
+                        No matching records found.
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                  ) : (
+                    filteredOrders.map((order) => (
+                      <tr 
+                        key={order.id} 
+                        onClick={() => setSelectedOrder(order)}
+                        className={`cursor-pointer transition-colors ${
+                          selectedOrder?.id === order.id ? 'bg-stone-50' : 'hover:bg-stone-50/50'
+                        }`}
+                      >
+                        <td className="py-3.5 px-4 font-bold text-[#6B5656]">ORD-{order.id.slice(-6).toUpperCase()}</td>
+                        <td className="py-3.5 px-4">
+                          <div className="font-semibold text-stone-850">{order.customer}</div>
+                          <div className="text-[10px] text-stone-400 truncate max-w-[120px]">{order.email}</div>
+                        </td>
+                        <td className="py-3.5 px-4 text-stone-505">{order.date.split(',')[0]}</td>
+                        <td className="py-3.5 px-4 font-bold text-stone-800">₹{order.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                        <td className="py-3.5 px-4">
+                          <span className={`px-2 py-0.5 border rounded-full text-[9px] font-bold uppercase tracking-wider ${getStatusBadge(order.status)}`}>
+                            {order.status}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 text-right">
+                          <button className="p-1 hover:bg-stone-100 rounded-lg text-stone-450 hover:text-stone-750 transition-colors">
+                            <Eye className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         {/* Order Details Panel */}
@@ -199,29 +306,41 @@ export default function AdminOrders() {
             <div className="space-y-4 animate-in fade-in duration-200">
               <div className="flex items-center justify-between pb-3 border-b border-stone-100">
                 <span className="font-bold text-stone-800 text-xs uppercase tracking-wider">Order Specifications</span>
-                <span className="font-mono font-bold text-[#6B5656] text-xs">{selectedOrder.id}</span>
+                <span className="font-mono font-bold text-[#6B5656] text-xs">ORD-{selectedOrder.id.slice(-6).toUpperCase()}</span>
               </div>
 
               <div className="space-y-3 text-xs">
                 <div>
                   <label className="text-[9px] font-bold text-stone-400 uppercase tracking-widest block">Client details</label>
-                  <p className="font-semibold text-stone-800 mt-0.5">{selectedOrder.customer}</p>
+                  <p className="font-semibold text-stone-850 mt-0.5">{selectedOrder.customer}</p>
                   <p className="text-stone-550 text-[10px]">{selectedOrder.email}</p>
+                  {selectedOrder.mobile && (
+                    <p className="text-stone-500 text-[10px] flex items-center gap-1 mt-0.5">
+                      <Phone className="w-3 h-3 inline" /> {selectedOrder.mobile}
+                    </p>
+                  )}
                 </div>
 
                 <div>
                   <label className="text-[9px] font-bold text-stone-400 uppercase tracking-widest block">Items purchased</label>
-                  <p className="text-stone-700 font-medium mt-0.5 leading-relaxed">{selectedOrder.items}</p>
+                  <div className="mt-1 space-y-1 bg-stone-50 p-2.5 rounded-xl border border-stone-100">
+                    {selectedOrder.rawItems.map((item, idx) => (
+                      <div key={idx} className="flex justify-between items-center text-[11px] text-stone-700 font-medium">
+                        <span>{item.title} x {item.quantity}</span>
+                        <span className="font-bold text-stone-800">₹{(item.price * item.quantity).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="text-[9px] font-bold text-stone-400 uppercase tracking-widest block">Payment mode</label>
-                    <p className="text-stone-700 font-semibold mt-0.5">{selectedOrder.payment}</p>
+                    <p className="text-stone-700 font-semibold mt-0.5 uppercase tracking-wide">{selectedOrder.payment}</p>
                   </div>
                   <div>
                     <label className="text-[9px] font-bold text-stone-400 uppercase tracking-widest block">Total fee</label>
-                    <p className="text-stone-900 font-bold mt-0.5">{selectedOrder.amount}</p>
+                    <p className="text-stone-900 font-bold mt-0.5">₹{selectedOrder.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
                   </div>
                 </div>
 
@@ -231,6 +350,7 @@ export default function AdminOrders() {
                     {(['Pending', 'Processing', 'Delivered', 'Cancelled'] as const).map(state => (
                       <button
                         key={state}
+                        disabled={actionLoading}
                         onClick={() => handleUpdateStatus(selectedOrder.id, state)}
                         className={`py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider border transition-all ${
                           selectedOrder.status === state

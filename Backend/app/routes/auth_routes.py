@@ -1,13 +1,19 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from fastapi.security import OAuth2PasswordRequestForm
-from app.models.user import UserCreate, UserResponse, UserInDB
+from app.models.user import (
+    UserCreate, UserResponse, UserInDB,
+    ForgotPasswordRequest, VerifyOTPRequest, ResetPasswordRequest
+)
 from app.core.security import get_password_hash, verify_password, create_access_token
 from app.core.db import get_database
+from app.services.email_service import queue_welcome_email, queue_otp_email
+import random
+from datetime import datetime, timedelta
 
 router = APIRouter(prefix="/api/auth", tags=["authentication"])
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-async def register(user_in: UserCreate):
+async def register(user_in: UserCreate, background_tasks: BackgroundTasks):
     db = get_database()
     if db is None:
         raise HTTPException(
@@ -44,6 +50,13 @@ async def register(user_in: UserCreate):
     
     # Retrieve and return the created user
     created_user = await db["users"].find_one({"_id": result.inserted_id})
+    
+    # Send welcome email using Resend
+    try:
+        queue_welcome_email(background_tasks, created_user)
+    except Exception as e:
+        print(f"Error queueing welcome email: {e}")
+        
     return created_user
 
 @router.post("/login")
@@ -83,3 +96,113 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
             "is_admin": is_admin_user
         }
     }
+
+
+@router.post("/forgot-password")
+async def forgot_password(req: ForgotPasswordRequest, background_tasks: BackgroundTasks):
+    db = get_database()
+    if db is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database connection is not initialized."
+        )
+
+    # Check if email exists
+    user = await db["users"].find_one({"email": req.email})
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No account found with this email address."
+        )
+
+    # Generate 6-digit OTP
+    otp = f"{random.randint(100000, 999999)}"
+    expires_at = datetime.utcnow() + timedelta(minutes=10)
+
+    # Store OTP in DB (overwrite if already exists)
+    await db["otps"].update_one(
+        {"email": req.email},
+        {"$set": {"otp": otp, "expires_at": expires_at}},
+        upsert=True
+    )
+
+    # Queue email sending task
+    try:
+        queue_otp_email(background_tasks, req.email, otp)
+    except Exception as e:
+        print(f"Error queueing OTP email: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to send OTP email. Please try again later."
+        )
+
+    return {"message": "OTP has been successfully sent to your email address."}
+
+
+@router.post("/verify-otp")
+async def verify_otp(req: VerifyOTPRequest):
+    db = get_database()
+    if db is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database connection is not initialized."
+        )
+
+    otp_doc = await db["otps"].find_one({"email": req.email, "otp": req.otp})
+    if not otp_doc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid OTP code. Please check and try again."
+        )
+
+    if otp_doc["expires_at"] < datetime.utcnow():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="OTP code has expired. Please request a new one."
+        )
+
+    return {"message": "OTP verified successfully."}
+
+
+@router.post("/reset-password")
+async def reset_password(req: ResetPasswordRequest):
+    db = get_database()
+    if db is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database connection is not initialized."
+        )
+
+    # Re-verify OTP for security
+    otp_doc = await db["otps"].find_one({"email": req.email, "otp": req.otp})
+    if not otp_doc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid OTP code."
+        )
+
+    if otp_doc["expires_at"] < datetime.utcnow():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="OTP code has expired. Please request a new one."
+        )
+
+    # Hash new password
+    hashed_password = get_password_hash(req.password)
+
+    # Update user password in MongoDB
+    result = await db["users"].update_one(
+        {"email": req.email},
+        {"$set": {"hashed_password": hashed_password}}
+    )
+
+    if result.modified_count == 0:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found or password could not be updated."
+        )
+
+    # Delete the verified OTP
+    await db["otps"].delete_one({"email": req.email})
+
+    return {"message": "Password has been reset successfully."}

@@ -10,3 +10,6 @@ python-multipart==0.0.9
 passlib[bcrypt]==1.7.4
 bcrypt==4.1.2
 pyjwt==2.8.0
+resend==2.4.0
+slowapi==0.1.9
+limits==3.13.0

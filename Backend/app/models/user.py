@@ -36,3 +36,15 @@ class UserInDB(UserBase):
 
     class Config:
         populate_by_name = True
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+class VerifyOTPRequest(BaseModel):
+    email: EmailStr
+    otp: str = Field(..., min_length=6, max_length=6)
+
+class ResetPasswordRequest(BaseModel):
+    email: EmailStr
+    otp: str = Field(..., min_length=6, max_length=6)
+    password: str = Field(..., min_length=6, description="Password must be at least 6 characters.")

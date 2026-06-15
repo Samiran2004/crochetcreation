@@ -1,6 +1,8 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+export const dynamic = 'force-dynamic';
+
+import React, { useEffect, useState, useMemo } from 'react';
 import { 
   DollarSign, 
   ShoppingBag, 
@@ -11,67 +13,112 @@ import {
   CheckCircle,
   AlertCircle
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 export default function AdminDashboard() {
-  const [productsCount, setProductsCount] = useState(0);
+  const router = useRouter();
+  
+  const [statsData, setStatsData] = useState({
+    total_revenue: 0.0,
+    total_orders: 0,
+    products_count: 0,
+    customers_count: 0,
+    recent_orders: [] as any[],
+    alerts: [] as any[]
+  });
+  
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const API_URL = useMemo(() => {
+    if (process.env.NEXT_PUBLIC_API_URL) {
+      return process.env.NEXT_PUBLIC_API_URL;
+    }
+    if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+      return 'http://localhost:8000';
+    }
+    return 'https://crochetcreation.onrender.com';
+  }, []);
 
   useEffect(() => {
-    // Fetch products count dynamically to display accurate stats
-    const fetchStats = async () => {
+    const fetchDashboardStats = async () => {
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://crochetcreation.onrender.com';
-        const res = await fetch(`${apiUrl}/api/products`);
+        const token = localStorage.getItem('token');
+        if (!token) {
+          router.push('/');
+          return;
+        }
+
+        const res = await fetch(`${API_URL}/api/admin/stats`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
         if (res.ok) {
           const data = await res.json();
-          if (Array.isArray(data)) {
-            setProductsCount(data.length);
+          setStatsData(data);
+        } else {
+          if (res.status === 401 || res.status === 403) {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            router.push('/');
+          } else {
+            setError("Failed to fetch dashboard stats.");
           }
         }
       } catch (err) {
-        console.error("Failed to fetch products count:", err);
+        console.error("Dashboard stats fetch failed:", err);
+        setError("Could not connect to backend server.");
+      } finally {
+        setLoading(false);
       }
     };
-    fetchStats();
-  }, []);
+
+    fetchDashboardStats();
+  }, [API_URL, router]);
 
   const stats = [
     {
       title: 'Total Revenue',
-      value: '₹42,850.00',
-      change: '+14.2% vs last month',
+      value: `₹${statsData.total_revenue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      change: 'Lifetime earnings',
       icon: DollarSign,
       color: 'bg-emerald-50 text-emerald-600 border-emerald-100',
     },
     {
       title: 'Total Orders',
-      value: '184',
-      change: '+8.3% vs last month',
+      value: statsData.total_orders.toString(),
+      change: 'All-time placements',
       icon: ShoppingBag,
       color: 'bg-amber-50 text-amber-600 border-amber-100',
     },
     {
       title: 'Active Catalog',
-      value: productsCount || '12',
+      value: statsData.products_count.toString(),
       change: 'Fully managed items',
       icon: TrendingUp,
       color: 'bg-rose-50 text-rose-600 border-rose-100',
     },
     {
-      title: 'New Artisans',
-      value: '89',
-      change: '+22.5% this week',
+      title: 'Total Customers',
+      value: statsData.customers_count.toString(),
+      change: 'Registered artisans/buyers',
       icon: Users,
       color: 'bg-sky-50 text-sky-600 border-sky-100',
     },
   ];
 
-  const recentOrders = [
-    { id: 'ORD-9831', customer: 'Anuradha Roy', items: 'Crochet Teddy Bear (1)', amount: '₹1,999.00', date: 'Just now', status: 'Delivered', statusColor: 'bg-emerald-100 text-emerald-800' },
-    { id: 'ORD-9830', customer: 'Sayan Banerjee', items: 'Warm Woolen Scarf (1), Coasters (4)', amount: '₹2,450.00', date: '2 hours ago', status: 'Pending', statusColor: 'bg-amber-100 text-amber-800' },
-    { id: 'ORD-9829', customer: 'Priyanka Das', items: 'Crochet Hanging Planter (2)', amount: '₹1,299.00', date: '5 hours ago', status: 'Processing', statusColor: 'bg-sky-100 text-sky-800' },
-    { id: 'ORD-9828', customer: 'Rahul Sharma', items: 'Amigurumi Keychain Set (3)', amount: '₹899.00', date: 'Yesterday', status: 'Delivered', statusColor: 'bg-emerald-100 text-emerald-800' },
-    { id: 'ORD-9827', customer: 'Nandini Sen', items: 'Knitted Baby Blanket (1)', amount: '₹3,200.00', date: '2 days ago', status: 'Delivered', statusColor: 'bg-emerald-100 text-emerald-800' },
-  ];
+  if (loading) {
+    return (
+      <div className="flex h-[60vh] items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 border-4 border-[#6B5656] border-t-transparent rounded-full animate-spin"></div>
+          <span className="text-xs font-semibold tracking-wider text-stone-500 uppercase">Loading Dashboard Data...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-in fade-in-50 duration-300">
@@ -83,10 +130,19 @@ export default function AdminDashboard() {
             Here is what is happening with your handmade crochet creations today.
           </p>
         </div>
-        <button className="bg-[#FEF9F6] text-[#6B5656] hover:bg-[#D9B4B4] hover:text-[#6B5656] transition-all duration-350 text-xs font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl shadow-md flex items-center gap-1.5 active:scale-95">
+        <button 
+          onClick={() => router.push('/')}
+          className="bg-[#FEF9F6] text-[#6B5656] hover:bg-[#D9B4B4] hover:text-[#6B5656] transition-all duration-350 text-xs font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl shadow-md flex items-center gap-1.5 active:scale-95"
+        >
           View Live Site <ArrowRight className="w-3.5 h-3.5" />
         </button>
       </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-800 p-4 rounded-xl text-xs font-semibold">
+          {error}
+        </div>
+      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -116,40 +172,57 @@ export default function AdminDashboard() {
         <div className="bg-white border border-stone-200 rounded-2xl shadow-sm p-5 lg:col-span-2 space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="font-serif text-sm font-bold text-stone-800 uppercase tracking-wide">Recent Orders</h3>
-            <span className="text-[10px] font-bold text-stone-500 uppercase tracking-wider cursor-pointer hover:text-[#6B5656] transition-colors">
+            <span 
+              onClick={() => router.push('/admin/orders')}
+              className="text-[10px] font-bold text-stone-500 uppercase tracking-wider cursor-pointer hover:text-[#6B5656] transition-colors"
+            >
               View All
             </span>
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-stone-100 text-[10px] font-bold text-stone-450 uppercase tracking-wider bg-stone-50/50">
-                  <th className="py-3 px-4">Order ID</th>
-                  <th className="py-3 px-4">Customer</th>
-                  <th className="py-3 px-4">Items Ordered</th>
-                  <th className="py-3 px-4">Amount</th>
-                  <th className="py-3 px-4">Date</th>
-                  <th className="py-3 px-4">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-stone-100 text-xs">
-                {recentOrders.map((order) => (
-                  <tr key={order.id} className="hover:bg-stone-50/50 transition-colors">
-                    <td className="py-3.5 px-4 font-bold text-[#6B5656]">{order.id}</td>
-                    <td className="py-3.5 px-4 font-medium text-stone-800">{order.customer}</td>
-                    <td className="py-3.5 px-4 text-stone-500 max-w-[200px] truncate">{order.items}</td>
-                    <td className="py-3.5 px-4 font-bold text-stone-800">{order.amount}</td>
-                    <td className="py-3.5 px-4 text-stone-500">{order.date}</td>
-                    <td className="py-3.5 px-4">
-                      <span className={`px-2 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider ${order.statusColor}`}>
-                        {order.status}
-                      </span>
-                    </td>
+            {statsData.recent_orders.length === 0 ? (
+              <div className="text-center py-8 text-stone-450 text-xs font-medium">
+                No orders registered yet. Start sharing your creations to get sales!
+              </div>
+            ) : (
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-stone-100 text-[10px] font-bold text-stone-450 uppercase tracking-wider bg-stone-50/50">
+                    <th className="py-3 px-4">Order ID</th>
+                    <th className="py-3 px-4">Customer</th>
+                    <th className="py-3 px-4">Items Ordered</th>
+                    <th className="py-3 px-4">Amount</th>
+                    <th className="py-3 px-4">Date</th>
+                    <th className="py-3 px-4">Status</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-stone-100 text-xs">
+                  {statsData.recent_orders.map((order) => {
+                    let statusColor = "bg-stone-100 text-stone-800";
+                    if (order.status === "Delivered") statusColor = "bg-emerald-100 text-emerald-800";
+                    if (order.status === "Pending") statusColor = "bg-amber-100 text-amber-800";
+                    if (order.status === "Processing") statusColor = "bg-sky-100 text-sky-800";
+                    if (order.status === "Cancelled") statusColor = "bg-rose-100 text-rose-800";
+
+                    return (
+                      <tr key={order.id} className="hover:bg-stone-50/50 transition-colors">
+                        <td className="py-3.5 px-4 font-bold text-[#6B5656] truncate max-w-[100px]">ORD-{order.id.slice(-6).toUpperCase()}</td>
+                        <td className="py-3.5 px-4 font-medium text-stone-800">{order.customer}</td>
+                        <td className="py-3.5 px-4 text-stone-500 max-w-[200px] truncate">{order.items}</td>
+                        <td className="py-3.5 px-4 font-bold text-stone-800">₹{order.amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                        <td className="py-3.5 px-4 text-stone-500">{order.date.split(' ')[0]}</td>
+                        <td className="py-3.5 px-4">
+                          <span className={`px-2 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider ${statusColor}`}>
+                            {order.status}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
 
@@ -158,35 +231,23 @@ export default function AdminDashboard() {
           <h3 className="font-serif text-sm font-bold text-stone-800 uppercase tracking-wide">Workshop Alerts</h3>
           
           <div className="space-y-3">
-            <div className="flex gap-3.5 p-3 rounded-xl bg-amber-50 border border-amber-100">
-              <Clock className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-              <div>
-                <h4 className="text-xs font-bold text-amber-800">Pending Order Packings</h4>
-                <p className="text-[10px] text-amber-650 mt-0.5">
-                  Order ORD-9830 requires premium wrapping box & thank you card.
-                </p>
-              </div>
-            </div>
+            {statsData.alerts.map((alert, idx) => {
+              let Icon = Clock;
+              if (alert.type === "payout") Icon = CheckCircle;
+              if (alert.type === "stock") Icon = AlertCircle;
 
-            <div className="flex gap-3.5 p-3 rounded-xl bg-emerald-50 border border-emerald-100">
-              <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-              <div>
-                <h4 className="text-xs font-bold text-emerald-800">Payout Released</h4>
-                <p className="text-[10px] text-emerald-650 mt-0.5">
-                  Artisan payouts for last month's items successfully processed.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex gap-3.5 p-3 rounded-xl bg-rose-50 border border-rose-100">
-              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-              <div>
-                <h4 className="text-xs font-bold text-rose-800">Low Stock Warning</h4>
-                <p className="text-[10px] text-rose-650 mt-0.5">
-                  "Crochet Teddy Bear Amigurumi" only has 2 items left in stock.
-                </p>
-              </div>
-            </div>
+              return (
+                <div key={idx} className={`flex gap-3.5 p-3 rounded-xl border ${alert.color}`}>
+                  <Icon className="w-4 h-4 shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="text-xs font-bold">{alert.title}</h4>
+                    <p className="text-[10px] opacity-90 mt-0.5">
+                      {alert.message}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>

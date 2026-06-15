@@ -8,18 +8,21 @@ from app.models.user import UserInDB
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 async def get_current_user(token: str = Depends(oauth2_scheme)) -> UserInDB:
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         email: str = payload.get("sub")
         if email is None:
-            raise credentials_exception
-    except jwt.PyJWTError:
-        raise credentials_exception
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Could not validate credentials: sub is missing from token payload.",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+    except jwt.PyJWTError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Could not validate credentials: JWT decode error: {str(e)}",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
     db = get_database()
     if db is None:
@@ -30,7 +33,11 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> UserInDB:
 
     user_dict = await db["users"].find_one({"email": email})
     if user_dict is None:
-        raise credentials_exception
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Could not validate credentials: user with email {email} not found in database.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
         
     return UserInDB(**user_dict)
 

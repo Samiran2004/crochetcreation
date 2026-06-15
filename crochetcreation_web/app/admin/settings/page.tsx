@@ -1,6 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+export const dynamic = 'force-dynamic';
+
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Settings, 
   Store, 
@@ -11,9 +13,15 @@ import {
   HelpCircle,
   FileText
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 export default function AdminSettings() {
+  const router = useRouter();
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
   const [formData, setFormData] = useState({
     storeName: 'CrochetCreation',
     supportEmail: 'support@crochetcreation.com',
@@ -26,6 +34,47 @@ export default function AdminSettings() {
     enableEmailNotifications: true,
   });
 
+  const API_URL = useMemo(() => {
+    if (process.env.NEXT_PUBLIC_API_URL) {
+      return process.env.NEXT_PUBLIC_API_URL;
+    }
+    if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+      return 'http://localhost:8000';
+    }
+    return 'https://crochetcreation.onrender.com';
+  }, []);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/settings/`);
+        if (res.ok) {
+          const data = await res.json();
+          setFormData({
+            storeName: data.store_name,
+            supportEmail: data.support_email,
+            supportPhone: data.support_phone,
+            currency: data.currency,
+            enableCOD: data.enable_cod,
+            enableUPI: data.enable_upi,
+            upiId: data.upi_id,
+            maxCustomRequestsPerDay: data.max_custom_requests_per_day.toString(),
+            enableEmailNotifications: data.enable_email_notifications ?? true,
+          });
+        } else {
+          setError("Failed to fetch settings from server.");
+        }
+      } catch (err) {
+        console.error("Failed to load settings:", err);
+        setError("Failed to connect to backend server.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSettings();
+  }, [API_URL]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     const checked = (e.target as HTMLInputElement).checked;
@@ -35,13 +84,65 @@ export default function AdminSettings() {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaveSuccess(true);
-    setTimeout(() => {
-      setSaveSuccess(false);
-    }, 3000);
+    setSaving(true);
+    setError(null);
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        router.push('/');
+        return;
+      }
+
+      const payload = {
+        store_name: formData.storeName,
+        support_email: formData.supportEmail,
+        support_phone: formData.supportPhone,
+        currency: formData.currency,
+        enable_cod: formData.enableCOD,
+        enable_upi: formData.enableUPI,
+        upi_id: formData.upiId,
+        max_custom_requests_per_day: parseInt(formData.maxCustomRequestsPerDay) || 5,
+        enable_email_notifications: formData.enableEmailNotifications,
+      };
+
+      const res = await fetch(`${API_URL}/api/settings/`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        setSaveSuccess(true);
+        setTimeout(() => {
+          setSaveSuccess(false);
+        }, 3000);
+      } else {
+        const errData = await res.json();
+        setError(errData.detail || "Failed to save settings.");
+      }
+    } catch (err) {
+      console.error("Save settings error:", err);
+      setError("Failed to connect to backend server.");
+    } finally {
+      setSaving(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="flex h-[60vh] items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 border-4 border-[#6B5656] border-t-transparent rounded-full animate-spin"></div>
+          <span className="text-xs font-semibold tracking-wider text-stone-500 uppercase">Loading Global Settings...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-in fade-in-50 duration-300">
@@ -49,7 +150,7 @@ export default function AdminSettings() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-5 border border-stone-200 rounded-2xl shadow-sm">
         <div>
           <h2 className="font-serif text-lg font-bold text-stone-850">Global Workshop Settings</h2>
-          <p className="text-xs text-stone-450 mt-1">
+          <p className="text-xs text-stone-455 mt-1">
             Configure storefront identity, payment modes, custom artisan limits, and logging.
           </p>
         </div>
@@ -60,6 +161,12 @@ export default function AdminSettings() {
           <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs px-4 py-3 rounded-xl font-bold flex items-center gap-2 animate-in fade-in slide-in-from-top-2 duration-300">
             <Check className="w-4 h-4 text-emerald-600" />
             Settings saved successfully! Workshop variables reloaded.
+          </div>
+        )}
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-800 p-4 rounded-xl text-xs font-semibold">
+            {error}
           </div>
         )}
 
@@ -219,9 +326,10 @@ export default function AdminSettings() {
               </p>
               <button
                 type="submit"
+                disabled={saving}
                 className="w-full bg-[#6B5656] hover:bg-[#D9B4B4] hover:text-[#6B5656] text-white font-bold text-xs uppercase tracking-wider py-3 px-6 rounded-xl transition-all duration-350 active:scale-95 shadow-md flex items-center justify-center gap-2"
               >
-                <Save className="w-4 h-4" /> Save Settings
+                <Save className="w-4 h-4" /> {saving ? 'Saving...' : 'Save Settings'}
               </button>
             </div>
 

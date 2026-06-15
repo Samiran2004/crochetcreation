@@ -71,7 +71,7 @@ export default function CrochetCreationPage() {
   const [token, setToken] = useState<string | null>(null);
   const [userProfile, setUserProfile] = useState<any | null>(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+  const [authMode, setAuthMode] = useState<'login' | 'register' | 'forgot' | 'verify' | 'reset'>('login');
   const [authFormData, setAuthFormData] = useState({
     first_name: '',
     last_name: '',
@@ -79,6 +79,9 @@ export default function CrochetCreationPage() {
     mobile: '',
     password: ''
   });
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [otpCode, setOtpCode] = useState('');
+  const [newPassword, setNewPassword] = useState('');
   const [authError, setAuthError] = useState<string | null>(null);
   const [authSuccessMsg, setAuthSuccessMsg] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(false);
@@ -119,7 +122,52 @@ export default function CrochetCreationPage() {
     const apiUrl = API_URL;
 
     try {
-      if (authMode === 'register') {
+      if (authMode === 'forgot') {
+        const res = await fetch(`${apiUrl}/api/auth/forgot-password`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: forgotEmail })
+        });
+
+        if (!res.ok) {
+          const errData = await res.json();
+          throw new Error(errData.detail || 'Failed to request OTP. Please verify your email.');
+        }
+
+        setAuthSuccessMsg("OTP sent to your email!");
+        setAuthMode('verify');
+      } else if (authMode === 'verify') {
+        const res = await fetch(`${apiUrl}/api/auth/verify-otp`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: forgotEmail, otp: otpCode })
+        });
+
+        if (!res.ok) {
+          const errData = await res.json();
+          throw new Error(errData.detail || 'Invalid or expired OTP.');
+        }
+
+        setAuthSuccessMsg("OTP verified! Set your new password.");
+        setAuthMode('reset');
+      } else if (authMode === 'reset') {
+        const res = await fetch(`${apiUrl}/api/auth/reset-password`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: forgotEmail, otp: otpCode, password: newPassword })
+        });
+
+        if (!res.ok) {
+          const errData = await res.json();
+          throw new Error(errData.detail || 'Failed to reset password.');
+        }
+
+        setAuthSuccessMsg("Password reset successfully! Please log in.");
+        setAuthMode('login');
+        setForgotEmail('');
+        setOtpCode('');
+        setNewPassword('');
+      } else if (authMode === 'register') {
         const res = await fetch(`${apiUrl}/api/auth/register`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1644,35 +1692,47 @@ export default function CrochetCreationPage() {
               <div className="w-12 h-12 rounded-full bg-[#D9B4B4]/20 flex items-center justify-center mx-auto text-[#D9B4B4]">
                 <User className="w-6 h-6" />
               </div>
-              <h3 className="text-xl font-bold text-[#6B5656]">Crochet Account</h3>
-              <p className="text-xs text-stone-500">Access your custom orders and exclusive patterns.</p>
+              <h3 className="text-xl font-bold text-[#6B5656]">
+                {authMode === 'forgot' && 'Forgot Password'}
+                {authMode === 'verify' && 'Verify Code'}
+                {authMode === 'reset' && 'Reset Password'}
+                {(authMode === 'login' || authMode === 'register') && 'Crochet Account'}
+              </h3>
+              <p className="text-xs text-stone-500">
+                {authMode === 'forgot' && 'Enter your email address to request a password reset code.'}
+                {authMode === 'verify' && 'Enter the 6-digit OTP code sent to your email.'}
+                {authMode === 'reset' && 'Create a new secure password for your account.'}
+                {(authMode === 'login' || authMode === 'register') && 'Access your custom orders and exclusive patterns.'}
+              </p>
             </div>
 
             {/* Tab Swapper */}
-            <div className="flex border-b border-[#EADBDB] mb-6">
-              <button
-                type="button"
-                onClick={() => {
-                  setAuthMode('login');
-                  setAuthError(null);
-                  setAuthSuccessMsg(null);
-                }}
-                className={`flex-1 pb-3 text-xs font-black tracking-widest uppercase text-center transition-colors ${authMode === 'login' ? 'border-b-2 border-[#6B5656] text-[#6B5656]' : 'text-stone-400 hover:text-stone-600'}`}
-              >
-                Login
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setAuthMode('register');
-                  setAuthError(null);
-                  setAuthSuccessMsg(null);
-                }}
-                className={`flex-1 pb-3 text-xs font-black tracking-widest uppercase text-center transition-colors ${authMode === 'register' ? 'border-b-2 border-[#6B5656] text-[#6B5656]' : 'text-stone-400 hover:text-stone-600'}`}
-              >
-                Register
-              </button>
-            </div>
+            {(authMode === 'login' || authMode === 'register') && (
+              <div className="flex border-b border-[#EADBDB] mb-6">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthMode('login');
+                    setAuthError(null);
+                    setAuthSuccessMsg(null);
+                  }}
+                  className={`flex-1 pb-3 text-xs font-black tracking-widest uppercase text-center transition-colors ${authMode === 'login' ? 'border-b-2 border-[#6B5656] text-[#6B5656]' : 'text-stone-400 hover:text-stone-600'}`}
+                >
+                  Login
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthMode('register');
+                    setAuthError(null);
+                    setAuthSuccessMsg(null);
+                  }}
+                  className={`flex-1 pb-3 text-xs font-black tracking-widest uppercase text-center transition-colors ${authMode === 'register' ? 'border-b-2 border-[#6B5656] text-[#6B5656]' : 'text-stone-400 hover:text-stone-600'}`}
+                >
+                  Register
+                </button>
+              </div>
+            )}
 
             {authError && (
               <div className="mb-4 p-3 bg-rose-50 border border-rose-100 text-rose-700 text-xs rounded-xl font-medium">
@@ -1687,76 +1747,139 @@ export default function CrochetCreationPage() {
             )}
 
             <form onSubmit={handleAuthSubmit} className="space-y-4">
-              {authMode === 'register' ? (
+              {authMode === 'forgot' && (
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Email Address</label>
+                  <input
+                    type="email"
+                    required
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    placeholder="name@domain.com"
+                    className="w-full bg-stone-50 border border-stone-200 px-4 py-2.5 rounded-xl text-sm focus:outline-none focus:border-[#D9B4B4] text-stone-850"
+                  />
+                </div>
+              )}
+
+              {authMode === 'verify' && (
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">6-Digit Verification Code</label>
+                  <input
+                    type="text"
+                    required
+                    maxLength={6}
+                    pattern="\d{6}"
+                    value={otpCode}
+                    onChange={(e) => setOtpCode(e.target.value)}
+                    placeholder="123456"
+                    className="w-full bg-stone-50 border border-stone-200 px-4 py-2.5 rounded-xl text-sm text-center font-bold tracking-widest focus:outline-none focus:border-[#D9B4B4] text-stone-850"
+                  />
+                </div>
+              )}
+
+              {authMode === 'reset' && (
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">New Password</label>
+                  <input
+                    type="password"
+                    required
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full bg-stone-50 border border-stone-200 px-4 py-2.5 rounded-xl text-sm focus:outline-none focus:border-[#D9B4B4] text-stone-850"
+                  />
+                </div>
+              )}
+
+              {(authMode === 'login' || authMode === 'register') && (
                 <>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">First Name</label>
-                      <input
-                        type="text"
-                        name="first_name"
-                        required
-                        value={authFormData.first_name}
-                        onChange={handleAuthChange}
-                        placeholder="John"
-                        className="w-full bg-stone-50 border border-stone-200 px-4 py-2.5 rounded-xl text-sm focus:outline-none focus:border-[#D9B4B4] text-stone-850"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Last Name</label>
-                      <input
-                        type="text"
-                        name="last_name"
-                        required
-                        value={authFormData.last_name}
-                        onChange={handleAuthChange}
-                        placeholder="Doe"
-                        className="w-full bg-stone-50 border border-stone-200 px-4 py-2.5 rounded-xl text-sm focus:outline-none focus:border-[#D9B4B4] text-stone-850"
-                      />
-                    </div>
-                  </div>
+                  {authMode === 'register' && (
+                    <>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">First Name</label>
+                          <input
+                            type="text"
+                            name="first_name"
+                            required
+                            value={authFormData.first_name}
+                            onChange={handleAuthChange}
+                            placeholder="John"
+                            className="w-full bg-stone-50 border border-stone-200 px-4 py-2.5 rounded-xl text-sm focus:outline-none focus:border-[#D9B4B4] text-stone-850"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Last Name</label>
+                          <input
+                            type="text"
+                            name="last_name"
+                            required
+                            value={authFormData.last_name}
+                            onChange={handleAuthChange}
+                            placeholder="Doe"
+                            className="w-full bg-stone-50 border border-stone-200 px-4 py-2.5 rounded-xl text-sm focus:outline-none focus:border-[#D9B4B4] text-stone-850"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Mobile Number</label>
+                        <input
+                          type="tel"
+                          name="mobile"
+                          required
+                          value={authFormData.mobile}
+                          onChange={handleAuthChange}
+                          placeholder="+15550000000"
+                          className="w-full bg-stone-50 border border-stone-200 px-4 py-2.5 rounded-xl text-sm focus:outline-none focus:border-[#D9B4B4] text-stone-850"
+                        />
+                      </div>
+                    </>
+                  )}
+
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Mobile Number</label>
+                    <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">
+                      {authMode === 'login' ? 'Email or Mobile Number' : 'Email Address'}
+                    </label>
                     <input
-                      type="tel"
-                      name="mobile"
+                      type={authMode === 'login' ? 'text' : 'email'}
+                      name="email"
                       required
-                      value={authFormData.mobile}
+                      value={authFormData.email}
                       onChange={handleAuthChange}
-                      placeholder="+15550000000"
+                      placeholder={authMode === 'login' ? 'name@domain.com or +15550000000' : 'name@domain.com'}
+                      className="w-full bg-stone-50 border border-stone-200 px-4 py-2.5 rounded-xl text-sm focus:outline-none focus:border-[#D9B4B4] text-stone-850"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="flex justify-between items-center">
+                      <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Password</label>
+                      {authMode === 'login' && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAuthMode('forgot');
+                            setAuthError(null);
+                            setAuthSuccessMsg(null);
+                          }}
+                          className="text-[#6B5656] hover:text-[#D9B4B4] text-[10px] font-bold uppercase tracking-wider transition-colors"
+                        >
+                          Forgot?
+                        </button>
+                      )}
+                    </div>
+                    <input
+                      type="password"
+                      name="password"
+                      required
+                      value={authFormData.password}
+                      onChange={handleAuthChange}
+                      placeholder="••••••••"
                       className="w-full bg-stone-50 border border-stone-200 px-4 py-2.5 rounded-xl text-sm focus:outline-none focus:border-[#D9B4B4] text-stone-850"
                     />
                   </div>
                 </>
-              ) : null}
-
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">
-                  {authMode === 'login' ? 'Email or Mobile Number' : 'Email Address'}
-                </label>
-                <input
-                  type={authMode === 'login' ? 'text' : 'email'}
-                  name="email"
-                  required
-                  value={authFormData.email}
-                  onChange={handleAuthChange}
-                  placeholder={authMode === 'login' ? 'name@domain.com or +15550000000' : 'name@domain.com'}
-                  className="w-full bg-stone-50 border border-stone-200 px-4 py-2.5 rounded-xl text-sm focus:outline-none focus:border-[#D9B4B4] text-stone-850"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Password</label>
-                <input
-                  type="password"
-                  name="password"
-                  required
-                  value={authFormData.password}
-                  onChange={handleAuthChange}
-                  placeholder="••••••••"
-                  className="w-full bg-stone-50 border border-stone-200 px-4 py-2.5 rounded-xl text-sm focus:outline-none focus:border-[#D9B4B4] text-stone-850"
-                />
-              </div>
+              )}
 
               <button
                 type="submit"
@@ -1768,12 +1891,30 @@ export default function CrochetCreationPage() {
                     <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
                     Processing...
                   </>
-                ) : authMode === 'login' ? (
-                  'Sign In'
                 ) : (
-                  'Create Account'
+                  <>
+                    {authMode === 'login' && 'Sign In'}
+                    {authMode === 'register' && 'Create Account'}
+                    {authMode === 'forgot' && 'Send OTP Code'}
+                    {authMode === 'verify' && 'Verify Code'}
+                    {authMode === 'reset' && 'Reset Password'}
+                  </>
                 )}
               </button>
+
+              {authMode !== 'login' && authMode !== 'register' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthMode('login');
+                    setAuthError(null);
+                    setAuthSuccessMsg(null);
+                  }}
+                  className="w-full text-center text-[#6B5656] hover:text-[#D9B4B4] text-[10px] font-bold uppercase tracking-wider pt-2 block transition-colors"
+                >
+                  ← Back to Login
+                </button>
+              )}
             </form>
           </div>
         </div>

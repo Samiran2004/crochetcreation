@@ -15,5 +15,9 @@ class Settings:
     SECRET_KEY: str = os.getenv("SECRET_KEY", "7b0d77be361fcd68169992fbb9a1a8c0d9a6c9cf1c26b3c9597282672323f46f")
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
+    
+    # Resend configuration
+    RESEND_API_KEY: str = os.getenv("RESEND_API_KEY", "")
+    EMAIL_FROM: str = os.getenv("EMAIL_FROM", "crochetcreation@samiransamanta.in")
 
 settings = Settings()

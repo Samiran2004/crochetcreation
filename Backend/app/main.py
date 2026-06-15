@@ -4,6 +4,10 @@ from contextlib import asynccontextmanager
 from app.core.db import connect_to_mongo, close_mongo_connection
 from app.routes.product_routes import router as product_router
 from app.routes.auth_routes import router as auth_router
+from app.routes.order_routes import router as order_router
+from app.routes.settings_routes import router as settings_router
+from app.routes.customer_routes import router as customer_router
+from app.routes.admin_routes import router as admin_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -32,6 +36,10 @@ app.add_middleware(
 # Include Router
 app.include_router(product_router)
 app.include_router(auth_router)
+app.include_router(order_router)
+app.include_router(settings_router)
+app.include_router(customer_router)
+app.include_router(admin_router)
 
 @app.get("/")
 async def root():
