@@ -68,6 +68,7 @@ export default function ProductDetailPage() {
   // Hover Zoom States & Handler
   const [zoomStyle, setZoomStyle] = useState({ transformOrigin: 'center center' });
   const [isZoomed, setIsZoomed] = useState(false);
+  const [activeImageUrl, setActiveImageUrl] = useState<string | null>(null);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     const { left, top, width, height } = e.currentTarget.getBoundingClientRect();
@@ -144,8 +145,10 @@ export default function ProductDetailPage() {
             description: data.description || 'No description provided for this product.',
             price: data.price,
             image_url: data.image_url,
+            image_urls: data.image_urls || [data.image_url],
             category: data.category || 'HANDMADE'
           });
+          setActiveImageUrl(data.image_url);
         } else {
           setProduct(null);
         }
@@ -416,32 +419,63 @@ export default function ProductDetailPage() {
         {/* Product Details Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-start">
           
-          {/* Left Column: Image Display with Amazon-Style Zoom */}
-          <div 
-            className="relative h-[480px] w-full rounded-3xl overflow-hidden border border-[#EADBDB] bg-stone-100 shadow-sm cursor-zoom-in group/zoom"
-            onMouseEnter={() => setIsZoomed(true)}
-            onMouseLeave={() => {
-              setIsZoomed(false);
-              setZoomStyle({ transformOrigin: 'center center' });
-            }}
-            onMouseMove={handleMouseMove}
-          >
-            <Image 
-              src={product.image_url} 
-              alt={product.name} 
-              fill 
-              priority
-              sizes="(max-width: 1024px) 100vw, 600px"
-              className="object-cover transition-transform duration-200 ease-out"
-              style={{
-                ...zoomStyle,
-                transform: isZoomed ? 'scale(2)' : 'scale(1)'
+          {/* Left Column: Image Display with Gallery & Amazon-Style Zoom */}
+          <div className="flex flex-col gap-4 w-full">
+            <div 
+              className="relative h-[480px] w-full rounded-3xl overflow-hidden border border-[#EADBDB] bg-stone-100 shadow-sm cursor-zoom-in group/zoom"
+              onMouseEnter={() => setIsZoomed(true)}
+              onMouseLeave={() => {
+                setIsZoomed(false);
+                setZoomStyle({ transformOrigin: 'center center' });
               }}
-            />
-            {/* Hover guidance label */}
-            <div className="absolute bottom-4 right-4 bg-black/60 backdrop-blur-xs text-white text-[9px] font-bold uppercase tracking-wider px-2.5 py-1.5 rounded-lg pointer-events-none transition-opacity duration-300 group-hover/zoom:opacity-0 flex items-center gap-1">
-              <span>🔍</span> Hover to zoom
+              onMouseMove={handleMouseMove}
+            >
+              <Image 
+                src={activeImageUrl || product.image_url} 
+                alt={product.name} 
+                fill 
+                priority
+                sizes="(max-width: 1024px) 100vw, 600px"
+                className="object-cover transition-transform duration-200 ease-out"
+                style={{
+                  ...zoomStyle,
+                  transform: isZoomed ? 'scale(2)' : 'scale(1)'
+                }}
+              />
+              {/* Hover guidance label */}
+              <div className="absolute bottom-4 right-4 bg-black/60 backdrop-blur-xs text-white text-[9px] font-bold uppercase tracking-wider px-2.5 py-1.5 rounded-lg pointer-events-none transition-opacity duration-300 group-hover/zoom:opacity-0 flex items-center gap-1">
+                <span>🔍</span> Hover to zoom
+              </div>
             </div>
+
+            {/* Thumbnail Gallery */}
+            {product.image_urls && product.image_urls.length > 1 && (
+              <div className="flex flex-wrap gap-3 items-center justify-start mt-2">
+                {product.image_urls.map((url: string, index: number) => {
+                  const isActive = (activeImageUrl || product.image_url) === url;
+                  return (
+                    <button
+                      key={index}
+                      onClick={() => setActiveImageUrl(url)}
+                      onMouseEnter={() => setActiveImageUrl(url)}
+                      className={`relative w-20 h-20 rounded-2xl overflow-hidden border-2 transition-all duration-200 bg-stone-50 ${
+                        isActive 
+                          ? 'border-[#6B5656] shadow-sm scale-102 ring-2 ring-[#6B5656]/10' 
+                          : 'border-[#EADBDB] hover:border-[#6B5656]/50 opacity-80 hover:opacity-100'
+                      }`}
+                    >
+                      <Image 
+                        src={url} 
+                        alt={`${product.name} gallery image ${index + 1}`} 
+                        fill 
+                        sizes="80px"
+                        className="object-cover"
+                      />
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Right Column: Order Details panel */}

@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, BeforeValidator
-from typing import Annotated, Optional
+from typing import Annotated, Optional, List
 
 # Custom type to convert MongoDB ObjectId to string for JSON serialization
 PyObjectId = Annotated[str, BeforeValidator(str)]
@@ -11,6 +11,7 @@ class ProductModel(BaseModel):
     price: float = Field(..., gt=0)
     category: str
     image_url: str
+    image_urls: Optional[List[str]] = Field(default_factory=list)
 
     class Config:
         populate_by_name = True

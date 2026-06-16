@@ -22,6 +22,7 @@ interface Product {
   price: number;
   category: string;
   image_url: string;
+  image_urls?: string[];
 }
 
 export default function AdminProducts() {
@@ -38,8 +39,8 @@ export default function AdminProducts() {
     price: '',
     category: 'TOYS',
   });
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -81,8 +82,8 @@ export default function AdminProducts() {
       price: '',
       category: 'TOYS',
     });
-    setSelectedFile(null);
-    setPreviewUrl(null);
+    setSelectedFiles([]);
+    setPreviewUrls([]);
     setSubmitError(null);
     setModalOpen(true);
   };
@@ -95,17 +96,18 @@ export default function AdminProducts() {
       price: product.price.toString(),
       category: product.category,
     });
-    setSelectedFile(null);
-    setPreviewUrl(product.image_url);
+    setSelectedFiles([]);
+    setPreviewUrls([]);
     setSubmitError(null);
     setModalOpen(true);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setSelectedFile(file);
-      setPreviewUrl(URL.createObjectURL(file));
+    if (e.target.files) {
+      const filesArray = Array.from(e.target.files);
+      setSelectedFiles(prev => [...prev, ...filesArray]);
+      const newPreviews = filesArray.map(file => URL.createObjectURL(file));
+      setPreviewUrls(prev => [...prev, ...newPreviews]);
     }
   };
 
@@ -135,8 +137,10 @@ export default function AdminProducts() {
       submissionData.append('price', formData.price);
       submissionData.append('category', formData.category.toUpperCase());
       
-      if (selectedFile) {
-        submissionData.append('image', selectedFile);
+      if (selectedFiles.length > 0) {
+        selectedFiles.forEach(file => {
+          submissionData.append('images', file);
+        });
       }
 
       let url = `${API_URL}/api/products/`;
@@ -147,8 +151,8 @@ export default function AdminProducts() {
         method = 'PUT';
       } else {
         // For creations, image file is required
-        if (!selectedFile) {
-          throw new Error("Please upload a product image.");
+        if (selectedFiles.length === 0) {
+          throw new Error("Please upload at least one product image.");
         }
       }
 
@@ -416,27 +420,64 @@ export default function AdminProducts() {
               </div>
 
               {/* Image Upload */}
+              {editingProduct && (
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">
+                    Current Images
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {(editingProduct.image_urls && editingProduct.image_urls.length > 0
+                      ? editingProduct.image_urls
+                      : [editingProduct.image_url]
+                    ).map((url, idx) => (
+                      <div key={idx} className="w-16 h-16 rounded-xl border border-stone-200 bg-white overflow-hidden relative shadow-xs">
+                        <img src={url} alt={`Current ${idx}`} className="w-full h-full object-cover" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider flex items-center gap-1.5">
-                  <Upload className="w-3 h-3 text-stone-450" /> Product Image
+                  <Upload className="w-3 h-3 text-stone-450" /> {editingProduct ? 'Upload New Images (Replaces current)' : 'Product Images'}
                 </label>
                 
-                <div className="flex flex-col sm:flex-row items-center gap-4 border border-dashed border-stone-300 rounded-2xl p-4 bg-stone-50/50">
-                  <div className="w-24 h-24 rounded-xl border border-stone-200 bg-white overflow-hidden flex items-center justify-center shrink-0 relative shadow-inner">
-                    {previewUrl ? (
-                      <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
+                <div className="border border-dashed border-stone-300 rounded-2xl p-4 bg-stone-50/50 space-y-4">
+                  <div className="flex flex-wrap gap-2 min-h-[80px] items-center">
+                    {previewUrls.length > 0 ? (
+                      previewUrls.map((url, index) => (
+                        <div key={index} className="w-20 h-20 rounded-xl border border-stone-200 bg-white overflow-hidden relative group/preview shadow-xs">
+                          <img src={url} alt="Preview" className="w-full h-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+                              setPreviewUrls(prev => prev.filter((_, i) => i !== index));
+                            }}
+                            className="absolute top-1 right-1 bg-black/60 hover:bg-red-650 text-white rounded-full p-1 transition-colors opacity-0 group-hover/preview:opacity-100"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))
                     ) : (
-                      <Upload className="w-6 h-6 text-stone-300" />
+                      <div className="w-full py-4 text-center text-stone-400 text-xs flex flex-col items-center justify-center gap-2">
+                        <Upload className="w-6 h-6 text-stone-300" />
+                        <span>No new images selected</span>
+                      </div>
                     )}
                   </div>
-                  <div className="flex-1 w-full text-center sm:text-left">
-                    <p className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Select Image File</p>
-                    <p className="text-[9px] text-stone-400 mt-0.5">Supports PNG, JPG, JPEG up to 5MB</p>
+                  
+                  <div className="w-full text-center sm:text-left">
+                    <p className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Select Image Files</p>
+                    <p className="text-[9px] text-stone-400 mt-0.5">Supports PNG, JPG, JPEG up to 5MB. Multiple selection allowed.</p>
                     <label className="mt-3 inline-flex bg-white hover:bg-stone-50 border border-stone-250 hover:border-[#D9B4B4] text-stone-650 text-[10px] font-bold uppercase tracking-wider px-3.5 py-2 rounded-lg cursor-pointer transition-all shadow-xs active:scale-95">
-                      Choose File
+                      Choose Files
                       <input 
                         type="file" 
                         accept="image/*" 
+                        multiple 
                         onChange={handleFileChange} 
                         className="hidden" 
                         required={!editingProduct}

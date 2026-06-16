@@ -15,12 +15,29 @@ async def create_product(
     description: str = Form(...),
     price: float = Form(...),
     category: str = Form(...),
-    image: UploadFile = File(...),
+    image: UploadFile = File(None),
+    images: List[UploadFile] = File(None),
     current_admin: UserInDB = Depends(get_current_admin_user)
 ):
     try:
-        # Upload image to Cloudinary
-        image_url = await upload_image_to_cloudinary(image)
+        uploaded_urls = []
+        if images:
+            for img in images:
+                if img.filename:
+                    url = await upload_image_to_cloudinary(img)
+                    uploaded_urls.append(url)
+        
+        if not uploaded_urls and image and image.filename:
+            url = await upload_image_to_cloudinary(image)
+            uploaded_urls.append(url)
+            
+        if not uploaded_urls:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="At least one product image is required."
+            )
+            
+        image_url = uploaded_urls[0]
         
         # Prepare product data for insertion
         product_data = {
@@ -28,7 +45,8 @@ async def create_product(
             "description": description,
             "price": price,
             "category": category,
-            "image_url": image_url
+            "image_url": image_url,
+            "image_urls": uploaded_urls
         }
         
         db = get_database()
@@ -110,6 +128,7 @@ async def update_product(
     price: float = Form(None),
     category: str = Form(None),
     image: UploadFile = File(None),
+    images: List[UploadFile] = File(None),
     current_admin: UserInDB = Depends(get_current_admin_user)
 ):
     db = get_database()
@@ -137,13 +156,31 @@ async def update_product(
             update_data["price"] = price
         if category is not None:
             update_data["category"] = category
-        if image is not None:
-            # Delete old image from Cloudinary if it exists
+            
+        uploaded_urls = []
+        if images:
+            for img in images:
+                if img.filename:
+                    url = await upload_image_to_cloudinary(img)
+                    uploaded_urls.append(url)
+                    
+        if not uploaded_urls and image and image.filename:
+            url = await upload_image_to_cloudinary(image)
+            uploaded_urls.append(url)
+            
+        if uploaded_urls:
+            # Delete old images from Cloudinary if they exist
+            old_image_urls = existing_product.get("image_urls") or []
             old_image_url = existing_product.get("image_url")
+            all_old_urls = set(old_image_urls)
             if old_image_url:
-                await delete_image_by_url(old_image_url)
-            image_url = await upload_image_to_cloudinary(image)
-            update_data["image_url"] = image_url
+                all_old_urls.add(old_image_url)
+                
+            for old_url in all_old_urls:
+                await delete_image_by_url(old_url)
+                
+            update_data["image_url"] = uploaded_urls[0]
+            update_data["image_urls"] = uploaded_urls
             
         if update_data:
             await db["products"].update_one({"_id": ObjectId(product_id)}, {"$set": update_data})
@@ -178,10 +215,15 @@ async def delete_product(
                 detail="Product not found"
             )
             
-        # Delete from Cloudinary if image_url exists
-        image_url = existing_product.get("image_url")
-        if image_url:
-            await delete_image_by_url(image_url)
+        # Delete from Cloudinary if image_url or image_urls exist
+        old_image_urls = existing_product.get("image_urls") or []
+        old_image_url = existing_product.get("image_url")
+        all_old_urls = set(old_image_urls)
+        if old_image_url:
+            all_old_urls.add(old_image_url)
+            
+        for old_url in all_old_urls:
+            await delete_image_by_url(old_url)
             
         # Delete from DB
         await db["products"].delete_one({"_id": ObjectId(product_id)})
