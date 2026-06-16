@@ -15,7 +15,8 @@ import {
   Bell,
   Search,
   User as UserIcon,
-  ShoppingBag
+  ShoppingBag,
+  Image as ImageIcon
 } from 'lucide-react';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -76,6 +77,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: 'Products', path: '/admin/products', icon: Package },
     { name: 'Orders', path: '/admin/orders', icon: ShoppingCart },
     { name: 'Customers', path: '/admin/customers', icon: Users },
+    { name: 'Homepage', path: '/admin/customizer', icon: ImageIcon },
     { name: 'Settings', path: '/admin/settings', icon: Settings },
   ];
 
@@ -84,6 +86,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     if (pathname.includes('/admin/products')) return 'Product Catalog';
     if (pathname.includes('/admin/orders')) return 'Order Operations';
     if (pathname.includes('/admin/customers')) return 'Customer Records';
+    if (pathname.includes('/admin/customizer')) return 'Homepage Customizer';
     if (pathname.includes('/admin/settings')) return 'Global Settings';
     return 'Admin Panel';
   };

@@ -66,6 +66,33 @@ export default function CrochetCreationPage() {
   const [loading, setLoading] = useState(true);
   const [selectedTexture, setSelectedTexture] = useState<string | null>(null);
   const [productsList, setProductsList] = useState<any[]>([]);
+  const [customImages, setCustomImages] = useState<Record<string, string>>({});
+
+  // Load custom homepage images on mount
+  useEffect(() => {
+    const fetchHomepageImages = async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/settings/homepage-images`);
+        if (res.ok) {
+          const data = await res.json();
+          const resolved: Record<string, string> = {};
+          for (const key in data) {
+            if (data[key] && data[key].url) {
+              resolved[key] = data[key].url;
+            }
+          }
+          setCustomImages(resolved);
+        }
+      } catch (err) {
+        console.error("Failed to load custom homepage images:", err);
+      }
+    };
+    fetchHomepageImages();
+  }, [API_URL]);
+
+  const getImageSrc = (key: keyof typeof IMAGES) => {
+    return customImages[key] || IMAGES[key];
+  };
 
   // Auth states
   const [token, setToken] = useState<string | null>(null);
@@ -244,7 +271,7 @@ export default function CrochetCreationPage() {
       name: 'Crochet Teddy Bear Amigurumi',
       description: 'Handmade with premium cotton yarn, hypoallergenic padding.',
       price: 24.99,
-      image_url: IMAGES.craftingTools,
+      image_url: getImageSrc('craftingTools'),
       badge: 'POPULAR'
     },
     {
@@ -253,7 +280,7 @@ export default function CrochetCreationPage() {
       name: 'Pastel Cozy Wool Cardigan',
       description: 'Warm, loose-fit design crafted with soft organic merino wool.',
       price: 89.00,
-      image_url: IMAGES.stackedSweaters,
+      image_url: getImageSrc('stackedSweaters'),
       badge: 'HANDMADE'
     },
     {
@@ -262,10 +289,10 @@ export default function CrochetCreationPage() {
       name: 'Heart Crochet Yarn Basket',
       description: 'Perfect desktop organizer for your needles, hooks, and yarns.',
       price: 18.50,
-      image_url: IMAGES.heroYarn,
+      image_url: getImageSrc('heroYarn'),
       badge: 'NEW RELEASE'
     }
-  ], []);
+  ], [customImages]);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -620,7 +647,7 @@ export default function CrochetCreationPage() {
           >
             <div className="relative w-9 h-9 rounded-full overflow-hidden border border-[#D9B4B4]/30 shadow-sm bg-white flex-shrink-0 group-hover:rotate-12 group-hover:scale-105 transition-all duration-300">
               <Image
-                src={IMAGES.logo}
+                src={getImageSrc('logo')}
                 alt="Crochet Creation Logo"
                 fill
                 sizes="36px"
@@ -914,7 +941,7 @@ export default function CrochetCreationPage() {
             {/* Heart shaped yarn ball */}
             <div className="mt-12 md:mt-16 w-56 h-56 md:w-64 md:h-64 relative">
               <Image
-                src={IMAGES.heroYarn}
+                src={getImageSrc('heroYarn')}
                 alt="Marilyn Heart Yarn"
                 fill
                 sizes="(max-width: 768px) 224px, 256px"
@@ -1292,9 +1319,9 @@ export default function CrochetCreationPage() {
             {displayProducts.length > 0 ? (
               displayProducts.map((product) => (
                 <div key={product._id || product.id} className="bg-white border border-[#EADBDB] rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group">
-                  <div className="h-64 bg-amber-50/20 relative overflow-hidden group cursor-pointer" onClick={() => setSelectedTexture(IMAGES.knitTexture)}>
+                  <div className="h-64 bg-amber-50/20 relative overflow-hidden group cursor-pointer" onClick={() => setSelectedTexture(getImageSrc('knitTexture'))}>
                     <Image
-                      src={product.image_url || IMAGES.craftingTools}
+                      src={product.image_url || getImageSrc('craftingTools')}
                       alt={product.title || product.name}
                       fill
                       sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 380px"
@@ -1347,7 +1374,7 @@ export default function CrochetCreationPage() {
               {/* Top: Crafting Tools Image */}
               <div className="h-56 relative">
                 <Image
-                  src={IMAGES.craftingTools}
+                  src={getImageSrc('craftingTools')}
                   alt="Crafting Tools"
                   fill
                   sizes="(max-width: 768px) 100vw, 50vw"
@@ -1380,7 +1407,7 @@ export default function CrochetCreationPage() {
             <div className="flex flex-col h-full rounded-2xl overflow-hidden border border-[#EADBDB] shadow-sm relative group min-h-[500px]">
               {/* Main Photo of Woman Knitting */}
               <Image
-                src={IMAGES.womanKnitting}
+                src={getImageSrc('womanKnitting')}
                 alt="Marilyn Knitting"
                 fill
                 sizes="(max-width: 768px) 100vw, 50vw"
@@ -1449,7 +1476,7 @@ export default function CrochetCreationPage() {
               {/* Stacked Sweaters Image */}
               <div className="h-96 relative rounded-2xl overflow-hidden border border-[#EADBDB] shadow-md">
                 <Image
-                  src={IMAGES.stackedSweaters}
+                  src={getImageSrc('stackedSweaters')}
                   alt="Stacked Sweaters"
                   fill
                   sizes="(max-width: 1024px) 100vw, 58vw"
@@ -1484,7 +1511,7 @@ export default function CrochetCreationPage() {
           {/* Full Knit Background */}
           <div className="absolute inset-0 z-0">
             <Image
-              src={IMAGES.knitTexture}
+              src={getImageSrc('knitTexture')}
               alt="Knit background"
               fill
               sizes="100vw"
@@ -1502,7 +1529,7 @@ export default function CrochetCreationPage() {
               <div className="relative w-20 h-20 rounded-full p-1 border-2 border-[#D9B4B4]">
                 <div className="w-full h-full relative rounded-full overflow-hidden">
                   <Image
-                    src={IMAGES.customerAlice}
+                    src={getImageSrc('customerAlice')}
                     alt="Alice Review"
                     fill
                     sizes="80px"
@@ -1541,7 +1568,7 @@ export default function CrochetCreationPage() {
               <div className="flex items-center gap-2.5">
                 <div className="relative w-8 h-8 rounded-full overflow-hidden border border-[#D9B4B4]/30 shadow-sm bg-white flex-shrink-0">
                   <Image
-                    src={IMAGES.logo}
+                    src={getImageSrc('logo')}
                     alt="Crochet Creation Logo"
                     fill
                     sizes="32px"
@@ -1582,7 +1609,7 @@ export default function CrochetCreationPage() {
               <div className="flex items-center gap-4 relative">
                 <div className="w-24 h-24 relative rounded-full overflow-hidden border border-[#D9B4B4]/20 shadow-md">
                   <Image
-                    src={IMAGES.heroYarn}
+                    src={getImageSrc('heroYarn')}
                     alt="Marilyn Footer Yarn"
                     fill
                     sizes="96px"

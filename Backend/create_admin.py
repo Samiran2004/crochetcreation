@@ -2,6 +2,17 @@ import os
 import sys
 from dotenv import load_dotenv
 from pymongo import MongoClient
+
+# Compatibility patch for bcrypt 4.1.0+ and passlib
+try:
+    import bcrypt
+    if not hasattr(bcrypt, "__about__"):
+        class About:
+            __version__ = getattr(bcrypt, "__version__", "4.0.0")
+        bcrypt.__about__ = About()
+except ImportError:
+    pass
+
 from passlib.context import CryptContext
 
 # Load environment variables

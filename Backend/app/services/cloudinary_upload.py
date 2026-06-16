@@ -30,3 +30,29 @@ async def upload_image_to_cloudinary(file: UploadFile, folder: str = "crochetcre
     await file.seek(0)
     
     return result.get("secure_url")
+
+async def upload_image_and_get_details(file: UploadFile, folder: str = "crochetcreation") -> dict:
+    """
+    Reads upload file stream and uploads it to Cloudinary.
+    Returns a dict with 'url' and 'public_id'.
+    """
+    content = await file.read()
+    result = cloudinary.uploader.upload(
+        content,
+        folder=folder,
+        resource_type="auto"
+    )
+    await file.seek(0)
+    return {
+        "url": result.get("secure_url"),
+        "public_id": result.get("public_id")
+    }
+
+async def delete_image_from_cloudinary(public_id: str):
+    """
+    Deletes an image from Cloudinary using its public_id.
+    """
+    try:
+        cloudinary.uploader.destroy(public_id)
+    except Exception as e:
+        print(f"Failed to delete Cloudinary image {public_id}: {e}")
