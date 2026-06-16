@@ -65,6 +65,17 @@ export default function ProductDetailPage() {
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
 
+  // Hover Zoom States & Handler
+  const [zoomStyle, setZoomStyle] = useState({ transformOrigin: 'center center' });
+  const [isZoomed, setIsZoomed] = useState(false);
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const { left, top, width, height } = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - left) / width) * 100;
+    const y = ((e.clientY - top) / height) * 100;
+    setZoomStyle({ transformOrigin: `${x}% ${y}%` });
+  };
+
   // Cart, Theme & Settings states
   const [cartItemsCount, setCartItemsCount] = useState(0);
   const [cartBouncing, setCartBouncing] = useState(false);
@@ -405,16 +416,32 @@ export default function ProductDetailPage() {
         {/* Product Details Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-start">
           
-          {/* Left Column: Image Display (No Hardcoded Gallery Thumbnails) */}
-          <div className="relative h-[480px] w-full rounded-3xl overflow-hidden border border-[#EADBDB] bg-stone-100 shadow-sm">
+          {/* Left Column: Image Display with Amazon-Style Zoom */}
+          <div 
+            className="relative h-[480px] w-full rounded-3xl overflow-hidden border border-[#EADBDB] bg-stone-100 shadow-sm cursor-zoom-in group/zoom"
+            onMouseEnter={() => setIsZoomed(true)}
+            onMouseLeave={() => {
+              setIsZoomed(false);
+              setZoomStyle({ transformOrigin: 'center center' });
+            }}
+            onMouseMove={handleMouseMove}
+          >
             <Image 
               src={product.image_url} 
               alt={product.name} 
               fill 
               priority
               sizes="(max-width: 1024px) 100vw, 600px"
-              className="object-cover"
+              className="object-cover transition-transform duration-200 ease-out"
+              style={{
+                ...zoomStyle,
+                transform: isZoomed ? 'scale(2)' : 'scale(1)'
+              }}
             />
+            {/* Hover guidance label */}
+            <div className="absolute bottom-4 right-4 bg-black/60 backdrop-blur-xs text-white text-[9px] font-bold uppercase tracking-wider px-2.5 py-1.5 rounded-lg pointer-events-none transition-opacity duration-300 group-hover/zoom:opacity-0 flex items-center gap-1">
+              <span>🔍</span> Hover to zoom
+            </div>
           </div>
 
           {/* Right Column: Order Details panel */}
