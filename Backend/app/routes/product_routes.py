@@ -71,6 +71,37 @@ async def get_products():
             detail=f"Failed to fetch products: {str(e)}"
         )
 
+@router.get("/{product_id}", response_model=ProductModel)
+async def get_product(product_id: str):
+    db = get_database()
+    if db is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database connection is not initialized."
+        )
+    try:
+        # Check if ObjectId format is valid, otherwise use raw string ID
+        query = {}
+        try:
+            query = {"_id": ObjectId(product_id)}
+        except Exception:
+            query = {"_id": product_id}
+            
+        product = await db["products"].find_one(query)
+        if not product:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Product not found"
+            )
+        return product
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch product: {str(e)}"
+        )
+
 @router.put("/{product_id}", response_model=ProductModel)
 async def update_product(
     product_id: str,

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   Heart,
@@ -68,7 +69,7 @@ export default function CrochetCreationPage() {
   const [productsList, setProductsList] = useState<any[]>([]);
   const [customImages, setCustomImages] = useState<Record<string, string>>({});
 
-  // Load custom homepage images on mount
+  // Load custom homepage images and cart count on mount
   useEffect(() => {
     const fetchHomepageImages = async () => {
       try {
@@ -88,6 +89,16 @@ export default function CrochetCreationPage() {
       }
     };
     fetchHomepageImages();
+
+    // Sync cart items count
+    if (typeof window !== 'undefined') {
+      const savedCart = localStorage.getItem('crochet_cart_count');
+      if (savedCart) {
+        setCartItemsCount(parseInt(savedCart, 10));
+      } else {
+        localStorage.setItem('crochet_cart_count', '2');
+      }
+    }
   }, [API_URL]);
 
   const getImageSrc = (key: keyof typeof IMAGES) => {
@@ -264,35 +275,6 @@ export default function CrochetCreationPage() {
     localStorage.removeItem('user');
   };
 
-  const defaultProducts = useMemo(() => [
-    {
-      _id: '1',
-      category: 'TOYS',
-      name: 'Crochet Teddy Bear Amigurumi',
-      description: 'Handmade with premium cotton yarn, hypoallergenic padding.',
-      price: 24.99,
-      image_url: getImageSrc('craftingTools'),
-      badge: 'POPULAR'
-    },
-    {
-      _id: '2',
-      category: 'PULLOVERS',
-      name: 'Pastel Cozy Wool Cardigan',
-      description: 'Warm, loose-fit design crafted with soft organic merino wool.',
-      price: 89.00,
-      image_url: getImageSrc('stackedSweaters'),
-      badge: 'HANDMADE'
-    },
-    {
-      _id: '3',
-      category: 'ACCESSORIES',
-      name: 'Heart Crochet Yarn Basket',
-      description: 'Perfect desktop organizer for your needles, hooks, and yarns.',
-      price: 18.50,
-      image_url: getImageSrc('heroYarn'),
-      badge: 'NEW RELEASE'
-    }
-  ], [customImages]);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -300,7 +282,7 @@ export default function CrochetCreationPage() {
         const res = await fetch(`${API_URL}/api/products`);
         if (res.ok) {
           const data = await res.json();
-          if (Array.isArray(data) && data.length > 0) {
+          if (Array.isArray(data)) {
             setProductsList(data);
           }
         }
@@ -312,13 +294,12 @@ export default function CrochetCreationPage() {
   }, []);
 
   const displayProducts = useMemo(() => {
-    const list = productsList.length > 0 ? productsList : defaultProducts;
-    return list.filter(p => {
+    return productsList.filter(p => {
       const cat = (p.category || '').toUpperCase();
       const filter = activeFilter.toUpperCase();
       return cat === filter || (filter === 'TOYS' && cat.includes('TOY')) || (filter === 'ACCESSORIES' && cat.includes('ACCESSORY'));
     });
-  }, [productsList, defaultProducts, activeFilter]);
+  }, [productsList, activeFilter]);
 
 
   // Theme configuration
@@ -390,7 +371,11 @@ export default function CrochetCreationPage() {
 
   // Add to cart animation trigger
   const handleAddToCart = (e: React.MouseEvent<HTMLButtonElement>) => {
-    setCartItemsCount((prev) => prev + 1);
+    setCartItemsCount((prev) => {
+      const next = prev + 1;
+      localStorage.setItem('crochet_cart_count', next.toString());
+      return next;
+    });
     setCartBouncing(true);
     setTimeout(() => setCartBouncing(false), 800);
 
@@ -1290,9 +1275,9 @@ export default function CrochetCreationPage() {
           {/* Title row */}
           <div className="flex items-center justify-between mb-8 border-b border-[#EADBDB] pb-4">
             <h2 className="text-lg font-black tracking-widest text-[#6B5656] uppercase">BUY A FINISHED PRODUCT</h2>
-            <a href="#shop" className="text-xs font-bold text-[#D9B4B4] hover:text-[#6B5656] uppercase tracking-widest flex items-center gap-1 transition-colors">
+            <Link href="/shop" className="text-xs font-bold text-[#D9B4B4] hover:text-[#6B5656] uppercase tracking-widest flex items-center gap-1 transition-colors">
               SEE ALL <ChevronRight className="w-4 h-4" />
-            </a>
+            </Link>
           </div>
 
           {/* Filter bar with subtle stripe pattern */}
@@ -1319,7 +1304,7 @@ export default function CrochetCreationPage() {
             {displayProducts.length > 0 ? (
               displayProducts.map((product) => (
                 <div key={product._id || product.id} className="bg-white border border-[#EADBDB] rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group">
-                  <div className="h-64 bg-amber-50/20 relative overflow-hidden group cursor-pointer" onClick={() => setSelectedTexture(getImageSrc('knitTexture'))}>
+                  <div className="h-64 bg-amber-50/20 relative overflow-hidden group cursor-pointer" onClick={() => router.push(`/product/${product._id || product.id}`)}>
                     <Image
                       src={product.image_url || getImageSrc('craftingTools')}
                       alt={product.title || product.name}
@@ -1333,14 +1318,19 @@ export default function CrochetCreationPage() {
                     <div className="absolute inset-0 bg-[#6B5656]/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center z-10">
                       <div className="bg-white/95 backdrop-blur-sm text-[#6B5656] text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-full shadow-md transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300 flex items-center gap-1.5">
                         <Search className="w-3.5 h-3.5 text-[#D9B4B4]" />
-                        View Texture
+                        View Details
                       </div>
                     </div>
                   </div>
                   <div className="p-6 flex flex-col justify-between border-t border-[#EADBDB]/50">
                     <div>
                       <span className="text-[9px] font-bold text-[#D9B4B4] uppercase tracking-widest">{product.category}</span>
-                      <h4 className="text-base font-bold text-[#6B5656] mt-1 mb-2">{product.title || product.name}</h4>
+                      <h4 
+                        onClick={() => router.push(`/product/${product._id || product.id}`)}
+                        className="text-base font-bold text-[#6B5656] mt-1 mb-2 cursor-pointer hover:text-[#D9B4B4] transition-colors"
+                      >
+                        {product.title || product.name}
+                      </h4>
                       <p className="text-xs text-stone-500 leading-relaxed">{product.description}</p>
                     </div>
                     <div className="flex items-center justify-between mt-6 pt-4 border-t border-stone-50">
