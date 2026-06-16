@@ -1,7 +1,7 @@
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, status, Depends
 from typing import List
 from app.models.product import ProductModel
-from app.services.cloudinary_upload import upload_image_to_cloudinary
+from app.services.cloudinary_upload import upload_image_to_cloudinary, delete_image_by_url
 from app.core.db import get_database
 from app.api.deps import get_current_admin_user
 from app.models.user import UserInDB
@@ -138,6 +138,10 @@ async def update_product(
         if category is not None:
             update_data["category"] = category
         if image is not None:
+            # Delete old image from Cloudinary if it exists
+            old_image_url = existing_product.get("image_url")
+            if old_image_url:
+                await delete_image_by_url(old_image_url)
             image_url = await upload_image_to_cloudinary(image)
             update_data["image_url"] = image_url
             
@@ -166,13 +170,21 @@ async def delete_product(
         )
         
     try:
-        # Check if product exists and delete it
-        result = await db["products"].delete_one({"_id": ObjectId(product_id)})
-        if result.deleted_count == 0:
+        # Check if product exists first
+        existing_product = await db["products"].find_one({"_id": ObjectId(product_id)})
+        if not existing_product:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Product not found"
             )
+            
+        # Delete from Cloudinary if image_url exists
+        image_url = existing_product.get("image_url")
+        if image_url:
+            await delete_image_by_url(image_url)
+            
+        # Delete from DB
+        await db["products"].delete_one({"_id": ObjectId(product_id)})
         return
         
     except Exception as e:

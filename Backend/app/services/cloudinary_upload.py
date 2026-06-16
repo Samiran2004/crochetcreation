@@ -56,3 +56,29 @@ async def delete_image_from_cloudinary(public_id: str):
         cloudinary.uploader.destroy(public_id)
     except Exception as e:
         print(f"Failed to delete Cloudinary image {public_id}: {e}")
+
+async def delete_image_by_url(url: str):
+    """
+    Parses the public_id from the Cloudinary URL and deletes it.
+    """
+    if not url:
+        return
+    try:
+        if "/image/upload/" not in url:
+            return
+        parts = url.split("/image/upload/")
+        subparts = parts[1].split("/")
+        if subparts[0].startswith("v") and subparts[0][1:].isdigit():
+            path_without_version = "/".join(subparts[1:])
+        else:
+            path_without_version = "/".join(subparts)
+        
+        if "." in path_without_version:
+            public_id = ".".join(path_without_version.split(".")[:-1])
+        else:
+            public_id = path_without_version
+            
+        cloudinary.uploader.destroy(public_id)
+    except Exception as e:
+        print(f"Failed to delete Cloudinary image from URL {url}: {e}")
+
