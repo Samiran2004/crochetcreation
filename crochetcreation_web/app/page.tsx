@@ -1334,7 +1334,7 @@ export default function CrochetCreationPage() {
                       <p className="text-xs text-stone-500 leading-relaxed">{product.description}</p>
                     </div>
                     <div className="flex items-center justify-between mt-6 pt-4 border-t border-stone-50">
-                      <span className="text-lg font-black text-[#6B5656]">${typeof product.price === 'number' ? product.price.toFixed(2) : product.price}</span>
+                      <span className="text-lg font-black text-[#6B5656]">₹{typeof product.price === 'number' ? product.price.toFixed(2) : product.price}</span>
                       <button
                         onClick={handleAddToCart}
                         className="bg-[#6B5656] hover:bg-[#D9B4B4] hover:text-[#6B5656] text-white p-2.5 rounded-full transition-colors active:scale-95 shadow"

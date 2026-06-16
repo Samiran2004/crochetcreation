@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic';
 
 import React, { useEffect, useState, useMemo } from 'react';
 import { 
-  DollarSign, 
+  IndianRupee, 
   ShoppingBag, 
   Users, 
   TrendingUp,
@@ -83,7 +83,7 @@ export default function AdminDashboard() {
       title: 'Total Revenue',
       value: `₹${statsData.total_revenue.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       change: 'Lifetime earnings',
-      icon: DollarSign,
+      icon: IndianRupee,
       color: 'bg-emerald-50 text-emerald-600 border-emerald-100',
     },
     {

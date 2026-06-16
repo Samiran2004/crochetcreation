@@ -528,7 +528,7 @@ export default function ShopPage() {
                   {/* Actions & Price */}
                   <div className="flex items-center justify-between mt-6 pt-4 border-t border-stone-100">
                     <span className="text-lg font-black text-[#6B5656]">
-                      ${p.price?.toFixed(2)}
+                      ₹{p.price?.toFixed(2)}
                     </span>
                     <div className="flex items-center gap-2">
                       <button
@@ -600,7 +600,7 @@ export default function ShopPage() {
                     <span className="text-[9px] font-black text-[#D9B4B4] uppercase tracking-widest block mb-2">Order Summary</span>
                     <div className="flex justify-between items-center text-xs font-bold text-[#6B5656]">
                       <span>{selectedProduct.title || selectedProduct.name}</span>
-                      <span>${((selectedProduct.price || 0) * checkoutQuantity).toFixed(2)}</span>
+                      <span>₹{((selectedProduct.price || 0) * checkoutQuantity).toFixed(2)}</span>
                     </div>
                     
                     {/* Quantity selectors inside modal */}
@@ -711,7 +711,7 @@ export default function ShopPage() {
                     disabled={checkoutLoading}
                     className="w-full bg-[#6B5656] hover:bg-[#D9B4B4] hover:text-[#6B5656] text-white font-bold py-3.5 px-6 rounded-xl transition-all disabled:opacity-50 text-xs uppercase tracking-widest mt-6 shadow"
                   >
-                    {checkoutLoading ? 'Processing Placement...' : `Place Custom Order - $${((selectedProduct.price || 0) * checkoutQuantity).toFixed(2)}`}
+                    {checkoutLoading ? 'Processing Placement...' : `Place Custom Order - ₹${((selectedProduct.price || 0) * checkoutQuantity).toFixed(2)}`}
                   </button>
                 </form>
               )}

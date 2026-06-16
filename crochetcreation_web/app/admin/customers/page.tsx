@@ -9,7 +9,7 @@ import {
   Phone, 
   Calendar, 
   ShoppingBag, 
-  DollarSign, 
+  IndianRupee, 
   Search,
   MessageSquare,
   RefreshCw
@@ -137,7 +137,7 @@ export default function AdminCustomers() {
         {[
           { label: 'Total Clients', value: customers.length, color: 'bg-[#6B5656]/5 text-[#6B5656] border-[#6B5656]/10', icon: Users },
           { label: 'Total Order Registrations', value: totalOrdersAll, color: 'bg-emerald-50 text-emerald-700 border-emerald-100', icon: ShoppingBag },
-          { label: 'Total Value Captured', value: `₹${totalSpentAll.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, color: 'bg-amber-50 text-amber-700 border-amber-100', icon: DollarSign },
+          { label: 'Total Value Captured', value: `₹${totalSpentAll.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, color: 'bg-amber-50 text-amber-700 border-amber-100', icon: IndianRupee },
         ].map((item, i) => {
           const Icon = item.icon;
           return (

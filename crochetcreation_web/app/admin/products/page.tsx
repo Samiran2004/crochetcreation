@@ -10,7 +10,7 @@ import {
   X, 
   Upload, 
   Folder, 
-  DollarSign, 
+  IndianRupee, 
   FileText,
   AlertTriangle
 } from 'lucide-react';
@@ -388,7 +388,7 @@ export default function AdminProducts() {
 
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider flex items-center gap-1.5">
-                    <DollarSign className="w-3 h-3 text-stone-450" /> Price (₹)
+                    <IndianRupee className="w-3 h-3 text-stone-450" /> Price (₹)
                   </label>
                   <input
                     type="number"

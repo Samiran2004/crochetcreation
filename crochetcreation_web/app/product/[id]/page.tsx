@@ -493,7 +493,7 @@ export default function ProductDetailPage() {
             <div className="bg-[#FEF9F6] border border-[#EADBDB] p-6 rounded-2xl">
               <p className="text-[10px] text-stone-450 uppercase tracking-widest font-black">Price</p>
               <div className="mt-1">
-                <span className="text-3xl font-black text-[#6B5656]">${product.price?.toFixed(2)}</span>
+                <span className="text-3xl font-black text-[#6B5656]">₹{product.price?.toFixed(2)}</span>
               </div>
             </div>
 
@@ -583,7 +583,7 @@ export default function ProductDetailPage() {
                       <p className="text-[11px] text-stone-500 line-clamp-2 leading-relaxed">{item.description}</p>
                     </div>
                     <div className="flex items-center justify-between mt-4 pt-3 border-t border-stone-50">
-                      <span className="text-sm font-black text-[#6B5656]">${item.price?.toFixed(2)}</span>
+                      <span className="text-sm font-black text-[#6B5656]">₹{item.price?.toFixed(2)}</span>
                       <span className="text-[10px] font-bold text-[#D9B4B4] uppercase tracking-widest flex items-center gap-0.5">
                         VIEW DETAILS <ChevronRight className="w-3 h-3" />
                       </span>
@@ -644,7 +644,7 @@ export default function ProductDetailPage() {
                     <span className="text-[9px] font-black text-[#D9B4B4] uppercase tracking-widest block mb-2">Order Summary</span>
                     <div className="flex justify-between items-center text-xs font-bold text-[#6B5656]">
                       <span>{product.name} ({quantity}x)</span>
-                      <span>${((product.price || 0) * quantity).toFixed(2)}</span>
+                      <span>₹{((product.price || 0) * quantity).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between items-center text-[10px] text-stone-400 mt-1 border-t border-stone-200/50 pt-2">
                       <span>Shipping Method</span>
@@ -732,7 +732,7 @@ export default function ProductDetailPage() {
                     disabled={checkoutLoading}
                     className="w-full bg-[#6B5656] hover:bg-[#D9B4B4] hover:text-[#6B5656] text-white font-bold py-3.5 px-6 rounded-xl transition-all disabled:opacity-50 text-xs uppercase tracking-widest mt-6 shadow"
                   >
-                    {checkoutLoading ? 'Processing Placement...' : `Place Custom Order - $${((product.price || 0) * quantity).toFixed(2)}`}
+                    {checkoutLoading ? 'Processing Placement...' : `Place Custom Order - ₹${((product.price || 0) * quantity).toFixed(2)}`}
                   </button>
                 </form>
               )}
