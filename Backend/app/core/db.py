@@ -1,6 +1,7 @@
 from motor.motor_asyncio import AsyncIOMotorClient # Async driver for mongoDB for async work
 from app.core.config import settings
 from bson import ObjectId
+from datetime import datetime
 
 class MockCursor:
     def __init__(self, data):
@@ -138,6 +139,23 @@ class MockDatabase:
             "materials": "100% Organic Cotton Yarn, Fiberfill stuffing",
             "care_instructions": "Handwash with mild liquid detergent. Dry flat in shade.",
             "in_stock": True
+        }]
+        # Seed a dummy order
+        self._store["orders"] = [{
+            "_id": ObjectId("647a7b8e1f3d8a5c4e8d0e77"),
+            "customer_name": "Rohan Das",
+            "customer_email": "rohan.das@example.com",
+            "customer_mobile": "9876543210",
+            "items": [{
+                "product_id": "647a7b8e1f3d8a5c4e9d0e99",
+                "title": "Beautiful Woolen Crochet Flower Pot",
+                "price": 499.00,
+                "quantity": 1
+            }],
+            "total_amount": 499.00,
+            "payment_method": "COD",
+            "status": "Pending",
+            "created_at": datetime.utcnow()
         }]
 
 class Database:
