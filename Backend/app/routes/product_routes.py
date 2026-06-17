@@ -15,6 +15,10 @@ async def create_product(
     description: str = Form(...),
     price: float = Form(...),
     category: str = Form(...),
+    size: str = Form(""),
+    materials: str = Form(""),
+    care_instructions: str = Form(""),
+    in_stock: bool = Form(True),
     image: UploadFile = File(None),
     images: List[UploadFile] = File(None),
     current_admin: UserInDB = Depends(get_current_admin_user)
@@ -46,7 +50,11 @@ async def create_product(
             "price": price,
             "category": category,
             "image_url": image_url,
-            "image_urls": uploaded_urls
+            "image_urls": uploaded_urls,
+            "size": size,
+            "materials": materials,
+            "care_instructions": care_instructions,
+            "in_stock": in_stock
         }
         
         db = get_database()
@@ -127,6 +135,10 @@ async def update_product(
     description: str = Form(None),
     price: float = Form(None),
     category: str = Form(None),
+    size: str = Form(None),
+    materials: str = Form(None),
+    care_instructions: str = Form(None),
+    in_stock: bool = Form(None),
     image: UploadFile = File(None),
     images: List[UploadFile] = File(None),
     current_admin: UserInDB = Depends(get_current_admin_user)
@@ -156,6 +168,14 @@ async def update_product(
             update_data["price"] = price
         if category is not None:
             update_data["category"] = category
+        if size is not None:
+            update_data["size"] = size
+        if materials is not None:
+            update_data["materials"] = materials
+        if care_instructions is not None:
+            update_data["care_instructions"] = care_instructions
+        if in_stock is not None:
+            update_data["in_stock"] = in_stock
             
         uploaded_urls = []
         if images:

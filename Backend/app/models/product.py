@@ -12,6 +12,10 @@ class ProductModel(BaseModel):
     category: str
     image_url: str
     image_urls: Optional[List[str]] = Field(default_factory=list)
+    size: Optional[str] = Field(default="")
+    materials: Optional[str] = Field(default="")
+    care_instructions: Optional[str] = Field(default="")
+    in_stock: Optional[bool] = Field(default=True)
 
     class Config:
         populate_by_name = True

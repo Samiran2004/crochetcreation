@@ -539,6 +539,48 @@ export default function ProductDetailPage() {
               </p>
             </div>
 
+            {/* Details & Specifications */}
+            <div className="border-t border-[#EADBDB] pt-6 space-y-4">
+              <span className="text-[10px] font-black uppercase tracking-wider text-[#6B5656] block">Details & Specifications</span>
+              <div className="grid grid-cols-2 gap-y-4 gap-x-6 text-xs bg-[#FEF9F6] p-4.5 rounded-2xl border border-[#EADBDB]">
+                
+                {/* Size */}
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider block">Dimensions / Size</span>
+                  <span className="text-stone-700 font-semibold">{product.size || 'Customisable / Made-to-order'}</span>
+                </div>
+
+                {/* Materials */}
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider block">Materials</span>
+                  <span className="text-stone-700 font-semibold">{product.materials || 'Premium yarn / Cotton mix'}</span>
+                </div>
+
+                {/* Care Instructions */}
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider block">Care Instructions</span>
+                  <span className="text-stone-700 font-semibold">{product.care_instructions || 'Handwash gently, dry flat'}</span>
+                </div>
+
+                {/* Availability */}
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider block">Availability</span>
+                  <span className="inline-block">
+                    {product.in_stock !== false ? (
+                      <span className="bg-emerald-50 text-emerald-700 border border-emerald-250/40 px-2.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider">
+                        In Stock
+                      </span>
+                    ) : (
+                      <span className="bg-red-50 text-red-700 border border-red-200/40 px-2.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider">
+                        Out of Stock
+                      </span>
+                    )}
+                  </span>
+                </div>
+
+              </div>
+            </div>
+
             {/* Quantity Selector & Checkout Actions */}
             <div className="border-t border-[#EADBDB] pt-6 space-y-4">
               <div className="flex items-center justify-between">
@@ -546,14 +588,16 @@ export default function ProductDetailPage() {
                 <div className="flex items-center border border-[#EADBDB] rounded-lg overflow-hidden bg-white shadow-inner">
                   <button 
                     onClick={() => setQuantity(q => Math.max(1, q - 1))}
-                    className="p-2 hover:bg-stone-50 text-stone-500 active:scale-90 transition-transform"
+                    disabled={product.in_stock === false}
+                    className="p-2 hover:bg-stone-50 text-stone-500 active:scale-90 transition-transform disabled:opacity-40"
                   >
                     <Minus className="w-4 h-4" />
                   </button>
                   <span className="px-6 text-sm font-bold text-[#6B5656] min-w-10 text-center">{quantity}</span>
                   <button 
                     onClick={() => setQuantity(q => Math.min(10, q + 1))}
-                    className="p-2 hover:bg-stone-50 text-stone-500 active:scale-90 transition-transform"
+                    disabled={product.in_stock === false}
+                    className="p-2 hover:bg-stone-50 text-stone-500 active:scale-90 transition-transform disabled:opacity-40"
                   >
                     <Plus className="w-4 h-4" />
                   </button>
@@ -564,15 +608,17 @@ export default function ProductDetailPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                 <button
                   onClick={handleAddToCart}
-                  className="w-full bg-white hover:bg-stone-50 text-[#6B5656] border border-[#6B5656] font-bold py-3.5 px-6 rounded-xl transition-all active:scale-98 shadow-sm flex items-center justify-center gap-2 text-xs uppercase tracking-widest"
+                  disabled={product.in_stock === false}
+                  className="w-full bg-white hover:bg-stone-50 text-[#6B5656] border border-[#6B5656] disabled:border-stone-200 disabled:text-stone-400 disabled:bg-stone-50 disabled:cursor-not-allowed font-bold py-3.5 px-6 rounded-xl transition-all active:scale-98 shadow-sm flex items-center justify-center gap-2 text-xs uppercase tracking-widest"
                 >
-                  <ShoppingBag className="w-4 h-4" /> Add to Basket
+                  <ShoppingBag className="w-4 h-4" /> {product.in_stock === false ? 'Out of Stock' : 'Add to Basket'}
                 </button>
                 <button
                   onClick={() => setCheckoutOpen(true)}
-                  className="w-full bg-[#6B5656] hover:bg-[#D9B4B4] hover:text-[#6B5656] text-white font-bold py-3.5 px-6 rounded-xl transition-all active:scale-98 shadow flex items-center justify-center gap-2 text-xs uppercase tracking-widest"
+                  disabled={product.in_stock === false}
+                  className="w-full bg-[#6B5656] hover:bg-[#D9B4B4] hover:text-[#6B5656] text-white disabled:bg-stone-200 disabled:text-stone-400 disabled:cursor-not-allowed font-bold py-3.5 px-6 rounded-xl transition-all active:scale-98 shadow flex items-center justify-center gap-2 text-xs uppercase tracking-widest"
                 >
-                  Buy It Now
+                  {product.in_stock === false ? 'Out of Stock' : 'Buy It Now'}
                 </button>
               </div>
 
