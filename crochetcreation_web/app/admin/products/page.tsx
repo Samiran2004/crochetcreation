@@ -17,7 +17,10 @@ import {
   Sparkles,
   Heart,
   Check,
-  HelpCircle
+  HelpCircle,
+  Search,
+  SlidersHorizontal,
+  Package
 } from 'lucide-react';
 
 interface Product {
@@ -39,6 +42,11 @@ export default function AdminProducts() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
+  // Search & Filtering states
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('ALL');
+  const [selectedStock, setSelectedStock] = useState('ALL');
+
   // Modal states
   const [modalOpen, setModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -242,6 +250,23 @@ export default function AdminProducts() {
     }
   };
 
+  const totalCount = products.length;
+  const inStockCount = products.filter(p => p.in_stock !== false).length;
+  const outOfStockCount = products.filter(p => p.in_stock === false).length;
+  const averagePrice = products.length > 0 
+    ? products.reduce((acc, p) => acc + p.price, 0) / products.length 
+    : 0;
+
+  const filteredProducts = products.filter((product) => {
+    const matchesSearch = product.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          (product.description && product.description.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesCategory = selectedCategory === 'ALL' || product.category === selectedCategory;
+    const matchesStock = selectedStock === 'ALL' || 
+                         (selectedStock === 'IN_STOCK' && product.in_stock !== false) ||
+                         (selectedStock === 'OUT_OF_STOCK' && product.in_stock === false);
+    return matchesSearch && matchesCategory && matchesStock;
+  });
+
   return (
     <div className="space-y-6 animate-in fade-in-50 duration-300">
       {/* Top Header Card */}
@@ -254,10 +279,94 @@ export default function AdminProducts() {
         </div>
         <button
           onClick={handleOpenAddModal}
-          className="bg-[#6B5656] hover:bg-[#D9B4B4] hover:text-[#6B5656] text-white font-bold text-xs uppercase tracking-wider py-2.5 px-4 rounded-xl flex items-center justify-center gap-1.5 transition-all duration-350 shadow-md active:scale-95 shrink-0"
+          className="bg-[#6B5656] hover:bg-[#D9B4B4] hover:text-[#6B5656] text-white font-bold text-xs uppercase tracking-wider py-2.5 px-4 rounded-xl flex items-center justify-center gap-1.5 transition-all duration-355 shadow-md active:scale-95 shrink-0"
         >
           <Plus className="w-4 h-4" /> Add New Product
         </button>
+      </div>
+
+      {/* Catalog Metrics Summary Board */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Total Products */}
+        <div className="bg-white border border-stone-200 rounded-2xl p-4 shadow-sm flex items-center gap-4">
+          <div className="p-3 rounded-xl bg-stone-50 border border-stone-100 text-[#6B5656]">
+            <Package className="w-5 h-5" />
+          </div>
+          <div>
+            <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest block leading-none">Total Products</span>
+            <span className="text-stone-850 font-bold text-xl block mt-1">{totalCount}</span>
+          </div>
+        </div>
+
+        {/* In Stock */}
+        <div className="bg-white border border-stone-200 rounded-2xl p-4 shadow-sm flex items-center gap-4">
+          <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-600">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 block"></span>
+          </div>
+          <div>
+            <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest block leading-none">Active / In Stock</span>
+            <span className="text-emerald-700 font-bold text-xl block mt-1">{inStockCount}</span>
+          </div>
+        </div>
+
+        {/* Out of Stock */}
+        <div className="bg-white border border-stone-200 rounded-2xl p-4 shadow-sm flex items-center gap-4">
+          <div className="p-3 rounded-xl bg-red-50 border border-red-100 text-red-600">
+            <span className="w-2.5 h-2.5 rounded-full bg-red-500 block"></span>
+          </div>
+          <div>
+            <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest block leading-none">Out of Stock</span>
+            <span className="text-rose-700 font-bold text-xl block mt-1">{outOfStockCount}</span>
+          </div>
+        </div>
+
+        {/* Average Price */}
+        <div className="bg-white border border-stone-200 rounded-2xl p-4 shadow-sm flex items-center gap-4">
+          <div className="p-3 rounded-xl bg-amber-50 border border-amber-100 text-amber-600">
+            <IndianRupee className="w-5 h-5" />
+          </div>
+          <div>
+            <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest block leading-none">Average Price</span>
+            <span className="text-amber-800 font-bold text-lg block mt-1">₹{averagePrice.toFixed(2)}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Toolbar - Search & Filtering */}
+      <div className="bg-white border border-stone-200 rounded-2xl p-4 shadow-sm flex flex-col md:flex-row gap-3 items-center justify-between">
+        <div className="relative w-full md:max-w-md">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
+          <input 
+            type="text"
+            placeholder="Search catalog by title, description..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full bg-stone-50 border border-stone-200 hover:border-stone-300 focus:border-[#D9B4B4] focus:bg-white pl-10 pr-4 py-2 rounded-xl text-xs focus:outline-none text-stone-850 placeholder-stone-400 transition-all duration-200"
+          />
+        </div>
+        <div className="flex w-full md:w-auto gap-3 items-center">
+          <select 
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="w-1/2 md:w-auto bg-stone-50 border border-stone-200 hover:border-stone-300 focus:border-[#D9B4B4] focus:bg-white px-3 py-2 rounded-xl text-xs focus:outline-none text-stone-850 font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer shadow-2xs"
+          >
+            <option value="ALL">All Categories</option>
+            <option value="TOYS">Toys / Amigurumi</option>
+            <option value="HOME">Home Decor</option>
+            <option value="BAGS">Bags & Purses</option>
+            <option value="GARMENTS">Garments</option>
+            <option value="ACCESSORIES">Accessories</option>
+          </select>
+          <select 
+            value={selectedStock}
+            onChange={(e) => setSelectedStock(e.target.value)}
+            className="w-1/2 md:w-auto bg-stone-50 border border-stone-200 hover:border-stone-300 focus:border-[#D9B4B4] focus:bg-white px-3 py-2 rounded-xl text-xs focus:outline-none text-stone-850 font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer shadow-2xs"
+          >
+            <option value="ALL">All Stock Status</option>
+            <option value="IN_STOCK">In Stock</option>
+            <option value="OUT_OF_STOCK">Out of Stock</option>
+          </select>
+        </div>
       </div>
 
       {/* Main Catalog View */}
@@ -276,80 +385,83 @@ export default function AdminProducts() {
             Retry
           </button>
         </div>
-      ) : products.length === 0 ? (
+      ) : filteredProducts.length === 0 ? (
         <div className="bg-white border border-stone-200 rounded-2xl p-12 text-center text-stone-500 space-y-4">
           <div className="w-12 h-12 rounded-full bg-stone-50 border border-stone-250 flex items-center justify-center mx-auto text-stone-400">
             <Plus className="w-6 h-6" />
           </div>
           <div className="space-y-1">
             <h3 className="text-sm font-bold text-stone-700 uppercase tracking-wider">No Products Found</h3>
-            <p className="text-xs text-stone-450">Get started by creating your first product item.</p>
+            <p className="text-xs text-stone-450">Try adjusting your filters or create a new product.</p>
           </div>
-          <button
-            onClick={handleOpenAddModal}
-            className="bg-[#6B5656] hover:bg-[#D9B4B4] hover:text-[#6B5656] text-white font-bold text-xs uppercase tracking-wider py-2.5 px-4 rounded-xl inline-flex items-center gap-1.5 transition-all duration-300"
-          >
-            <Plus className="w-3.5 h-3.5" /> Create Product
-          </button>
         </div>
       ) : (
         <div className="bg-white border border-stone-200 rounded-2xl shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-stone-100 text-[10px] font-bold text-stone-400 uppercase tracking-wider bg-stone-50/50">
-                  <th className="py-3 px-5 w-24">Image</th>
-                  <th className="py-3 px-5">Title</th>
-                  <th className="py-3 px-5">Price</th>
-                  <th className="py-3 px-5">Stock</th>
-                  <th className="py-3 px-5">Category</th>
-                  <th className="py-3 px-5">Description</th>
-                  <th className="py-3 px-5 text-right">Actions</th>
+                <tr className="border-b border-stone-100 text-[10px] font-bold text-stone-400 uppercase tracking-widest bg-stone-50/50">
+                  <th className="py-4 px-6">Product Details</th>
+                  <th className="py-4 px-6 w-32">Price</th>
+                  <th className="py-4 px-6 w-36">Stock Status</th>
+                  <th className="py-4 px-6 max-w-xs">Description</th>
+                  <th className="py-4 px-6 w-28 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone-100 text-xs">
-                {products.map((product) => (
-                  <tr key={product._id} className="hover:bg-stone-50/30 transition-colors">
-                    <td className="py-3.5 px-5">
-                      <div className="w-12 h-12 rounded-xl overflow-hidden bg-stone-100 border border-stone-200 relative shadow-inner">
-                        <img 
-                          src={product.image_url} 
-                          alt={product.title} 
-                          className="w-full h-full object-cover object-center" 
-                        />
+                {filteredProducts.map((product) => (
+                  <tr key={product._id} className="hover:bg-stone-50/30 transition-colors group">
+                    <td className="py-4 px-6">
+                      <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 rounded-xl overflow-hidden bg-stone-100 border border-stone-200/60 relative shrink-0 shadow-xs">
+                          <img 
+                            src={product.image_url} 
+                            alt={product.title} 
+                            className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300" 
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <h4 className="font-bold text-stone-850 text-sm leading-snug">{product.title}</h4>
+                          <div className="flex flex-wrap items-center gap-1.5 text-[9px]">
+                            <span className="bg-[#FEF9F6] text-[#6B5656] border border-[#D9B4B4]/40 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                              {product.category}
+                            </span>
+                            {product.size && (
+                              <span className="bg-stone-100 text-stone-500 border border-stone-200/50 px-2 py-0.5 rounded-full font-semibold uppercase">
+                                {product.size}
+                              </span>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </td>
-                    <td className="py-3.5 px-5 font-bold text-stone-800">{product.title}</td>
-                    <td className="py-3.5 px-5 font-bold text-stone-850">₹{product.price.toFixed(2)}</td>
-                    <td className="py-3.5 px-5">
+                    <td className="py-4 px-6 font-bold text-stone-900 text-sm">₹{product.price.toFixed(2)}</td>
+                    <td className="py-4 px-6">
                       {product.in_stock !== false ? (
-                        <span className="bg-emerald-50 text-emerald-700 border border-emerald-200/50 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider">
+                        <span className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 border border-emerald-250/20 px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                           In Stock
                         </span>
                       ) : (
-                        <span className="bg-red-50 text-red-700 border border-red-200/55 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider">
+                        <span className="inline-flex items-center gap-1.5 bg-rose-50 text-rose-700 border border-rose-250/20 px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider">
+                          <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
                           Out of Stock
                         </span>
                       )}
                     </td>
-                    <td className="py-3.5 px-5">
-                      <span className="bg-[#FEF9F6] text-[#6B5656] border border-[#D9B4B4]/40 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider">
-                        {product.category}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-5 text-stone-450 max-w-xs truncate">{product.description}</td>
-                    <td className="py-3.5 px-5 text-right space-x-1.5">
+                    <td className="py-4 px-6 text-stone-450 max-w-xs truncate">{product.description}</td>
+                    <td className="py-4 px-6 text-right space-x-1">
                       <button
                         onClick={() => handleOpenEditModal(product)}
                         title="Edit Product"
-                        className="p-1.5 hover:bg-stone-100 text-stone-500 hover:text-stone-800 rounded-lg transition-colors inline-flex items-center"
+                        className="p-2 hover:bg-stone-100 text-stone-500 hover:text-stone-800 rounded-xl transition-colors inline-flex items-center"
                       >
                         <Edit2 className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => handleOpenDeleteConfirm(product)}
                         title="Delete Product"
-                        className="p-1.5 hover:bg-red-50 text-stone-500 hover:text-red-600 rounded-lg transition-colors inline-flex items-center"
+                        className="p-2 hover:bg-red-50 text-stone-500 hover:text-red-600 rounded-xl transition-colors inline-flex items-center"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
