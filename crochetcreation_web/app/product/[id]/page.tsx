@@ -541,43 +541,75 @@ export default function ProductDetailPage() {
 
             {/* Details & Specifications */}
             <div className="border-t border-[#EADBDB] pt-6 space-y-4">
-              <span className="text-[10px] font-black uppercase tracking-wider text-[#6B5656] block">Details & Specifications</span>
-              <div className="grid grid-cols-2 gap-y-4 gap-x-6 text-xs bg-[#FEF9F6] p-4.5 rounded-2xl border border-[#EADBDB]">
-                
-                {/* Size */}
-                <div className="space-y-1">
-                  <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider block">Dimensions / Size</span>
-                  <span className="text-stone-700 font-semibold">{product.size || 'Customisable / Made-to-order'}</span>
-                </div>
+              <span className="text-[10px] font-black uppercase tracking-wider text-[#6B5656] block tracking-widest">
+                DETAILS & SPECIFICATIONS
+              </span>
+              <div className="bg-[#FEF9F6] border border-[#EADBDB] rounded-2xl p-6 shadow-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-8">
+                  
+                  {/* Size */}
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 rounded-xl bg-[#6B5656]/5 text-[#6B5656] shrink-0 mt-0.5">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                      </svg>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-[9px] font-bold text-stone-400 uppercase tracking-widest block leading-none">Dimensions / Size</span>
+                      <span className="text-[#6B5656] font-semibold text-sm leading-tight block pt-0.5">{product.size || 'Customisable'}</span>
+                    </div>
+                  </div>
 
-                {/* Materials */}
-                <div className="space-y-1">
-                  <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider block">Materials</span>
-                  <span className="text-stone-700 font-semibold">{product.materials || 'Premium yarn / Cotton mix'}</span>
-                </div>
+                  {/* Materials */}
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 rounded-xl bg-[#6B5656]/5 text-[#6B5656] shrink-0 mt-0.5">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                      </svg>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-[9px] font-bold text-stone-400 uppercase tracking-widest block leading-none">Materials</span>
+                      <span className="text-[#6B5656] font-semibold text-sm leading-tight block pt-0.5">{product.materials || 'Premium yarn mix'}</span>
+                    </div>
+                  </div>
 
-                {/* Care Instructions */}
-                <div className="space-y-1">
-                  <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider block">Care Instructions</span>
-                  <span className="text-stone-700 font-semibold">{product.care_instructions || 'Handwash gently, dry flat'}</span>
-                </div>
+                  {/* Care Instructions */}
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 rounded-xl bg-[#6B5656]/5 text-[#6B5656] shrink-0 mt-0.5">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                      </svg>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-[9px] font-bold text-stone-400 uppercase tracking-widest block leading-none">Care Instructions</span>
+                      <span className="text-[#6B5656] font-semibold text-sm leading-tight block pt-0.5">{product.care_instructions || 'Handwash gently'}</span>
+                    </div>
+                  </div>
 
-                {/* Availability */}
-                <div className="space-y-1">
-                  <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider block">Availability</span>
-                  <span className="inline-block">
-                    {product.in_stock !== false ? (
-                      <span className="bg-emerald-50 text-emerald-700 border border-emerald-250/40 px-2.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider">
-                        In Stock
+                  {/* Availability */}
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 rounded-xl bg-[#6B5656]/5 text-[#6B5656] shrink-0 mt-0.5">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-[9px] font-bold text-stone-400 uppercase tracking-widest block leading-none">Availability</span>
+                      <span className="inline-block pt-1">
+                        {product.in_stock !== false ? (
+                          <span className="bg-emerald-50 text-emerald-700 border border-emerald-200/40 px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-widest">
+                            In Stock
+                          </span>
+                        ) : (
+                          <span className="bg-rose-50 text-rose-700 border border-rose-200/40 px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-widest">
+                            Out of Stock
+                          </span>
+                        )}
                       </span>
-                    ) : (
-                      <span className="bg-red-50 text-red-700 border border-red-200/40 px-2.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider">
-                        Out of Stock
-                      </span>
-                    )}
-                  </span>
-                </div>
+                    </div>
+                  </div>
 
+                </div>
               </div>
             </div>
 
