@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import Image from 'next/image';
+import { addToCart } from './components/CartDrawer';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -69,7 +70,7 @@ export default function CrochetCreationPage() {
   const [productsList, setProductsList] = useState<any[]>([]);
   const [customImages, setCustomImages] = useState<Record<string, string>>({});
 
-  // Load custom homepage images and cart count on mount
+  // Load custom homepage images on mount
   useEffect(() => {
     const fetchHomepageImages = async () => {
       try {
@@ -89,17 +90,27 @@ export default function CrochetCreationPage() {
       }
     };
     fetchHomepageImages();
-
-    // Sync cart items count
-    if (typeof window !== 'undefined') {
-      const savedCart = localStorage.getItem('crochet_cart_count');
-      if (savedCart) {
-        setCartItemsCount(parseInt(savedCart, 10));
-      } else {
-        localStorage.setItem('crochet_cart_count', '2');
-      }
-    }
   }, [API_URL]);
+
+  // Sync cart items count dynamically
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const syncCartCount = () => {
+        const savedCount = localStorage.getItem('crochet_cart_count');
+        if (savedCount) {
+          setCartItemsCount(parseInt(savedCount, 10));
+        } else {
+          setCartItemsCount(0);
+          localStorage.setItem('crochet_cart_count', '0');
+        }
+      };
+      syncCartCount();
+      window.addEventListener('cart-change', syncCartCount);
+      return () => {
+        window.removeEventListener('cart-change', syncCartCount);
+      };
+    }
+  }, []);
 
   const getImageSrc = (key: keyof typeof IMAGES) => {
     return customImages[key] || IMAGES[key];
@@ -370,12 +381,15 @@ export default function CrochetCreationPage() {
   }, []);
 
   // Add to cart animation trigger
-  const handleAddToCart = (e: React.MouseEvent<HTMLButtonElement>) => {
-    setCartItemsCount((prev) => {
-      const next = prev + 1;
-      localStorage.setItem('crochet_cart_count', next.toString());
-      return next;
-    });
+  const handleAddToCart = (product: any, e: React.MouseEvent<HTMLButtonElement>) => {
+    addToCart({
+      id: product._id || product.id,
+      name: product.title || product.name,
+      price: typeof product.price === 'string' ? parseFloat(product.price) : (product.price || 0),
+      image_url: product.image_url || (product.images && product.images[0]) || '',
+      category: product.category || 'General'
+    }, 1);
+
     setCartBouncing(true);
     setTimeout(() => setCartBouncing(false), 800);
 
@@ -661,6 +675,7 @@ export default function CrochetCreationPage() {
           <div className="hidden lg:flex items-center gap-4 text-xs font-medium tracking-wider text-[#FEF9F6]">
             <div
               id="header-cart-icon"
+              onClick={() => typeof window !== 'undefined' && window.dispatchEvent(new Event('open-cart'))}
               className={`flex items-center gap-1.5 hover:text-[#D9B4B4] cursor-pointer transition-transform duration-300 ${cartBouncing ? 'scale-110 text-[#D9B4B4]' : ''}`}
             >
               <ShoppingBag className={`w-4 h-4 text-[#D9B4B4] ${cartBouncing ? 'animate-bounce' : ''}`} />
@@ -757,7 +772,11 @@ export default function CrochetCreationPage() {
             <div className="flex items-center justify-center gap-4 pt-4 border-t border-[#FEF9F6]/10 text-[#FEF9F6]">
               <div
                 id="mobile-cart-icon"
-                className={`flex items-center gap-1.5 transition-transform duration-300 ${cartBouncing ? 'scale-110 text-[#D9B4B4]' : ''}`}
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  typeof window !== 'undefined' && window.dispatchEvent(new Event('open-cart'));
+                }}
+                className={`flex items-center gap-1.5 cursor-pointer transition-transform duration-300 ${cartBouncing ? 'scale-110 text-[#D9B4B4]' : ''}`}
               >
                 <ShoppingBag className={`w-4 h-4 text-[#D9B4B4] ${cartBouncing ? 'animate-bounce' : ''}`} />
                 <span>{cartItemsCount} items</span>
@@ -1336,7 +1355,7 @@ export default function CrochetCreationPage() {
                     <div className="flex items-center justify-between mt-6 pt-4 border-t border-stone-50">
                       <span className="text-lg font-black text-[#6B5656]">₹{typeof product.price === 'number' ? product.price.toFixed(2) : product.price}</span>
                       <button
-                        onClick={handleAddToCart}
+                        onClick={(e) => handleAddToCart(product, e)}
                         className="bg-[#6B5656] hover:bg-[#D9B4B4] hover:text-[#6B5656] text-white p-2.5 rounded-full transition-colors active:scale-95 shadow"
                       >
                         <ShoppingBag className="w-4 h-4" />

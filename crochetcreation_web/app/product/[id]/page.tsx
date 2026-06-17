@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
+import { addToCart } from '../../components/CartDrawer';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { 
@@ -89,6 +90,7 @@ export default function ProductDetailPage() {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutSuccess, setCheckoutSuccess] = useState(false);
+  const [whatsappUrl, setWhatsappUrl] = useState('');
   const [checkoutFormData, setCheckoutFormData] = useState({
     name: '',
     email: '',
@@ -109,13 +111,17 @@ export default function ProductDetailPage() {
       const savedTheme = localStorage.getItem('themeColor');
       if (savedTheme) setThemeColor(savedTheme);
 
-      const savedCart = localStorage.getItem('crochet_cart_count');
-      if (savedCart) {
-        setCartItemsCount(parseInt(savedCart, 10));
-      } else {
-        setCartItemsCount(0);
-        localStorage.setItem('crochet_cart_count', '0');
-      }
+      const syncCartCount = () => {
+        const savedCart = localStorage.getItem('crochet_cart_count');
+        if (savedCart) {
+          setCartItemsCount(parseInt(savedCart, 10));
+        } else {
+          setCartItemsCount(0);
+          localStorage.setItem('crochet_cart_count', '0');
+        }
+      };
+      syncCartCount();
+      window.addEventListener('cart-change', syncCartCount);
 
       const savedToken = localStorage.getItem('token');
       const savedUser = localStorage.getItem('user');
@@ -125,6 +131,10 @@ export default function ProductDetailPage() {
           setUserProfile(JSON.parse(savedUser));
         } catch (_) {}
       }
+
+      return () => {
+        window.removeEventListener('cart-change', syncCartCount);
+      };
     }
   }, []);
 
@@ -208,12 +218,17 @@ export default function ProductDetailPage() {
   };
 
   const handleAddToCart = () => {
-    const nextCount = cartItemsCount + quantity;
-    setCartItemsCount(nextCount);
-    localStorage.setItem('crochet_cart_count', nextCount.toString());
+    if (!product) return;
+    addToCart({
+      id: product._id || product.id,
+      name: product.title || product.name,
+      price: typeof product.price === 'string' ? parseFloat(product.price) : (product.price || 0),
+      image_url: product.image_url || (product.images && product.images[0]) || '',
+      category: product.category || 'General'
+    }, quantity);
     setCartBouncing(true);
     setTimeout(() => setCartBouncing(false), 800);
-    showToast(`Added ${quantity} × ${product?.name} to cart! 🧶`);
+    showToast(`Added ${quantity} × ${product.name} to cart! 🧶`);
   };
 
   const handleCheckoutSubmit = async (e: React.FormEvent) => {
@@ -225,42 +240,48 @@ export default function ProductDetailPage() {
 
     setCheckoutLoading(true);
     try {
-      const orderPayload = {
-        customer_name: checkoutFormData.name,
-        customer_email: checkoutFormData.email,
-        customer_mobile: checkoutFormData.mobile,
-        items: [
-          {
-            product_id: product?._id || productId,
-            title: product?.name || 'Handcrafted Product',
-            price: product?.price || 0,
-            quantity: quantity
-          }
-        ],
-        total_amount: (product?.price || 0) * quantity,
-        payment_method: checkoutFormData.paymentMethod
-      };
+      const productName = product?.name || 'Handcrafted Product';
+      const productPrice = product?.price || 0;
+      const totalPrice = productPrice * quantity;
+      const categoryName = product?.category || 'General';
+      const paymentMethodText = checkoutFormData.paymentMethod === 'COD' ? 'Cash on Delivery (COD)' : 'Prepaid (Online Payment)';
+      
+      const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+      const productDetailUrl = `${origin}/product/${product?._id || productId}`;
+      const productImageUrl = product?.image_url || '';
 
-      const res = await fetch(`${API_URL}/api/orders`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(orderPayload)
-      });
+      const message = `🧶 *New Order Request - Crochet Creation* 🧶\n\n` +
+        `Hello! I would like to place a custom order with the following details:\n\n` +
+        `📦 *Product Details:*\n` +
+        `- *Name:* ${productName}\n` +
+        `- *Category:* ${categoryName}\n` +
+        `- *Price:* ₹${productPrice.toFixed(2)}\n` +
+        `- *Quantity:* ${quantity}\n` +
+        `- *Total Amount:* ₹${totalPrice.toFixed(2)}\n` +
+        `- *Product Link:* ${productDetailUrl}\n` +
+        (productImageUrl ? `- *Image Link:* ${productImageUrl}\n` : '') + `\n` +
+        `👤 *Customer Details:*\n` +
+        `- *Name:* ${checkoutFormData.name}\n` +
+        `- *Email:* ${checkoutFormData.email}\n` +
+        `- *Mobile:* ${checkoutFormData.mobile}\n` +
+        `- *Delivery Address:* ${checkoutFormData.address}\n\n` +
+        `💳 *Payment Method:* ${paymentMethodText}\n\n` +
+        `Please confirm this order. Thank you!`;
 
-      if (res.ok) {
-        setCheckoutSuccess(true);
-        setCartItemsCount(0);
-        localStorage.setItem('crochet_cart_count', '0');
-        showToast('Order placed successfully! 💌');
-      } else {
-        const errData = await res.json();
-        alert(`Failed to place order: ${errData.detail || 'Internal server error'}`);
-      }
+      const formattedPhone = '917551041853';
+      const url = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`;
+      
+      // Open WhatsApp link
+      window.open(url, '_blank');
+      
+      setWhatsappUrl(url);
+      setCheckoutSuccess(true);
+      setCartItemsCount(0);
+      localStorage.setItem('crochet_cart_count', '0');
+      showToast('Redirecting to WhatsApp... 🧶');
     } catch (err) {
       console.error('Checkout error:', err);
-      alert('Failed to place order. Please try again.');
+      alert('Failed to generate WhatsApp message. Please try again.');
     } finally {
       setCheckoutLoading(false);
     }
@@ -340,6 +361,7 @@ export default function ProductDetailPage() {
           <div className="hidden lg:flex items-center gap-4 text-xs font-medium tracking-wider text-[#FEF9F6]">
             <div
               id="header-cart-icon"
+              onClick={() => typeof window !== 'undefined' && window.dispatchEvent(new Event('open-cart'))}
               className={`flex items-center gap-1.5 hover:text-[#D9B4B4] cursor-pointer transition-transform duration-300 ${cartBouncing ? 'scale-110 text-[#D9B4B4]' : ''}`}
             >
               <ShoppingBag className={`w-4 h-4 text-[#D9B4B4] ${cartBouncing ? 'animate-bounce' : ''}`} />
@@ -399,6 +421,19 @@ export default function ProductDetailPage() {
             <Link href="/#pages" onClick={() => setIsMenuOpen(false)} className="py-2 hover:text-[#D9B4B4] text-[#FEF9F6]">PAGES</Link>
             <Link href="/#portfolio" onClick={() => setIsMenuOpen(false)} className="py-2 hover:text-[#D9B4B4] text-[#FEF9F6]">PORTFOLIO</Link>
             <Link href="/#elements" onClick={() => setIsMenuOpen(false)} className="py-2 hover:text-[#D9B4B4] text-[#FEF9F6]">ELEMENTS</Link>
+            <div className="flex items-center justify-center gap-4 pt-4 border-t border-[#FEF9F6]/10 text-[#FEF9F6]">
+              <div
+                id="mobile-cart-icon"
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  typeof window !== 'undefined' && window.dispatchEvent(new Event('open-cart'));
+                }}
+                className={`flex items-center gap-1.5 cursor-pointer transition-transform duration-300 ${cartBouncing ? 'scale-110 text-[#D9B4B4]' : ''}`}
+              >
+                <ShoppingBag className={`w-4 h-4 text-[#D9B4B4] ${cartBouncing ? 'animate-bounce' : ''}`} />
+                <span>{cartItemsCount} items</span>
+              </div>
+            </div>
           </div>
         )}
       </header>
@@ -620,14 +655,22 @@ export default function ProductDetailPage() {
             <div className="p-6 overflow-y-auto flex-grow">
               {checkoutSuccess ? (
                 <div className="text-center py-8 space-y-4">
-                  <div className="w-16 h-16 bg-[#FEF9F6] border border-[#D9B4B4] rounded-full flex items-center justify-center text-3xl mx-auto shadow animate-bounce">
-                    📦
+                  <div className="w-16 h-16 bg-emerald-50 border border-emerald-250 rounded-full flex items-center justify-center text-3xl mx-auto shadow animate-pulse">
+                    💬
                   </div>
-                  <h4 className="text-lg font-bold text-[#6B5656]">Order Placed Successfully!</h4>
+                  <h4 className="text-lg font-bold text-[#6B5656]">Redirecting to WhatsApp...</h4>
                   <p className="text-xs text-stone-500 max-w-sm mx-auto leading-relaxed">
-                    Thank you for your order! Since all items are custom stitched, we will begin crafting immediately. An email confirmation has been queued to <strong>{checkoutFormData.email}</strong>.
+                    We are opening a WhatsApp chat with the admin to place your custom order. If the chat did not open automatically, please click the button below to send your details.
                   </p>
-                  <div className="pt-4">
+                  <div className="pt-4 flex flex-col sm:flex-row justify-center gap-3">
+                    <a
+                      href={whatsappUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="bg-emerald-600 hover:bg-emerald-750 text-white text-xs font-bold py-2.5 px-6 rounded-xl uppercase tracking-wider transition-colors shadow flex items-center justify-center gap-2"
+                    >
+                      Send Message via WhatsApp
+                    </a>
                     <button
                       onClick={() => { setCheckoutOpen(false); setCheckoutSuccess(false); router.push('/'); }}
                       className="bg-[#6B5656] hover:bg-[#D9B4B4] hover:text-[#6B5656] text-white text-xs font-bold py-2.5 px-6 rounded-xl uppercase tracking-wider transition-colors shadow"

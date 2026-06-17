@@ -1,5 +1,6 @@
 import './globals.css';
 import type { Metadata } from 'next';
+import CartDrawer from './components/CartDrawer';
 
 export const metadata: Metadata = {
   title: 'Crochet Creation | Handcrafted Knitwear & Crochet Studio',
@@ -20,6 +21,7 @@ export default function RootLayout({
       </head>
       <body className="antialiased min-h-screen bg-[#FEF9F6] text-[#2D2525]">
         {children}
+        <CartDrawer />
       </body>
     </html>
   );
