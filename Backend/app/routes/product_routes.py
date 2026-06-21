@@ -25,15 +25,22 @@ async def create_product(
 ):
     try:
         uploaded_urls = []
+        width = None
+        height = None
         if images:
             for img in images:
                 if img.filename:
-                    url = await upload_image_to_cloudinary(img)
-                    uploaded_urls.append(url)
+                    upload_res = await upload_image_to_cloudinary(img)
+                    uploaded_urls.append(upload_res["url"])
+                    if not width:
+                        width = upload_res["width"]
+                        height = upload_res["height"]
         
         if not uploaded_urls and image and image.filename:
-            url = await upload_image_to_cloudinary(image)
-            uploaded_urls.append(url)
+            upload_res = await upload_image_to_cloudinary(image)
+            uploaded_urls.append(upload_res["url"])
+            width = upload_res["width"]
+            height = upload_res["height"]
             
         if not uploaded_urls:
             raise HTTPException(
@@ -54,7 +61,9 @@ async def create_product(
             "size": size,
             "materials": materials,
             "care_instructions": care_instructions,
-            "in_stock": in_stock
+            "in_stock": in_stock,
+            "width": width,
+            "height": height
         }
         
         db = get_database()
@@ -178,15 +187,22 @@ async def update_product(
             update_data["in_stock"] = in_stock
             
         uploaded_urls = []
+        width = None
+        height = None
         if images:
             for img in images:
                 if img.filename:
-                    url = await upload_image_to_cloudinary(img)
-                    uploaded_urls.append(url)
+                    upload_res = await upload_image_to_cloudinary(img)
+                    uploaded_urls.append(upload_res["url"])
+                    if not width:
+                        width = upload_res["width"]
+                        height = upload_res["height"]
                     
         if not uploaded_urls and image and image.filename:
-            url = await upload_image_to_cloudinary(image)
-            uploaded_urls.append(url)
+            upload_res = await upload_image_to_cloudinary(image)
+            uploaded_urls.append(upload_res["url"])
+            width = upload_res["width"]
+            height = upload_res["height"]
             
         if uploaded_urls:
             # Delete old images from Cloudinary if they exist
@@ -201,6 +217,8 @@ async def update_product(
                 
             update_data["image_url"] = uploaded_urls[0]
             update_data["image_urls"] = uploaded_urls
+            update_data["width"] = width
+            update_data["height"] = height
             
         if update_data:
             await db["products"].update_one({"_id": ObjectId(product_id)}, {"$set": update_data})

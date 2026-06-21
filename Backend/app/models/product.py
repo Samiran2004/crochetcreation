@@ -16,6 +16,8 @@ class ProductModel(BaseModel):
     materials: Optional[str] = Field(default="")
     care_instructions: Optional[str] = Field(default="")
     in_stock: Optional[bool] = Field(default=True)
+    width: Optional[int] = Field(default=None)
+    height: Optional[int] = Field(default=None)
 
     class Config:
         populate_by_name = True
@@ -28,6 +30,8 @@ class ProductModel(BaseModel):
                 "description": "Handmade white organic cotton crochet rabbit toy.",
                 "price": 24.99,
                 "category": "toys",
-                "image_url": "https://res.cloudinary.com/demo/image/upload/v1234/crochet_rabbit.jpg"
+                "image_url": "https://res.cloudinary.com/demo/image/upload/v1234/crochet_rabbit.jpg",
+                "width": 1200,
+                "height": 900
             }
         }

@@ -1319,17 +1319,19 @@ export default function CrochetCreationPage() {
           </div>
 
           {/* Product Grid - 3 Columns */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
             {displayProducts.length > 0 ? (
               displayProducts.map((product) => (
                 <div key={product._id || product.id} className="bg-white border border-[#EADBDB] rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group">
-                  <div className="h-64 bg-amber-50/20 relative overflow-hidden group cursor-pointer" onClick={() => router.push(`/product/${product._id || product.id}`)}>
+                  <div className="bg-amber-50/20 relative overflow-hidden group cursor-pointer" onClick={() => router.push(`/product/${product._id || product.id}`)}>
                     <Image
                       src={product.image_url || getImageSrc('craftingTools')}
                       alt={product.title || product.name}
-                      fill
+                      width={product.width || 800}
+                      height={product.height || 800}
+                      style={{ width: '100%', height: 'auto', display: 'block' }}
                       sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 380px"
-                      className="object-cover group-hover:scale-105 transition-transform duration-500"
+                      className="group-hover:scale-105 transition-transform duration-500"
                     />
                     <span className="absolute top-4 left-4 bg-[#D9B4B4] text-[#6B5656] text-[9px] font-black tracking-wider uppercase px-2.5 py-1 rounded-full shadow-sm z-10">
                       {product.badge || 'HANDMADE'}

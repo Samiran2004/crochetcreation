@@ -11,41 +11,52 @@ cloudinary.config(
     secure=True
 )
 
-async def upload_image_to_cloudinary(file: UploadFile, folder: str = "crochetcreation") -> str:
+async def upload_image_to_cloudinary(file: UploadFile, folder: str = "crochetcreation") -> dict:
     """
     Reads upload file stream and uploads it to Cloudinary under the specified folder.
-    Returns the secure HTTPS URL.
+    Returns a dict with 'url', 'public_id', 'width', and 'height'.
     """
     # Read binary content from the FastAPI UploadFile stream
     content = await file.read()
     
-    # Upload to Cloudinary
+    # Upload to Cloudinary without cropping, ensuring high quality and auto format
     result = cloudinary.uploader.upload(
         content,
         folder=folder,
-        resource_type="auto"
+        resource_type="auto",
+        quality="auto:best",
+        fetch_format="auto"
     )
     
     # Reset file cursor position in case the stream is reused
     await file.seek(0)
     
-    return result.get("secure_url")
+    return {
+        "url": result.get("secure_url"),
+        "public_id": result.get("public_id"),
+        "width": result.get("width"),
+        "height": result.get("height")
+    }
 
 async def upload_image_and_get_details(file: UploadFile, folder: str = "crochetcreation") -> dict:
     """
     Reads upload file stream and uploads it to Cloudinary.
-    Returns a dict with 'url' and 'public_id'.
+    Returns a dict with 'url', 'public_id', 'width', and 'height'.
     """
     content = await file.read()
     result = cloudinary.uploader.upload(
         content,
         folder=folder,
-        resource_type="auto"
+        resource_type="auto",
+        quality="auto:best",
+        fetch_format="auto"
     )
     await file.seek(0)
     return {
         "url": result.get("secure_url"),
-        "public_id": result.get("public_id")
+        "public_id": result.get("public_id"),
+        "width": result.get("width"),
+        "height": result.get("height")
     }
 
 async def delete_image_from_cloudinary(public_id: str):

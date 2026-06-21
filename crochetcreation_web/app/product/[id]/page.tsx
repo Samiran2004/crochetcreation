@@ -457,7 +457,7 @@ export default function ProductDetailPage() {
           {/* Left Column: Image Display with Gallery & Amazon-Style Zoom */}
           <div className="flex flex-col gap-4 w-full">
             <div 
-              className="relative h-[480px] w-full rounded-3xl overflow-hidden border border-[#EADBDB] bg-stone-100 shadow-sm cursor-zoom-in group/zoom"
+              className="relative w-full rounded-3xl overflow-hidden border border-[#EADBDB] bg-stone-100 shadow-sm cursor-zoom-in group/zoom"
               onMouseEnter={() => setIsZoomed(true)}
               onMouseLeave={() => {
                 setIsZoomed(false);
@@ -468,11 +468,15 @@ export default function ProductDetailPage() {
               <Image 
                 src={activeImageUrl || product.image_url} 
                 alt={product.name} 
-                fill 
+                width={product.width || 800}
+                height={product.height || 800}
                 priority
                 sizes="(max-width: 1024px) 100vw, 600px"
-                className="object-cover transition-transform duration-200 ease-out"
+                className="transition-transform duration-200 ease-out"
                 style={{
+                  width: '100%',
+                  height: 'auto',
+                  display: 'block',
                   ...zoomStyle,
                   transform: isZoomed ? 'scale(2)' : 'scale(1)'
                 }}
@@ -679,15 +683,23 @@ export default function ProductDetailPage() {
               <span className="text-xs font-bold text-[#D9B4B4] uppercase tracking-widest">Handcrafted With Passion</span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
               {relatedProducts.slice(0, 3).map((item) => (
                 <Link
                   key={item._id || item.id}
                   href={`/product/${item._id || item.id}`}
                   className="bg-white border border-[#EADBDB] rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all group flex flex-col justify-between"
                 >
-                  <div className="h-48 relative overflow-hidden bg-amber-50/10">
-                    <Image src={item.image_url} alt={item.title || item.name} fill sizes="380px" className="object-cover group-hover:scale-103 transition-transform" />
+                  <div className="relative overflow-hidden bg-amber-50/10">
+                    <Image 
+                      src={item.image_url} 
+                      alt={item.title || item.name} 
+                      width={item.width || 800}
+                      height={item.height || 800}
+                      style={{ width: '100%', height: 'auto', display: 'block' }}
+                      sizes="380px" 
+                      className="group-hover:scale-103 transition-transform" 
+                    />
                   </div>
                   <div className="p-4 flex-grow flex flex-col justify-between">
                     <div>

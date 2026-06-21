@@ -524,7 +524,7 @@ export default function ShopPage() {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 items-start">
             {filteredProducts.map((p) => (
               <div
                 key={p._id || p.id}
@@ -533,13 +533,15 @@ export default function ShopPage() {
               >
                 
                 {/* Product Image */}
-                <div className="h-64 relative bg-stone-100 overflow-hidden">
+                <div className="relative bg-stone-100 overflow-hidden">
                   <Image 
                     src={p.image_url} 
                     alt={p.title || p.name} 
-                    fill 
+                    width={p.width || 800}
+                    height={p.height || 800}
+                    style={{ width: '100%', height: 'auto', display: 'block' }}
                     sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 380px"
-                    className="object-cover group-hover:scale-103 transition-transform duration-500" 
+                    className="group-hover:scale-103 transition-transform duration-500" 
                   />
                   <div className="absolute top-4 left-4">
                     <span className="bg-white/90 backdrop-blur-xs text-[#6B5656] text-[8px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md shadow-xs border border-[#EADBDB]/50">
