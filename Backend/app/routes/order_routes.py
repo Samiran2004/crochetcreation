@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, status, Depends, BackgroundTasks
 from typing import List, Optional
 from app.models.order import OrderCreate, OrderResponse
 from app.core.db import get_database
-from app.api.deps import get_current_admin_user
+from app.api.deps import get_current_admin_user, get_current_user
 from app.models.user import UserInDB
 from bson import ObjectId
 from datetime import datetime
@@ -41,6 +41,26 @@ async def create_order(order_in: OrderCreate, background_tasks: BackgroundTasks)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to place order: {str(e)}"
+        )
+
+@router.get("/my-orders", response_model=List[OrderResponse])
+async def get_my_orders(
+    current_user: UserInDB = Depends(get_current_user)
+):
+    db = get_database()
+    if db is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database connection is not initialized."
+        )
+    try:
+        cursor = db["orders"].find({"customer_email": current_user.email}).sort("created_at", -1)
+        orders = await cursor.to_list(length=200)
+        return orders
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch my orders: {str(e)}"
         )
 
 @router.get("/", response_model=List[OrderResponse])

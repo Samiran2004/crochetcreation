@@ -740,7 +740,9 @@ export default function CrochetCreationPage() {
                     Admin
                   </button>
                 )}
-                <span className="text-[10px] font-bold uppercase tracking-wider text-stone-300">Hi, {userProfile.first_name}</span>
+                <Link href="/dashboard" className="text-[10px] font-bold uppercase tracking-wider text-stone-300 hover:text-white transition-colors">
+                  Hi, {userProfile.first_name}
+                </Link>
                 <button
                   onClick={handleLogout}
                   title="Logout"
@@ -839,7 +841,9 @@ export default function CrochetCreationPage() {
                       Admin
                     </button>
                   )}
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-stone-300">Hi, {userProfile.first_name}</span>
+                  <Link href="/dashboard" className="text-[10px] font-bold uppercase tracking-wider text-stone-300 hover:text-white transition-colors">
+                    Hi, {userProfile.first_name}
+                  </Link>
                   <button
                     onClick={() => {
                       handleLogout();

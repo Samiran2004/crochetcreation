@@ -388,7 +388,9 @@ export default function ShopPage() {
                     Admin
                   </Link>
                 )}
-                <span className="text-[10px] font-bold uppercase tracking-wider text-stone-300">Hi, {userProfile.first_name}</span>
+                <Link href="/dashboard" className="text-[10px] font-bold uppercase tracking-wider text-stone-300 hover:text-white transition-colors">
+                  Hi, {userProfile.first_name}
+                </Link>
                 <button onClick={handleLogout} className="hover:text-[#D9B4B4] transition-colors p-1">
                   <LogOut className="w-4 h-4" />
                 </button>

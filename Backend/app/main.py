@@ -8,6 +8,7 @@ from app.routes.order_routes import router as order_router
 from app.routes.settings_routes import router as settings_router
 from app.routes.customer_routes import router as customer_router
 from app.routes.admin_routes import router as admin_router
+from app.routes.user_routes import router as user_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -40,6 +41,7 @@ app.include_router(order_router)
 app.include_router(settings_router)
 app.include_router(customer_router)
 app.include_router(admin_router)
+app.include_router(user_router)
 
 @app.get("/")
 async def root():
