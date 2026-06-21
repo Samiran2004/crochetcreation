@@ -529,7 +529,7 @@ export default function ShopPage() {
               <div
                 key={p._id || p.id}
                 onClick={() => router.push(`/product/${p._id || p.id}`)}
-                className="flex flex-col h-full bg-white border border-[#EADBDB]/65 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 group cursor-pointer"
+                className="flex flex-col h-full bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 group cursor-pointer"
               >
                 
                 {/* Product Image */}
@@ -542,7 +542,7 @@ export default function ShopPage() {
                     className="w-full h-full object-cover object-center group-hover:scale-103 transition-transform duration-500" 
                   />
                   <div className="absolute top-3 left-3">
-                    <span className="bg-white/95 backdrop-blur-xs text-stone-600 text-[8px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md shadow-xs border border-[#EADBDB]/40">
+                    <span className="bg-white/90 backdrop-blur-sm text-[10px] uppercase tracking-wider font-bold px-3 py-1.5 rounded-full shadow-sm text-stone-600 border border-gray-100/50">
                       {p.category}
                     </span>
                   </div>
@@ -550,31 +550,34 @@ export default function ShopPage() {
 
                 {/* Product Info */}
                 <div className="p-5 flex-1 flex flex-col">
-                  <div className="space-y-1.5 flex-1 mb-4">
-                    <h3 className="text-sm font-bold text-stone-850 group-hover:text-[#6B5656] transition-colors leading-snug line-clamp-2">
+                  <div className="flex-1">
+                    <span className="text-[10px] font-bold text-[#D9B4B4] uppercase tracking-widest block">
+                      {p.category}
+                    </span>
+                    <h3 className="text-lg font-bold text-gray-900 leading-tight mt-1 group-hover:text-[#6B5656] transition-colors line-clamp-2">
                       {p.title || p.name}
                     </h3>
-                    <p className="text-xs text-stone-500 line-clamp-2 leading-relaxed">
+                    <p className="text-xs text-gray-500 mt-2 line-clamp-2 leading-relaxed">
                       {p.description}
                     </p>
                   </div>
 
                   {/* Actions & Price */}
-                  <div className="flex items-center justify-between mt-auto pt-4 border-t border-stone-100">
-                    <span className="text-base font-extrabold text-stone-900">
+                  <div className="flex items-center justify-between mt-auto pt-4">
+                    <span className="text-xl font-extrabold text-gray-900">
                       ₹{p.price?.toFixed(2)}
                     </span>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3">
                       <button
                         onClick={(e) => handleAddToCart(p, e)}
                         title="Add to Basket"
-                        className="bg-white hover:bg-stone-50 border border-[#EADBDB] text-[#6B5656] p-2 rounded-xl transition-all active:scale-95 shadow-xs"
+                        className="w-10 h-10 flex items-center justify-center border border-gray-200 rounded-full text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors active:scale-95 shadow-xs"
                       >
                         <CartIcon className="w-4 h-4" />
                       </button>
                       <button
                         onClick={(e) => handleBuyNow(p, e)}
-                        className="bg-[#6B5656] hover:bg-[#5C4949] text-white font-bold text-[9px] uppercase tracking-widest py-2.5 px-4.5 rounded-full transition-all active:scale-95 shadow-xs"
+                        className="px-6 py-2.5 bg-[#6B5656] hover:bg-[#5C4949] text-white text-sm font-semibold rounded-full transition-all active:scale-95 shadow-xs whitespace-nowrap flex-shrink-0"
                       >
                         Buy Now
                       </button>

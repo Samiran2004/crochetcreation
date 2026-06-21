@@ -688,7 +688,7 @@ export default function ProductDetailPage() {
                 <Link
                   key={item._id || item.id}
                   href={`/product/${item._id || item.id}`}
-                  className="flex flex-col h-full bg-white border border-[#EADBDB]/65 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 group"
+                  className="flex flex-col h-full bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 group"
                 >
                   <div className="relative aspect-[4/5] w-full bg-stone-50 overflow-hidden">
                     <Image 
@@ -700,14 +700,14 @@ export default function ProductDetailPage() {
                     />
                   </div>
                   <div className="p-5 flex-1 flex flex-col">
-                    <div className="space-y-1.5 flex-1 mb-4">
-                      <span className="text-[9px] font-bold text-[#D9B4B4] uppercase tracking-widest block">{item.category}</span>
-                      <h4 className="text-sm font-bold text-stone-850 group-hover:text-[#6B5656] transition-colors leading-snug line-clamp-2">{item.title || item.name}</h4>
-                      <p className="text-xs text-stone-500 line-clamp-2 leading-relaxed">{item.description}</p>
+                    <div className="flex-1">
+                      <span className="text-[10px] font-bold text-[#D9B4B4] uppercase tracking-widest block">{item.category}</span>
+                      <h4 className="text-lg font-bold text-gray-900 leading-tight mt-1 group-hover:text-[#6B5656] transition-colors line-clamp-2">{item.title || item.name}</h4>
+                      <p className="text-xs text-gray-500 mt-2 line-clamp-2 leading-relaxed">{item.description}</p>
                     </div>
-                    <div className="flex items-center justify-between mt-auto pt-4 border-t border-stone-100">
-                      <span className="text-base font-extrabold text-stone-900">₹{item.price?.toFixed(2)}</span>
-                      <span className="text-[9px] font-bold text-[#D9B4B4] uppercase tracking-widest flex items-center gap-0.5 mt-auto">
+                    <div className="flex items-center justify-between mt-auto pt-4">
+                      <span className="text-xl font-extrabold text-gray-900">₹{item.price?.toFixed(2)}</span>
+                      <span className="text-[10px] font-bold text-[#D9B4B4] uppercase tracking-widest flex items-center gap-0.5 mt-auto">
                         VIEW DETAILS <ChevronRight className="w-3.5 h-3.5 text-[#D9B4B4]" />
                       </span>
                     </div>
