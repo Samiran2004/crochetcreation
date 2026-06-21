@@ -683,34 +683,32 @@ export default function ProductDetailPage() {
               <span className="text-xs font-bold text-[#D9B4B4] uppercase tracking-widest">Handcrafted With Passion</span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {relatedProducts.slice(0, 3).map((item) => (
                 <Link
                   key={item._id || item.id}
                   href={`/product/${item._id || item.id}`}
-                  className="bg-white border border-[#EADBDB] rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all group flex flex-col justify-between"
+                  className="flex flex-col h-full bg-white border border-[#EADBDB]/65 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 group"
                 >
-                  <div className="relative overflow-hidden bg-amber-50/10">
+                  <div className="relative aspect-[4/5] w-full bg-stone-50 overflow-hidden">
                     <Image 
                       src={item.image_url} 
                       alt={item.title || item.name} 
-                      width={item.width || 800}
-                      height={item.height || 800}
-                      style={{ width: '100%', height: 'auto', display: 'block' }}
+                      fill
                       sizes="380px" 
-                      className="group-hover:scale-103 transition-transform" 
+                      className="w-full h-full object-cover object-center group-hover:scale-103 transition-transform duration-500" 
                     />
                   </div>
-                  <div className="p-4 flex-grow flex flex-col justify-between">
-                    <div>
-                      <span className="text-[8px] font-bold text-[#D9B4B4] uppercase tracking-widest">{item.category}</span>
-                      <h4 className="text-sm font-bold text-[#6B5656] mt-0.5 mb-1 group-hover:text-[#D9B4B4] transition-colors">{item.title || item.name}</h4>
-                      <p className="text-[11px] text-stone-500 line-clamp-2 leading-relaxed">{item.description}</p>
+                  <div className="p-5 flex-1 flex flex-col">
+                    <div className="space-y-1.5 flex-1 mb-4">
+                      <span className="text-[9px] font-bold text-[#D9B4B4] uppercase tracking-widest block">{item.category}</span>
+                      <h4 className="text-sm font-bold text-stone-850 group-hover:text-[#6B5656] transition-colors leading-snug line-clamp-2">{item.title || item.name}</h4>
+                      <p className="text-xs text-stone-500 line-clamp-2 leading-relaxed">{item.description}</p>
                     </div>
-                    <div className="flex items-center justify-between mt-4 pt-3 border-t border-stone-50">
-                      <span className="text-sm font-black text-[#6B5656]">₹{item.price?.toFixed(2)}</span>
-                      <span className="text-[10px] font-bold text-[#D9B4B4] uppercase tracking-widest flex items-center gap-0.5">
-                        VIEW DETAILS <ChevronRight className="w-3 h-3" />
+                    <div className="flex items-center justify-between mt-auto pt-4 border-t border-stone-100">
+                      <span className="text-base font-extrabold text-stone-900">₹{item.price?.toFixed(2)}</span>
+                      <span className="text-[9px] font-bold text-[#D9B4B4] uppercase tracking-widest flex items-center gap-0.5 mt-auto">
+                        VIEW DETAILS <ChevronRight className="w-3.5 h-3.5 text-[#D9B4B4]" />
                       </span>
                     </div>
                   </div>

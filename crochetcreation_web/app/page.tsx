@@ -431,6 +431,20 @@ export default function CrochetCreationPage() {
     };
   };
 
+  const handleBuyNow = (product: any, e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    addToCart({
+      id: product._id || product.id,
+      name: product.title || product.name,
+      price: typeof product.price === 'string' ? parseFloat(product.price) : (product.price || 0),
+      image_url: product.image_url || (product.images && product.images[0]) || '',
+      category: product.category || 'General'
+    }, 1);
+    window.dispatchEvent(new Event('cart-change'));
+    window.dispatchEvent(new Event('open-cart'));
+  };
+
   // Generates a smooth, flowing crochet chain stitch path (interlocking loops)
   const crochetPathD = useMemo(() => {
     let d = "M 20 0";
@@ -1319,49 +1333,56 @@ export default function CrochetCreationPage() {
           </div>
 
           {/* Product Grid - 3 Columns */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {displayProducts.length > 0 ? (
               displayProducts.map((product) => (
-                <div key={product._id || product.id} className="bg-white border border-[#EADBDB] rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group">
-                  <div className="bg-amber-50/20 relative overflow-hidden group cursor-pointer" onClick={() => router.push(`/product/${product._id || product.id}`)}>
+                <div key={product._id || product.id} className="flex flex-col h-full bg-white border border-[#EADBDB]/65 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 group">
+                  <div className="relative aspect-[4/5] w-full bg-stone-50 overflow-hidden group cursor-pointer" onClick={() => router.push(`/product/${product._id || product.id}`)}>
                     <Image
                       src={product.image_url || getImageSrc('craftingTools')}
                       alt={product.title || product.name}
-                      width={product.width || 800}
-                      height={product.height || 800}
-                      style={{ width: '100%', height: 'auto', display: 'block' }}
+                      fill
                       sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 380px"
-                      className="group-hover:scale-105 transition-transform duration-500"
+                      className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
                     />
-                    <span className="absolute top-4 left-4 bg-[#D9B4B4] text-[#6B5656] text-[9px] font-black tracking-wider uppercase px-2.5 py-1 rounded-full shadow-sm z-10">
+                    <span className="absolute top-3 left-3 bg-[#D9B4B4] text-[#6B5656] text-[8px] font-black tracking-wider uppercase px-2.5 py-1 rounded-md shadow-xs border border-[#EADBDB]/40 z-10">
                       {product.badge || 'HANDMADE'}
                     </span>
                     <div className="absolute inset-0 bg-[#6B5656]/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center z-10">
-                      <div className="bg-white/95 backdrop-blur-sm text-[#6B5656] text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-full shadow-md transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300 flex items-center gap-1.5">
+                      <div className="bg-white/95 backdrop-blur-sm text-[#6B5656] text-[8px] font-black uppercase tracking-widest px-4 py-2 rounded-full shadow-md transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300 flex items-center gap-1.5">
                         <Search className="w-3.5 h-3.5 text-[#D9B4B4]" />
                         View Details
                       </div>
                     </div>
                   </div>
-                  <div className="p-6 flex flex-col justify-between border-t border-[#EADBDB]/50">
-                    <div>
-                      <span className="text-[9px] font-bold text-[#D9B4B4] uppercase tracking-widest">{product.category}</span>
+                  <div className="p-5 flex-1 flex flex-col">
+                    <div className="space-y-1.5 flex-1 mb-4">
+                      <span className="text-[9px] font-bold text-[#D9B4B4] uppercase tracking-widest block">{product.category}</span>
                       <h4 
                         onClick={() => router.push(`/product/${product._id || product.id}`)}
-                        className="text-base font-bold text-[#6B5656] mt-1 mb-2 cursor-pointer hover:text-[#D9B4B4] transition-colors"
+                        className="text-sm font-bold text-stone-850 cursor-pointer hover:text-[#6B5656] transition-colors leading-snug line-clamp-2"
                       >
                         {product.title || product.name}
                       </h4>
-                      <p className="text-xs text-stone-500 leading-relaxed">{product.description}</p>
+                      <p className="text-xs text-stone-500 line-clamp-2 leading-relaxed">{product.description}</p>
                     </div>
-                    <div className="flex items-center justify-between mt-6 pt-4 border-t border-stone-50">
-                      <span className="text-lg font-black text-[#6B5656]">₹{typeof product.price === 'number' ? product.price.toFixed(2) : product.price}</span>
-                      <button
-                        onClick={(e) => handleAddToCart(product, e)}
-                        className="bg-[#6B5656] hover:bg-[#D9B4B4] hover:text-[#6B5656] text-white p-2.5 rounded-full transition-colors active:scale-95 shadow"
-                      >
-                        <ShoppingBag className="w-4 h-4" />
-                      </button>
+                    <div className="flex items-center justify-between mt-auto pt-4 border-t border-stone-100">
+                      <span className="text-base font-extrabold text-stone-900">₹{typeof product.price === 'number' ? product.price.toFixed(2) : product.price}</span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={(e) => handleAddToCart(product, e)}
+                          title="Add to Basket"
+                          className="bg-white hover:bg-stone-50 border border-[#EADBDB] text-[#6B5656] p-2 rounded-xl transition-all active:scale-95 shadow-xs"
+                        >
+                          <ShoppingBag className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={(e) => handleBuyNow(product, e)}
+                          className="bg-[#6B5656] hover:bg-[#5C4949] text-white font-bold text-[9px] uppercase tracking-widest py-2.5 px-4.5 rounded-full transition-all active:scale-95 shadow-xs"
+                        >
+                          Buy Now
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
