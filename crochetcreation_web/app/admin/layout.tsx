@@ -33,6 +33,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const userStr = localStorage.getItem('user');
 
     if (!token || !userStr) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
       router.push('/');
       return;
     }
@@ -47,6 +49,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       setIsAdmin(true);
     } catch (err) {
       console.error("Failed to parse admin profile:", err);
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
       router.push('/');
     } finally {
       setLoading(false);

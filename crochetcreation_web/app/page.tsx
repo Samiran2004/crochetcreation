@@ -53,6 +53,7 @@ export default function CrochetCreationPage() {
   const [activeFilter, setActiveFilter] = useState('TOYS');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [customRequestModal, setCustomRequestModal] = useState(false);
+  const [policyModal, setPolicyModal] = useState<string | null>(null);
   const [requestSubmitted, setRequestSubmitted] = useState(false);
   const [formData, setFormData] = useState({ name: '', email: '', details: '' });
   const [scrollY, setScrollY] = useState(0);
@@ -121,6 +122,11 @@ export default function CrochetCreationPage() {
   const [userProfile, setUserProfile] = useState<any | null>(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register' | 'forgot' | 'verify' | 'reset'>('login');
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 4000);
+  };
   const [authFormData, setAuthFormData] = useState({
     first_name: '',
     last_name: '',
@@ -145,12 +151,19 @@ export default function CrochetCreationPage() {
         try {
           const parsedUser = JSON.parse(savedUser);
           setUserProfile(parsedUser);
-          if (parsedUser.is_admin) {
+          if (savedToken && parsedUser.is_admin) {
             router.push('/admin/dashboard');
           }
         } catch (e) {
           console.error("Failed to parse user profile:", e);
         }
+      }
+
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('login') === 'true') {
+        setAuthError(null);
+        setAuthSuccessMsg(null);
+        setAuthModalOpen(true);
       }
     }
   }, [router]);
@@ -220,23 +233,16 @@ export default function CrochetCreationPage() {
         const res = await fetch(`${apiUrl}/api/auth/register`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            first_name: authFormData.first_name,
-            last_name: authFormData.last_name,
-            email: authFormData.email,
-            mobile: authFormData.mobile,
-            password: authFormData.password
-          })
+          body: JSON.stringify(authFormData)
         });
 
         if (!res.ok) {
           const errData = await res.json();
-          throw new Error(errData.detail || 'Registration failed. Please check inputs.');
+          throw new Error(errData.detail || 'Registration failed.');
         }
 
-        setAuthSuccessMsg("Account created! Please log in.");
+        setAuthSuccessMsg("Registration successful! Please log in.");
         setAuthMode('login');
-        setAuthFormData(prev => ({ ...prev, password: '' }));
       } else {
         const bodyData = new URLSearchParams();
         bodyData.append('username', authFormData.email);
@@ -270,6 +276,12 @@ export default function CrochetCreationPage() {
 
         if (userObj.is_admin) {
           router.push('/admin/dashboard');
+        } else {
+          const params = new URLSearchParams(window.location.search);
+          const redirectUrl = params.get('redirect');
+          if (redirectUrl) {
+            router.push(redirectUrl);
+          }
         }
       }
     } catch (err: any) {
@@ -382,6 +394,16 @@ export default function CrochetCreationPage() {
 
   // Add to cart animation trigger
   const handleAddToCart = (product: any, e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!token && !userProfile) {
+      showToast("Please log in to add items to your cart.");
+      setAuthError(null);
+      setAuthSuccessMsg(null);
+      setAuthModalOpen(true);
+      return;
+    }
+
     addToCart({
       id: product._id || product.id,
       name: product.title || product.name,
@@ -434,6 +456,14 @@ export default function CrochetCreationPage() {
   const handleBuyNow = (product: any, e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     e.stopPropagation();
+    if (!token && !userProfile) {
+      showToast("Please log in to purchase.");
+      setAuthError(null);
+      setAuthSuccessMsg(null);
+      setAuthModalOpen(true);
+      return;
+    }
+
     addToCart({
       id: product._id || product.id,
       name: product.title || product.name,
@@ -667,7 +697,7 @@ export default function CrochetCreationPage() {
                 className="object-cover"
               />
             </div>
-            <span className="text-xl md:text-2xl font-bold tracking-widest text-[#FEF9F6] font-display">
+            <span className="text-xl md:text-2xl font-serif font-semibold tracking-wide text-[#FEF9F6]">
               Crochet Creation
             </span>
           </div>
@@ -676,13 +706,12 @@ export default function CrochetCreationPage() {
           <nav className="hidden lg:flex items-center gap-8 text-xs font-semibold tracking-widest uppercase text-[#FEF9F6]">
             <a href="#home" className="relative py-1 hover:text-[#D9B4B4] transition-all duration-300 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1.5px] after:bg-[#D9B4B4] hover:after:w-full after:transition-all after:duration-300">HOME</a>
             <span className="relative">
-              <a href="#shop" className="relative py-1 hover:text-[#D9B4B4] transition-all duration-300 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1.5px] after:bg-[#D9B4B4] hover:after:w-full after:transition-all after:duration-300">SHOP</a>
+              <a href="/shop" className="relative py-1 hover:text-[#D9B4B4] transition-all duration-300 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1.5px] after:bg-[#D9B4B4] hover:after:w-full after:transition-all after:duration-300">SHOP</a>
               <span className="absolute -top-3 -right-6 bg-[#D9B4B4] text-[#6B5656] text-[8px] font-black px-1.5 py-0.5 rounded-full animate-bounce">NEW</span>
             </span>
-            <a href="#blog" className="relative py-1 hover:text-[#D9B4B4] transition-all duration-300 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1.5px] after:bg-[#D9B4B4] hover:after:w-full after:transition-all after:duration-300">BLOG</a>
-            <a href="#pages" className="relative py-1 hover:text-[#D9B4B4] transition-all duration-300 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1.5px] after:bg-[#D9B4B4] hover:after:w-full after:transition-all after:duration-300">PAGES</a>
-            <a href="#portfolio" className="relative py-1 hover:text-[#D9B4B4] transition-all duration-300 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1.5px] after:bg-[#D9B4B4] hover:after:w-full after:transition-all after:duration-300">PORTFOLIO</a>
-            <a href="#elements" className="relative py-1 hover:text-[#D9B4B4] transition-all duration-300 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1.5px] after:bg-[#D9B4B4] hover:after:w-full after:transition-all after:duration-300">ELEMENTS</a>
+            <a href="/shop" className="relative py-1 hover:text-[#D9B4B4] transition-all duration-300 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1.5px] after:bg-[#D9B4B4] hover:after:w-full after:transition-all after:duration-300">CATEGORIES</a>
+            <a href="#about" className="relative py-1 hover:text-[#D9B4B4] transition-all duration-300 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1.5px] after:bg-[#D9B4B4] hover:after:w-full after:transition-all after:duration-300">ABOUT US</a>
+            <a href="#contact" className="relative py-1 hover:text-[#D9B4B4] transition-all duration-300 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1.5px] after:bg-[#D9B4B4] hover:after:w-full after:transition-all after:duration-300">CONTACT</a>
           </nav>
 
           {/* Icons & Utility */}
@@ -778,11 +807,10 @@ export default function CrochetCreationPage() {
             }}
           >
             <a href="#home" onClick={() => setIsMenuOpen(false)} className="py-2 hover:text-[#D9B4B4] transition-colors text-[#FEF9F6]">HOME</a>
-            <a href="#shop" onClick={() => setIsMenuOpen(false)} className="py-2 hover:text-[#D9B4B4] transition-colors text-[#FEF9F6]">SHOP</a>
-            <a href="#blog" onClick={() => setIsMenuOpen(false)} className="py-2 hover:text-[#D9B4B4] transition-colors text-[#FEF9F6]">BLOG</a>
-            <a href="#pages" onClick={() => setIsMenuOpen(false)} className="py-2 hover:text-[#D9B4B4] transition-colors text-[#FEF9F6]">PAGES</a>
-            <a href="#portfolio" onClick={() => setIsMenuOpen(false)} className="py-2 hover:text-[#D9B4B4] transition-colors text-[#FEF9F6]">PORTFOLIO</a>
-            <a href="#elements" onClick={() => setIsMenuOpen(false)} className="py-2 hover:text-[#D9B4B4] transition-colors text-[#FEF9F6]">ELEMENTS</a>
+            <a href="/shop" onClick={() => setIsMenuOpen(false)} className="py-2 hover:text-[#D9B4B4] transition-colors text-[#FEF9F6]">SHOP</a>
+            <a href="/shop" onClick={() => setIsMenuOpen(false)} className="py-2 hover:text-[#D9B4B4] transition-colors text-[#FEF9F6]">CATEGORIES</a>
+            <a href="#about" onClick={() => setIsMenuOpen(false)} className="py-2 hover:text-[#D9B4B4] transition-colors text-[#FEF9F6]">ABOUT US</a>
+            <a href="#contact" onClick={() => setIsMenuOpen(false)} className="py-2 hover:text-[#D9B4B4] transition-colors text-[#FEF9F6]">CONTACT</a>
             <div className="flex items-center justify-center gap-4 pt-4 border-t border-[#FEF9F6]/10 text-[#FEF9F6]">
               <div
                 id="mobile-cart-icon"
@@ -942,7 +970,7 @@ export default function CrochetCreationPage() {
               <Heart className="w-5 h-5 fill-[#D9B4B4] text-[#D9B4B4]" />
             </div>
 
-            <h2 className="text-3xl md:text-6xl font-normal tracking-wide leading-tight max-w-xl">
+            <h2 className="text-3xl md:text-6xl font-serif font-light tracking-wide leading-relaxed max-w-xl">
               Find Something You Love
             </h2>
             <p className="text-xs md:text-sm tracking-widest text-[#D9B4B4] uppercase mt-4 mb-8">
@@ -951,7 +979,7 @@ export default function CrochetCreationPage() {
 
             <button
               onClick={() => document.getElementById('shop')?.scrollIntoView({ behavior: 'smooth' })}
-              className="border-2 border-[#D9B4B4] hover:bg-[#D9B4B4] hover:text-[#6B5656] text-[#D9B4B4] text-xs uppercase tracking-widest font-bold px-8 py-3.5 rounded-full transition-all duration-300 active:scale-95 shadow-lg"
+              className="border-2 border-[#D9B4B4] hover:bg-[#D9B4B4] hover:text-[#6B5656] text-[#D9B4B4] text-xs font-sans font-semibold uppercase tracking-widest px-8 py-3.5 rounded-full transition-all duration-300 active:scale-95 shadow-lg"
             >
               View all products
             </button>
@@ -1307,7 +1335,7 @@ export default function CrochetCreationPage() {
 
           {/* Title row */}
           <div className="flex items-center justify-between mb-8 border-b border-[#EADBDB] pb-4">
-            <h2 className="text-lg font-black tracking-widest text-[#6B5656] uppercase">BUY A FINISHED PRODUCT</h2>
+            <h2 className="text-xl md:text-2xl font-serif font-medium tracking-wide text-[#6B5656]">BUY A FINISHED PRODUCT</h2>
             <Link href="/shop" className="text-xs font-bold text-[#D9B4B4] hover:text-[#6B5656] uppercase tracking-widest flex items-center gap-1 transition-colors">
               SEE ALL <ChevronRight className="w-4 h-4" />
             </Link>
@@ -1416,7 +1444,7 @@ export default function CrochetCreationPage() {
               {/* Middle: Dark Textured Sub-block */}
               <div className="bg-crochet-charcoal text-[#FEF9F6] p-8 flex-grow flex flex-col justify-center items-center text-center space-y-4">
                 <span className="text-[10px] font-black tracking-widest text-[#D9B4B4] uppercase">DO IT YOURSELF</span>
-                <h3 className="text-lg font-bold tracking-wide leading-snug">
+                <h3 className="text-lg font-serif font-medium tracking-wide leading-snug">
                   STEP-BY-STEP MASTER CLASSES WITH PHOTO AND VIDEO LESSONS
                 </h3>
                 <p className="text-xs text-stone-300 italic">
@@ -1451,7 +1479,7 @@ export default function CrochetCreationPage() {
                   <span className="text-[8px] font-black tracking-wider uppercase text-[#D9B4B4]">LEARN FROM Crochet Creation</span>
                   <p className="text-xs text-stone-300">Discover masterclasses for all experience levels.</p>
                 </div>
-                <a href="#pages" className="text-xs font-black uppercase tracking-widest text-[#D9B4B4] hover:text-[#FEF9F6] flex items-center gap-1 transition-colors">
+                <a href="#about" className="text-xs font-black uppercase tracking-widest text-[#D9B4B4] hover:text-[#FEF9F6] flex items-center gap-1 transition-colors">
                   SEE MORE <ChevronRight className="w-4 h-4" />
                 </a>
               </div>
@@ -1461,13 +1489,13 @@ export default function CrochetCreationPage() {
         </section>
 
         {/* 5. "Crochet and Hand Knitting" Section */}
-        <section id="pages" className="py-24 pl-14 pr-6 md:px-12 max-w-7xl mx-auto w-full scroll-mt-28">
+        <section id="about" className="py-24 pl-14 pr-6 md:px-12 max-w-7xl mx-auto w-full scroll-mt-28">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
 
             {/* Left Column (Text & Buttons) */}
             <div className="lg:col-span-5 space-y-8 lg:sticky lg:top-24">
               <div className="space-y-4">
-                <h2 className="text-3xl md:text-5xl font-normal tracking-wide text-[#6B5656] leading-tight">
+                <h2 className="text-3xl md:text-5xl font-serif font-medium tracking-wide text-[#6B5656] leading-tight">
                   CROCHET AND HAND KNITTING
                 </h2>
                 <p className="text-xs font-black tracking-widest text-[#D9B4B4] uppercase">
@@ -1554,7 +1582,7 @@ export default function CrochetCreationPage() {
 
           <div className="max-w-3xl mx-auto pl-14 pr-6 md:px-12 relative z-10 space-y-8">
             <span className="text-[10px] font-black tracking-widest text-[#D9B4B4] uppercase block">WHAT THEY SAY</span>
-            <h2 className="text-2xl md:text-4xl font-normal text-[#6B5656]">CUSTOMER REVIEWS</h2>
+            <h2 className="text-2xl md:text-4xl font-serif font-medium text-[#6B5656]">CUSTOMER REVIEWS</h2>
 
             <div className="flex flex-col items-center space-y-6">
               {/* Alice avatar in pink ring */}
@@ -1627,15 +1655,7 @@ export default function CrochetCreationPage() {
             {/* Right Side: Social links & Rose pink yarn ball */}
             <div className="lg:col-span-5 flex flex-col justify-between items-start lg:items-end gap-8">
 
-              {/* Social Icons */}
-              <div className="flex items-center gap-4">
-                <a href="#" className="w-8 h-8 rounded-full border border-[#D9B4B4] hover:bg-[#D9B4B4] hover:text-[#6B5656] flex items-center justify-center text-[#D9B4B4] transition-colors"><Facebook className="w-4 h-4" /></a>
-                <a href="#" className="w-8 h-8 rounded-full border border-[#D9B4B4] hover:bg-[#D9B4B4] hover:text-[#6B5656] flex items-center justify-center text-[#D9B4B4] transition-colors"><Instagram className="w-4 h-4" /></a>
-                <a href="#" className="w-8 h-8 rounded-full border border-[#D9B4B4] hover:bg-[#D9B4B4] hover:text-[#6B5656] flex items-center justify-center text-[#D9B4B4] transition-colors"><Twitter className="w-4 h-4" /></a>
-                <a href="#" className="w-8 h-8 rounded-full border border-[#D9B4B4] hover:bg-[#D9B4B4] hover:text-[#6B5656] flex items-center justify-center text-[#D9B4B4] transition-colors">
-                  <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" /></svg>
-                </a>
-              </div>
+              {/* Removed dead social links */}
 
               {/* Yarn Ball and Needles */}
               <div className="flex items-center gap-4 relative">
@@ -1657,6 +1677,15 @@ export default function CrochetCreationPage() {
           {/* Footer legal bar */}
           <div className="max-w-7xl mx-auto pl-14 pr-6 md:px-12 border-t border-[#FEF9F6]/10 mt-12 pt-8 flex flex-col md:flex-row items-center justify-between text-[10px] text-stone-400 font-bold uppercase tracking-wider gap-4">
             <span>© 2026 Crochet Creation Studio. All Rights Reserved.</span>
+            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
+              <button onClick={() => setPolicyModal('privacy')} className="hover:text-[#D9B4B4] transition-colors uppercase font-bold">Privacy Policy</button>
+              <span className="text-stone-600">|</span>
+              <button onClick={() => setPolicyModal('terms')} className="hover:text-[#D9B4B4] transition-colors uppercase font-bold">Terms of Service</button>
+              <span className="text-stone-600">|</span>
+              <button onClick={() => setPolicyModal('refund')} className="hover:text-[#D9B4B4] transition-colors uppercase font-bold">Refund Policy</button>
+              <span className="text-stone-600">|</span>
+              <a href="#contact" className="hover:text-[#D9B4B4] transition-colors uppercase font-bold">Customer Support</a>
+            </div>
             <div className="flex items-center gap-2">
               <span>THANK YOU FOR WATCHING</span>
               <span className="text-rose-400">❤</span>
@@ -1975,6 +2004,78 @@ export default function CrochetCreationPage() {
                 </button>
               )}
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 bg-white border border-[#EADBDB] px-5 py-4 rounded-xl shadow-xl z-50 animate-in fade-in slide-in-from-bottom-5 duration-300 flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-[#EADBDB]/30 flex items-center justify-center text-stone-600">
+            🧶
+          </div>
+          <div>
+            <p className="text-xs font-bold text-stone-800">Crochet Creation</p>
+            <p className="text-xs text-stone-600 mt-0.5">{toastMessage}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Policy Dialog Modal */}
+      {policyModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-950/70 backdrop-blur-sm">
+          <div className="bg-[#FEF9F6] border border-[#EADBDB] rounded-3xl max-w-lg w-full p-8 shadow-2xl relative">
+            <button
+              onClick={() => setPolicyModal(null)}
+              className="absolute top-6 right-6 text-stone-400 hover:text-stone-700 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            
+            <div className="space-y-6">
+              <div className="text-center">
+                <span className="text-[10px] font-black tracking-widest text-[#D9B4B4] uppercase">Legal Policy</span>
+                <h3 className="text-2xl font-normal text-[#6B5656] mt-2 font-display uppercase tracking-wider">
+                  {policyModal === 'privacy' && 'Privacy Policy'}
+                  {policyModal === 'terms' && 'Terms of Service'}
+                  {policyModal === 'refund' && 'Refund Policy'}
+                </h3>
+              </div>
+
+              <div className="text-xs text-stone-600 space-y-4 max-h-[300px] overflow-y-auto pr-2 leading-relaxed">
+                {policyModal === 'privacy' && (
+                  <>
+                    <p>Your privacy is important to us. It is Crochet Creation Studio's policy to respect your privacy regarding any information we may collect from you across our website.</p>
+                    <p>We only ask for personal information when we truly need it to provide a service to you. We collect it by fair and lawful means, with your knowledge and consent. We also let you know why we're collecting it and how it will be used.</p>
+                    <p>We only retain collected information for as long as necessary to provide you with your requested service. What data we store, we'll protect within commercially acceptable means to prevent loss and theft, as well as unauthorized access, disclosure, copying, use, or modification.</p>
+                    <p>We don't share any personally identifying information publicly or with third-parties, except when required to by law.</p>
+                  </>
+                )}
+                {policyModal === 'terms' && (
+                  <>
+                    <p>Welcome to Crochet Creation. By accessing this website, you agree to be bound by these terms of service, all applicable laws and regulations, and agree that you are responsible for compliance with any applicable local laws.</p>
+                    <p>The materials contained in this website are protected by applicable copyright and trademark law. Permission is granted to temporarily download one copy of the materials (information or software) on Crochet Creation Studio's website for personal, non-commercial transitory viewing only.</p>
+                    <p>Under this license you may not modify or copy the materials, use the materials for any commercial purpose, or attempt to decompile or reverse engineer any software contained on the website.</p>
+                  </>
+                )}
+                {policyModal === 'refund' && (
+                  <>
+                    <p>We want you to be completely satisfied with your handmade purchases. Since each item is crafted by hand, small variations are natural and are a testament to the authentic crafting process.</p>
+                    <p>If you are not satisfied with your purchase, you may request a return or exchange within 14 days of delivery. The item must be unused, unwashed, and in its original packaging.</p>
+                    <p>Custom-made items stitched according to individual sizes are eligible for refunds only in the event of a manufacturing defect or shipping error.</p>
+                  </>
+                )}
+              </div>
+
+              <div className="pt-4 border-t border-[#EADBDB]">
+                <button
+                  onClick={() => setPolicyModal(null)}
+                  className="w-full bg-[#6B5656] hover:bg-[#5C4949] text-white text-xs font-semibold py-3.5 rounded-full transition-all active:scale-95 shadow-sm uppercase tracking-widest"
+                >
+                  Close Window
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

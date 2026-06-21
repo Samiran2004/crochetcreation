@@ -219,6 +219,13 @@ export default function ProductDetailPage() {
 
   const handleAddToCart = () => {
     if (!product) return;
+    if (!token && !userProfile) {
+      showToast("Please log in to add items to your cart.");
+      setTimeout(() => {
+        router.push('/?login=true&redirect=' + encodeURIComponent(`/product/${productId}`));
+      }, 1200);
+      return;
+    }
     addToCart({
       id: product._id || product.id,
       name: product.title || product.name,
@@ -229,6 +236,18 @@ export default function ProductDetailPage() {
     setCartBouncing(true);
     setTimeout(() => setCartBouncing(false), 800);
     showToast(`Added ${quantity} × ${product.name} to cart! 🧶`);
+  };
+
+  const handleBuyNow = () => {
+    if (!product) return;
+    if (!token && !userProfile) {
+      showToast("Please log in to purchase.");
+      setTimeout(() => {
+        router.push('/?login=true&redirect=' + encodeURIComponent(`/product/${productId}`));
+      }, 1200);
+      return;
+    }
+    setCheckoutOpen(true);
   };
 
   const handleCheckoutSubmit = async (e: React.FormEvent) => {
@@ -340,7 +359,7 @@ export default function ProductDetailPage() {
                 className="object-cover" 
               />
             </div>
-            <span className="text-xl md:text-2xl font-bold tracking-widest text-[#FEF9F6] font-display">
+            <span className="text-xl md:text-2xl font-serif font-semibold tracking-wide text-[#FEF9F6]">
               Crochet Creation
             </span>
           </Link>
@@ -349,13 +368,12 @@ export default function ProductDetailPage() {
           <nav className="hidden lg:flex items-center gap-8 text-xs font-semibold tracking-widest uppercase text-[#FEF9F6]">
             <Link href="/#home" className="relative py-1 hover:text-[#D9B4B4] transition-all duration-300 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1.5px] after:bg-[#D9B4B4] hover:after:w-full after:transition-all after:duration-300">HOME</Link>
             <span className="relative">
-              <Link href="/#shop" className="relative py-1 hover:text-[#D9B4B4] transition-all duration-300 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1.5px] after:bg-[#D9B4B4] hover:after:w-full after:transition-all after:duration-300">SHOP</Link>
+              <Link href="/shop" className="relative py-1 hover:text-[#D9B4B4] transition-all duration-300 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1.5px] after:bg-[#D9B4B4] hover:after:w-full after:transition-all after:duration-300">SHOP</Link>
               <span className="absolute -top-3 -right-6 bg-[#D9B4B4] text-[#6B5656] text-[8px] font-black px-1.5 py-0.5 rounded-full animate-bounce">NEW</span>
             </span>
-            <Link href="/#blog" className="relative py-1 hover:text-[#D9B4B4] transition-all duration-300 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1.5px] after:bg-[#D9B4B4] hover:after:w-full after:transition-all after:duration-300">BLOG</Link>
-            <Link href="/#pages" className="relative py-1 hover:text-[#D9B4B4] transition-all duration-300 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1.5px] after:bg-[#D9B4B4] hover:after:w-full after:transition-all after:duration-300">PAGES</Link>
-            <Link href="/#portfolio" className="relative py-1 hover:text-[#D9B4B4] transition-all duration-300 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1.5px] after:bg-[#D9B4B4] hover:after:w-full after:transition-all after:duration-300">PORTFOLIO</Link>
-            <Link href="/#elements" className="relative py-1 hover:text-[#D9B4B4] transition-all duration-300 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1.5px] after:bg-[#D9B4B4] hover:after:w-full after:transition-all after:duration-300">ELEMENTS</Link>
+            <Link href="/shop" className="relative py-1 hover:text-[#D9B4B4] transition-all duration-300 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1.5px] after:bg-[#D9B4B4] hover:after:w-full after:transition-all after:duration-300">CATEGORIES</Link>
+            <Link href="/#about" className="relative py-1 hover:text-[#D9B4B4] transition-all duration-300 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1.5px] after:bg-[#D9B4B4] hover:after:w-full after:transition-all after:duration-300">ABOUT US</Link>
+            <Link href="/#contact" className="relative py-1 hover:text-[#D9B4B4] transition-all duration-300 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1.5px] after:bg-[#D9B4B4] hover:after:w-full after:transition-all after:duration-300">CONTACT</Link>
           </nav>
 
           <div className="hidden lg:flex items-center gap-4 text-xs font-medium tracking-wider text-[#FEF9F6]">
@@ -416,11 +434,10 @@ export default function ProductDetailPage() {
             style={{ backgroundColor: `${activeTheme.primaryDark}F2` }}
           >
             <Link href="/#home" onClick={() => setIsMenuOpen(false)} className="py-2 hover:text-[#D9B4B4] text-[#FEF9F6]">HOME</Link>
-            <Link href="/#shop" onClick={() => setIsMenuOpen(false)} className="py-2 hover:text-[#D9B4B4] text-[#FEF9F6]">SHOP</Link>
-            <Link href="/#blog" onClick={() => setIsMenuOpen(false)} className="py-2 hover:text-[#D9B4B4] text-[#FEF9F6]">BLOG</Link>
-            <Link href="/#pages" onClick={() => setIsMenuOpen(false)} className="py-2 hover:text-[#D9B4B4] text-[#FEF9F6]">PAGES</Link>
-            <Link href="/#portfolio" onClick={() => setIsMenuOpen(false)} className="py-2 hover:text-[#D9B4B4] text-[#FEF9F6]">PORTFOLIO</Link>
-            <Link href="/#elements" onClick={() => setIsMenuOpen(false)} className="py-2 hover:text-[#D9B4B4] text-[#FEF9F6]">ELEMENTS</Link>
+            <Link href="/shop" onClick={() => setIsMenuOpen(false)} className="py-2 text-[#D9B4B4]">SHOP</Link>
+            <Link href="/shop" onClick={() => setIsMenuOpen(false)} className="py-2 hover:text-[#D9B4B4] text-[#FEF9F6]">CATEGORIES</Link>
+            <Link href="/#about" onClick={() => setIsMenuOpen(false)} className="py-2 hover:text-[#D9B4B4] text-[#FEF9F6]">ABOUT US</Link>
+            <Link href="/#contact" onClick={() => setIsMenuOpen(false)} className="py-2 hover:text-[#D9B4B4] text-[#FEF9F6]">CONTACT</Link>
             <div className="flex items-center justify-center gap-4 pt-4 border-t border-[#FEF9F6]/10 text-[#FEF9F6]">
               <div
                 id="mobile-cart-icon"
@@ -650,7 +667,7 @@ export default function ProductDetailPage() {
                   <ShoppingBag className="w-4 h-4" /> {product.in_stock === false ? 'Out of Stock' : 'Add to Basket'}
                 </button>
                 <button
-                  onClick={() => setCheckoutOpen(true)}
+                  onClick={handleBuyNow}
                   disabled={product.in_stock === false}
                   className="w-full bg-[#6B5656] hover:bg-[#D9B4B4] hover:text-[#6B5656] text-white disabled:bg-stone-200 disabled:text-stone-400 disabled:cursor-not-allowed font-bold py-3.5 px-6 rounded-xl transition-all active:scale-98 shadow flex items-center justify-center gap-2 text-xs uppercase tracking-widest"
                 >
@@ -886,8 +903,9 @@ export default function ProductDetailPage() {
             <h4 className="text-white font-bold text-sm tracking-wider uppercase mb-4">Quick Links</h4>
             <ul className="space-y-2 text-xs">
               <li><Link href="/#home" className="hover:text-white">Home Catalog</Link></li>
-              <li><Link href="/#shop" className="hover:text-white">Finished Products</Link></li>
-              <li><Link href="/#blog" className="hover:text-white">Our Blog</Link></li>
+              <li><Link href="/shop" className="hover:text-white">Finished Products</Link></li>
+              <li><Link href="/#about" className="hover:text-white">About Us</Link></li>
+              <li><Link href="/#contact" className="hover:text-white">Contact</Link></li>
             </ul>
           </div>
           <div>
@@ -898,10 +916,13 @@ export default function ProductDetailPage() {
             </p>
           </div>
           <div>
-            <h4 className="text-white font-bold text-sm tracking-wider uppercase mb-4">Secure Shop</h4>
-            <p className="text-xs leading-relaxed">
-              Stitched with passion and delivered with care. Thank you for supporting local craftswomen.
-            </p>
+            <h4 className="text-white font-bold text-sm tracking-wider uppercase mb-4">Trust Links</h4>
+            <ul className="space-y-2 text-xs">
+              <li><Link href="/#privacy" className="hover:text-white">Privacy Policy</Link></li>
+              <li><Link href="/#terms" className="hover:text-white">Terms of Service</Link></li>
+              <li><Link href="/#refund" className="hover:text-white">Refund Policy</Link></li>
+              <li><Link href="/#contact" className="hover:text-white">Customer Support</Link></li>
+            </ul>
           </div>
         </div>
         <div className="max-w-7xl mx-auto px-6 mt-12 pt-8 border-t border-stone-800/80 text-center text-xs">
