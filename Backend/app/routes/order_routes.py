@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, status, Depends, BackgroundTasks
 from typing import List, Optional
-from app.models.order import OrderCreate, OrderResponse
+from app.models.order import OrderCreate, OrderResponse, ManualOrderCreate
 from app.core.db import get_database
 from app.api.deps import get_current_admin_user, get_current_user
 from app.models.user import UserInDB
@@ -11,7 +11,11 @@ from app.services.email_service import queue_order_confirmation, queue_order_sta
 router = APIRouter(prefix="/api/orders", tags=["orders"])
 
 @router.post("/", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
-async def create_order(order_in: OrderCreate, background_tasks: BackgroundTasks):
+async def create_order(
+    order_in: OrderCreate,
+    background_tasks: BackgroundTasks,
+    current_user: UserInDB = Depends(get_current_user)
+):
     db = get_database()
     if db is None:
         raise HTTPException(
@@ -23,6 +27,8 @@ async def create_order(order_in: OrderCreate, background_tasks: BackgroundTasks)
         order_dict = order_in.model_dump()
         order_dict["status"] = "Pending"
         order_dict["created_at"] = datetime.utcnow()
+        # Explicitly attach the user_id as a BSON ObjectId
+        order_dict["user_id"] = ObjectId(current_user.id) if current_user.id else None
 
         result = await db["orders"].insert_one(order_dict)
 
@@ -54,7 +60,8 @@ async def get_my_orders(
             detail="Database connection is not initialized."
         )
     try:
-        cursor = db["orders"].find({"customer_email": current_user.email}).sort("created_at", -1)
+        # Strict relational match using user_id BSON ObjectId
+        cursor = db["orders"].find({"user_id": ObjectId(current_user.id)}).sort("created_at", -1)
         orders = await cursor.to_list(length=200)
         return orders
     except Exception as e:
@@ -161,4 +168,41 @@ async def delete_order(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to delete order: {str(e)}"
+        )
+
+@router.post("/manual", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
+async def create_manual_order(
+    order_in: ManualOrderCreate,
+    current_admin: UserInDB = Depends(get_current_admin_user)
+):
+    """Admin endpoint to create manual/DM orders (WhatsApp, Instagram, custom)."""
+    db = get_database()
+    if db is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database connection is not initialized."
+        )
+    try:
+        order_dict = order_in.model_dump()
+        order_dict["status"] = "Pending"
+        order_dict["created_at"] = datetime.utcnow()
+        order_dict["is_manual"] = True
+
+        # Link to existing user if customer_email matches a registered account
+        linked_user_id = None
+        if order_in.customer_email:
+            existing_user = await db["users"].find_one({"email": order_in.customer_email})
+            if existing_user:
+                linked_user_id = existing_user["_id"]
+
+        order_dict["user_id"] = linked_user_id  # ObjectId or None
+
+        result = await db["orders"].insert_one(order_dict)
+        inserted_order = await db["orders"].find_one({"_id": result.inserted_id})
+        return inserted_order
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create manual order: {str(e)}"
         )

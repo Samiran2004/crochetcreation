@@ -32,18 +32,32 @@ class MockCollection:
         if name not in self.db._store:
             self.db._store[name] = []
             
+    def _matches_filter(self, doc, filter):
+        if not filter:
+            return True
+        if "$or" in filter:
+            or_clauses = filter["$or"]
+            or_match = False
+            for clause in or_clauses:
+                if self._matches_filter(doc, clause):
+                    or_match = True
+                    break
+            if not or_match:
+                return False
+            other_filter = {k: v for k, v in filter.items() if k != "$or"}
+            return self._matches_filter(doc, other_filter)
+            
+        for k, v in filter.items():
+            if k == "_id":
+                if str(doc.get("_id")) != str(v):
+                    return False
+            elif doc.get(k) != v:
+                return False
+        return True
+
     async def find_one(self, filter, *args, **kwargs):
         for doc in self.db._store[self.name]:
-            match = True
-            for k, v in filter.items():
-                if k == "_id":
-                    if str(doc.get("_id")) != str(v):
-                        match = False
-                        break
-                elif doc.get(k) != v:
-                    match = False
-                    break
-            if match:
+            if self._matches_filter(doc, filter):
                 return doc
         return None
         
@@ -51,16 +65,7 @@ class MockCollection:
         filter = filter or {}
         results = []
         for doc in self.db._store[self.name]:
-            match = True
-            for k, v in filter.items():
-                if k == "_id":
-                    if str(doc.get("_id")) != str(v):
-                        match = False
-                        break
-                elif doc.get(k) != v:
-                    match = False
-                    break
-            if match:
+            if self._matches_filter(doc, filter):
                 results.append(doc)
         return MockCursor(results)
         
@@ -105,6 +110,9 @@ class MockCollection:
 class MockDatabase:
     def __init__(self):
         self._store = {}
+        
+    def __getitem__(self, name):
+        return MockCollection(name, self)
         # Prepopulate default admin user
         self._store["users"] = [{
             "_id": ObjectId("647a7b8e1f3d8a5c4e9d0e12"),

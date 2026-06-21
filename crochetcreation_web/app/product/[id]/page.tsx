@@ -269,6 +269,53 @@ export default function ProductDetailPage() {
       const productDetailUrl = `${origin}/product/${product?._id || productId}`;
       const productImageUrl = product?.image_url || '';
 
+      // Save order to the database first
+      const savedToken = localStorage.getItem('token') || token;
+      console.log('[Checkout] Placing order: sending data to backend...', {
+        url: `${API_URL}/api/orders/`,
+        tokenPresent: !!savedToken
+      });
+      if (savedToken) {
+        const orderData = {
+          customer_name: checkoutFormData.name,
+          customer_email: checkoutFormData.email,
+          customer_mobile: checkoutFormData.mobile,
+          items: [
+            {
+              product_id: product?._id || productId || '',
+              title: productName,
+              price: productPrice,
+              quantity: quantity
+            }
+          ],
+          total_amount: totalPrice,
+          payment_method: checkoutFormData.paymentMethod
+        };
+
+        const orderResponse = await fetch(`${API_URL}/api/orders/`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${savedToken}`
+          },
+          body: JSON.stringify(orderData)
+        });
+
+        console.log('[Checkout] Backend response received:', {
+          status: orderResponse.status,
+          ok: orderResponse.ok
+        });
+
+        if (!orderResponse.ok) {
+          const errData = await orderResponse.json().catch(() => ({}));
+          console.error('[Checkout API Error]', orderResponse.status, errData);
+          throw new Error(errData.detail || 'Failed to record the order on the server.');
+        }
+        console.log('[Checkout] Order recorded successfully on server.');
+      } else {
+        console.warn('[Checkout] No token found in localStorage or state. Skipping DB save.');
+      }
+
       const message = `🧶 *New Order Request - Crochet Creation* 🧶\n\n` +
         `Hello! I would like to place a custom order with the following details:\n\n` +
         `📦 *Product Details:*\n` +
@@ -298,9 +345,9 @@ export default function ProductDetailPage() {
       setCartItemsCount(0);
       localStorage.setItem('crochet_cart_count', '0');
       showToast('Redirecting to WhatsApp... 🧶');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Checkout error:', err);
-      alert('Failed to generate WhatsApp message. Please try again.');
+      alert(err.message || 'Failed to place order. Please try again.');
     } finally {
       setCheckoutLoading(false);
     }

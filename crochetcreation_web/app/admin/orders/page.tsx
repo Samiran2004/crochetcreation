@@ -19,7 +19,9 @@ import {
   Mail,
   User,
   Check,
-  Package
+  Package,
+  Plus,
+  StickyNote
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -34,6 +36,8 @@ interface Order {
   status: 'Delivered' | 'Pending' | 'Processing' | 'Cancelled';
   payment: string;
   rawItems: any[];
+  is_manual: boolean;
+  notes: string | null;
 }
 
 export default function AdminOrders() {
@@ -81,14 +85,16 @@ export default function AdminOrders() {
         const formattedOrders: Order[] = data.map((o: any) => ({
           id: o._id || o.id,
           customer: o.customer_name,
-          email: o.customer_email,
-          mobile: o.customer_mobile || "",
+          email: o.customer_email || '',
+          mobile: o.customer_mobile || '',
           items: o.items.map((item: any) => `${item.title} (${item.quantity})`).join(', '),
           amount: o.total_amount,
           date: o.created_at ? new Date(o.created_at).toLocaleString() : 'Just now',
           status: o.status,
           payment: o.payment_method || 'COD',
-          rawItems: o.items || []
+          rawItems: o.items || [],
+          is_manual: o.is_manual || false,
+          notes: o.notes || null
         }));
         setOrders(formattedOrders);
         
@@ -229,6 +235,13 @@ export default function AdminOrders() {
           >
             <RefreshCw className={`w-4 h-4 text-stone-650 ${loading ? 'animate-spin' : ''}`} />
           </button>
+          <button
+            onClick={() => router.push('/admin/orders/new')}
+            className="flex items-center gap-1.5 bg-[#6B5656] hover:bg-[#4A3E3E] text-white text-[10px] font-bold uppercase tracking-widest px-4 py-2.5 rounded-xl transition-all active:scale-95 shadow-sm"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Manual Order
+          </button>
         </div>
       </div>
 
@@ -335,8 +348,15 @@ export default function AdminOrders() {
                             ORD-{order.id.slice(-6).toUpperCase()}
                           </td>
                           <td className="py-4 px-6">
-                            <div className="font-bold text-stone-850">{order.customer}</div>
-                            <div className="text-[10px] text-stone-400 mt-0.5">{order.email}</div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-stone-850">{order.customer}</span>
+                              {order.is_manual && (
+                                <span className="bg-purple-50 text-purple-700 text-[8px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border border-purple-200">
+                                  Manual / DM
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-[10px] text-stone-400 mt-0.5">{order.email || 'No email'}</div>
                           </td>
                           <td className="py-4 px-6 text-stone-500 font-medium">
                             {order.date.split(',')[0]}
@@ -398,9 +418,16 @@ export default function AdminOrders() {
                     <User className="w-3 h-3 text-[#6B5656]" /> Buyer Profile
                   </span>
                   <div className="bg-stone-50/50 p-3 rounded-xl border border-stone-100/60 space-y-1.5">
-                    <p className="font-bold text-stone-850 text-xs">{selectedOrder.customer}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-bold text-stone-850 text-xs">{selectedOrder.customer}</p>
+                      {selectedOrder.is_manual && (
+                        <span className="bg-purple-50 text-purple-700 text-[7px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full border border-purple-200">
+                          Manual
+                        </span>
+                      )}
+                    </div>
                     <p className="text-stone-500 text-[10px] flex items-center gap-1.5">
-                      <Mail className="w-3 h-3 text-stone-400" /> {selectedOrder.email}
+                      <Mail className="w-3 h-3 text-stone-400" /> {selectedOrder.email || 'No email provided'}
                     </p>
                     {selectedOrder.mobile && (
                       <p className="text-stone-500 text-[10px] flex items-center gap-1.5">
@@ -409,6 +436,18 @@ export default function AdminOrders() {
                     )}
                   </div>
                 </div>
+
+                {/* Internal Notes (manual orders) */}
+                {selectedOrder.notes && (
+                  <div className="space-y-2">
+                    <span className="text-[9px] font-bold text-stone-450 uppercase tracking-widest block flex items-center gap-1.5">
+                      <StickyNote className="w-3 h-3 text-[#6B5656]" /> Internal Notes
+                    </span>
+                    <div className="bg-amber-50/50 p-3 rounded-xl border border-amber-100/60">
+                      <p className="text-[11px] text-stone-700 leading-relaxed whitespace-pre-wrap">{selectedOrder.notes}</p>
+                    </div>
+                  </div>
+                )}
 
                 {/* Items Purchased */}
                 <div className="space-y-2">
