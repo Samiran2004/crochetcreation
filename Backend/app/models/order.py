@@ -45,3 +45,8 @@ class OrderResponse(BaseModel):
 
     class Config:
         populate_by_name = True
+
+class ManualOrderResponse(BaseModel):
+    """Response for manual order creation — includes email_sent flag."""
+    order: OrderResponse
+    email_sent: bool = False

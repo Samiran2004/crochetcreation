@@ -52,6 +52,14 @@ export default function CreateManualOrder() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [linkedAccount, setLinkedAccount] = useState<string | null>(null);
+  const [emailSent, setEmailSent] = useState(false);
+
+  // Toast notification state
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' } | null>(null);
+  const showToast = (message: string, type: 'success' | 'info' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 5000);
+  };
 
   // Computed total
   const totalAmount = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -130,9 +138,21 @@ export default function CreateManualOrder() {
       }
 
       const data = await res.json();
-      if (data.user_id) {
-        setLinkedAccount(data.customer_email || customerEmail);
+      const orderData = data.order || data;
+      const wasEmailSent = data.email_sent === true;
+
+      setEmailSent(wasEmailSent);
+      if (orderData.user_id) {
+        setLinkedAccount(orderData.customer_email || customerEmail);
       }
+
+      // Show conditional toast
+      if (wasEmailSent) {
+        showToast('Order created successfully! Confirmation email sent to user.', 'success');
+      } else {
+        showToast('Manual order logged successfully (No email linked).', 'info');
+      }
+
       setSuccess(true);
     } catch (err: any) {
       setError(err.message || 'An unexpected error occurred.');
@@ -163,6 +183,15 @@ export default function CreateManualOrder() {
                 ✓ Linked to registered account: <span className="font-bold">{linkedAccount}</span>
               </p>
             )}
+            {emailSent ? (
+              <p className="text-xs text-sky-700 bg-sky-50 border border-sky-200 rounded-xl px-4 py-2 inline-block mt-1">
+                ✉️ Confirmation email sent to the customer.
+              </p>
+            ) : (
+              <p className="text-xs text-stone-500 bg-stone-50 border border-stone-200 rounded-xl px-4 py-2 inline-block mt-1">
+                No email linked — order logged without notification.
+              </p>
+            )}
           </div>
           <div className="flex items-center justify-center gap-3 pt-2">
             <button
@@ -175,6 +204,7 @@ export default function CreateManualOrder() {
                 setPaymentMethod('COD');
                 setItems([{ id: crypto.randomUUID(), title: '', price: 0, quantity: 1 }]);
                 setLinkedAccount(null);
+                setEmailSent(false);
               }}
               className="bg-white hover:bg-stone-50 border border-stone-200 text-stone-700 font-bold text-xs uppercase tracking-widest py-3 px-6 rounded-xl transition-all"
             >
@@ -464,6 +494,30 @@ export default function CreateManualOrder() {
           </button>
         </div>
       </form>
+
+      {/* Toast Notification */}
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-50 animate-in fade-in-50 slide-in-from-bottom-4 duration-300">
+          <div className={`flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-xl border ${
+            toast.type === 'success'
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+              : 'bg-sky-50 border-sky-200 text-sky-800'
+          }`}>
+            {toast.type === 'success' ? (
+              <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+            ) : (
+              <Mail className="w-4 h-4 text-sky-600 shrink-0" />
+            )}
+            <p className="text-xs font-semibold">{toast.message}</p>
+            <button
+              onClick={() => setToast(null)}
+              className="ml-2 text-stone-400 hover:text-stone-700 transition-colors text-xs font-bold"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

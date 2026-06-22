@@ -1,12 +1,12 @@
 from fastapi import APIRouter, HTTPException, status, Depends, BackgroundTasks
 from typing import List, Optional
-from app.models.order import OrderCreate, OrderResponse, ManualOrderCreate
+from app.models.order import OrderCreate, OrderResponse, ManualOrderCreate, ManualOrderResponse
 from app.core.db import get_database
 from app.api.deps import get_current_admin_user, get_current_user
 from app.models.user import UserInDB
 from bson import ObjectId
 from datetime import datetime
-from app.services.email_service import queue_order_confirmation, queue_order_status_update
+from app.services.email_service import queue_order_confirmation, queue_order_status_update, queue_manual_order_emails
 
 router = APIRouter(prefix="/api/orders", tags=["orders"])
 
@@ -170,9 +170,10 @@ async def delete_order(
             detail=f"Failed to delete order: {str(e)}"
         )
 
-@router.post("/manual", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/manual", response_model=ManualOrderResponse, status_code=status.HTTP_201_CREATED)
 async def create_manual_order(
     order_in: ManualOrderCreate,
+    background_tasks: BackgroundTasks,
     current_admin: UserInDB = Depends(get_current_admin_user)
 ):
     """Admin endpoint to create manual/DM orders (WhatsApp, Instagram, custom)."""
@@ -199,7 +200,15 @@ async def create_manual_order(
 
         result = await db["orders"].insert_one(order_dict)
         inserted_order = await db["orders"].find_one({"_id": result.inserted_id})
-        return inserted_order
+
+        # Queue emails in background (non-blocking)
+        email_sent = False
+        try:
+            email_sent = queue_manual_order_emails(background_tasks, inserted_order)
+        except Exception as email_err:
+            print(f"Error queueing manual order emails: {email_err}")
+
+        return ManualOrderResponse(order=inserted_order, email_sent=email_sent)
 
     except Exception as e:
         raise HTTPException(

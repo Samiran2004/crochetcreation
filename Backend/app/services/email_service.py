@@ -505,6 +505,211 @@ def queue_order_status_update(background_tasks: BackgroundTasks, order_data: dic
     background_tasks.add_task(send_email_raw, [customer_email], subject, html)
 
 
+def send_manual_order_confirmation(to_email: str, order_data: dict):
+    """
+    Sends a beautifully formatted confirmation email for admin-created manual/DM orders.
+    Called as a background task — does NOT block the API response.
+    """
+    customer_name = order_data.get("customer_name", "Valued Customer")
+    order_id = str(order_data.get("_id") or order_data.get("id", "N/A"))
+    short_id = order_id[-6:].upper() if len(order_id) > 6 else order_id
+    total_amount = order_data.get("total_amount", 0.0)
+    payment_method = order_data.get("payment_method", "COD")
+    items = order_data.get("items", [])
+    notes = order_data.get("notes", "")
+
+    subject = f"Your Custom Order Has Been Created — #{short_id} 🧶"
+
+    # Build items table rows
+    items_rows = ""
+    for item in items:
+        price = item.get("price", 0.0)
+        qty = item.get("quantity", 1)
+        subtotal = price * qty
+        items_rows += f"""
+        <tr>
+            <td style="padding: 12px 10px; border-bottom: 1px solid #EAE2D5; color: #4E342E; font-size: 14px;">
+                {item.get("title", "Custom Item")}
+            </td>
+            <td style="padding: 12px 10px; border-bottom: 1px solid #EAE2D5; color: #5D4037; font-size: 14px; text-align: center;">
+                {qty}
+            </td>
+            <td style="padding: 12px 10px; border-bottom: 1px solid #EAE2D5; color: #5D4037; font-size: 14px; text-align: right;">
+                ₹{price:,.2f}
+            </td>
+            <td style="padding: 12px 10px; border-bottom: 1px solid #EAE2D5; color: #4E342E; font-weight: 600; font-size: 14px; text-align: right;">
+                ₹{subtotal:,.2f}
+            </td>
+        </tr>
+        """
+
+    body = f"""
+    <div style="text-align: center; margin-bottom: 25px;">
+        <span style="font-size: 10px; background-color: #E8DEF8; color: #6A1B9A; padding: 4px 14px; border-radius: 20px; text-transform: uppercase; font-weight: bold; letter-spacing: 1.5px;">Custom Order</span>
+    </div>
+
+    <div class="welcome-text" style="font-size: 20px; color: #4E342E; font-weight: 600;">
+        Hi {customer_name},
+    </div>
+    <p style="color: #5D4037; font-size: 15px; line-height: 1.7;">
+        Great news! Your custom order has been personally created by our team. We're already preparing to handcraft your items with care and attention to every stitch.
+    </p>
+
+    <div class="card" style="margin: 25px 0; padding: 18px 20px;">
+        <table style="width: 100%; font-size: 14px; color: #5D4037; border-collapse: collapse;">
+            <tr>
+                <td style="padding: 6px 0; font-weight: 700; width: 140px; color: #4E342E;">Order ID:</td>
+                <td style="padding: 6px 0; font-family: 'Courier New', monospace; font-weight: bold; color: #6D4C41;">ORD-{short_id}</td>
+            </tr>
+            <tr>
+                <td style="padding: 6px 0; font-weight: 700; color: #4E342E;">Payment Method:</td>
+                <td style="padding: 6px 0;">{payment_method}</td>
+            </tr>
+            <tr>
+                <td style="padding: 6px 0; font-weight: 700; color: #4E342E;">Status:</td>
+                <td style="padding: 6px 0;">
+                    <span class="status-badge status-pending">Pending</span>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <table class="table" style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+        <thead>
+            <tr style="border-bottom: 2px solid #8D6E63;">
+                <th style="text-align: left; padding: 10px; color: #4E342E; font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Item</th>
+                <th style="text-align: center; padding: 10px; color: #4E342E; font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Qty</th>
+                <th style="text-align: right; padding: 10px; color: #4E342E; font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Price</th>
+                <th style="text-align: right; padding: 10px; color: #4E342E; font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Subtotal</th>
+            </tr>
+        </thead>
+        <tbody>
+            {items_rows}
+            <tr>
+                <td colspan="3" style="text-align: right; padding: 14px 10px; font-weight: bold; color: #4E342E; font-size: 16px; border-top: 2px solid #8D6E63;">
+                    Grand Total:
+                </td>
+                <td style="text-align: right; padding: 14px 10px; font-weight: bold; color: #4E342E; font-size: 18px; border-top: 2px solid #8D6E63;">
+                    ₹{total_amount:,.2f}
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    <p style="color: #5D4037; font-size: 14px; line-height: 1.7;">
+        Our artisans will begin crafting your order shortly. You'll receive status updates via email as your order progresses through each stage.
+    </p>
+
+    <div class="button-container" style="text-align: center; margin: 30px 0;">
+        <a href="https://samiransamanta.in/dashboard" class="button" style="background-color: #8D6E63; color: #FFFFFF; padding: 14px 32px; text-decoration: none; font-weight: 700; border-radius: 8px; display: inline-block; box-shadow: 0 4px 12px rgba(141, 110, 99, 0.25); font-size: 14px; letter-spacing: 0.5px;">
+            View Order in Dashboard
+        </a>
+    </div>
+
+    <p style="border-top: 1px dashed #EAE2D5; padding-top: 20px; font-size: 13px; color: #8D6E63; line-height: 1.6;">
+        Questions about your custom order? Simply reply to this email or reach us at
+        <a href="mailto:support@samiransamanta.in" style="color: #6D4C41; font-weight: bold; text-decoration: none;">support@samiransamanta.in</a>.
+    </p>
+
+    <p style="margin-bottom: 0; color: #5D4037;">Warmest stitches,</p>
+    <p style="margin-top: 5px; font-weight: bold; color: #4E342E; font-size: 16px;">The CrochetCreation Team 🧶</p>
+    """
+
+    html = BASE_HTML_TEMPLATE.format(title="Your Custom Order Confirmation", body_content=body)
+    send_email_raw([to_email], subject, html)
+
+
+def queue_manual_order_emails(background_tasks: BackgroundTasks, order_data: dict) -> bool:
+    """
+    Queues manual order confirmation email to the customer (if linked)
+    and an admin alert. Returns True if customer email was queued.
+    """
+    customer_email = order_data.get("customer_email")
+    user_id = order_data.get("user_id")
+    email_sent = False
+
+    # Only send to customer if email exists AND linked to a registered user
+    if customer_email and user_id:
+        background_tasks.add_task(send_manual_order_confirmation, customer_email, order_data)
+        email_sent = True
+
+    # Always send admin alert for manual orders
+    admin_email = "samiran.samanta.dev@gmail.com"
+    customer_name = order_data.get("customer_name", "Unknown")
+    order_id = str(order_data.get("_id") or order_data.get("id", "N/A"))
+    short_id = order_id[-6:].upper() if len(order_id) > 6 else order_id
+    total_amount = order_data.get("total_amount", 0.0)
+    notes = order_data.get("notes", "")
+
+    items = order_data.get("items", [])
+    items_rows = ""
+    for item in items:
+        price = item.get("price", 0.0)
+        qty = item.get("quantity", 1)
+        items_rows += f"""
+        <tr>
+            <td>{item.get("title", "Item")}</td>
+            <td>₹{price:.2f}</td>
+            <td>{qty}</td>
+            <td>₹{(price * qty):.2f}</td>
+        </tr>
+        """
+
+    notes_section = ""
+    if notes:
+        notes_section = f"""
+        <div class="card" style="border-left-color: #FFB74D; background-color: #FFF8E1;">
+            <strong>📝 Internal Notes:</strong><br>
+            {notes}
+        </div>
+        """
+
+    body_admin = f"""
+    <div style="text-align: center; margin-bottom: 15px;">
+        <span style="font-size: 10px; background-color: #E8DEF8; color: #6A1B9A; padding: 4px 14px; border-radius: 20px; text-transform: uppercase; font-weight: bold; letter-spacing: 1.5px;">Manual Order Created</span>
+    </div>
+    <div class="welcome-text">New Manual Order Alert!</div>
+    <p>A manual/DM order has been logged in the admin dashboard.</p>
+
+    <div class="card">
+        <strong>Customer Details:</strong><br>
+        Name: {customer_name}<br>
+        Email: {customer_email or "Not provided"}<br>
+        Mobile: {order_data.get("customer_mobile") or "Not provided"}<br>
+        Account Linked: {"✅ Yes" if user_id else "❌ No (Guest)"}
+    </div>
+
+    {notes_section}
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Item</th>
+                <th>Price</th>
+                <th>Qty</th>
+                <th>Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {items_rows}
+            <tr class="total-row">
+                <td colspan="3" style="text-align: right;">Grand Total:</td>
+                <td>₹{total_amount:.2f}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="button-container">
+        <a href="https://samiransamanta.in/admin/orders" class="button">View Orders Dashboard</a>
+    </div>
+    """
+
+    html_admin = BASE_HTML_TEMPLATE.format(title="Manual Order Alert", body_content=body_admin)
+    background_tasks.add_task(send_email_raw, [admin_email], f"🛠️ Manual Order #{short_id} — {customer_name} (₹{total_amount:.2f})", html_admin)
+
+    return email_sent
+
+
 def queue_otp_email(background_tasks: BackgroundTasks, to_email: str, otp: str):
     """
     Queues a beautiful password reset OTP email with custom styling.
