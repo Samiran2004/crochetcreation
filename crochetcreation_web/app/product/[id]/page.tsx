@@ -471,22 +471,53 @@ export default function ProductDetailPage() {
             </div>
           </div>
 
-          <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="lg:hidden p-2 text-[#FEF9F6] hover:text-[#D9B4B4]">
-            {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
+          {/* Mobile Icons */}
+          <div className="flex items-center gap-3 lg:hidden">
+            <div
+              id="mobile-cart-icon-header"
+              onClick={() => typeof window !== 'undefined' && window.dispatchEvent(new Event('open-cart'))}
+              className={`relative min-w-[44px] min-h-[44px] flex items-center justify-center cursor-pointer transition-transform duration-300 ${cartBouncing ? 'scale-110' : ''}`}
+            >
+              <ShoppingBag className={`w-5 h-5 text-[#D9B4B4] ${cartBouncing ? 'animate-bounce' : ''}`} />
+              {cartItemsCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-[#D9B4B4] text-[#6B5656] text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center">
+                  {cartItemsCount}
+                </span>
+              )}
+            </div>
+            <button
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="min-w-[44px] min-h-[44px] flex items-center justify-center text-[#FEF9F6] hover:text-[#D9B4B4] transition-colors"
+            >
+              {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
+          </div>
         </div>
 
-        {/* Mobile Navigation Drawer */}
+        {/* Mobile Navigation Drawer — Full-Screen Overlay */}
         {isMenuOpen && (
           <div
-            className="lg:hidden absolute top-full left-0 w-full border-b border-[#FEF9F6]/10 py-6 px-6 z-30 flex flex-col gap-4 text-sm font-semibold tracking-widest uppercase text-center shadow-2xl backdrop-blur-lg transition-all"
-            style={{ backgroundColor: `${activeTheme.primaryDark}F2` }}
+            className="lg:hidden fixed inset-0 z-[60] flex flex-col pt-20 pb-8 px-6 text-sm font-semibold tracking-widest uppercase text-center backdrop-blur-xl transition-all animate-in fade-in duration-200"
+            style={{
+              backgroundColor: `${activeTheme.primaryDark}F5`
+            }}
           >
-            <Link href="/#home" onClick={() => setIsMenuOpen(false)} className="py-2 hover:text-[#D9B4B4] text-[#FEF9F6]">HOME</Link>
-            <Link href="/shop" onClick={() => setIsMenuOpen(false)} className="py-2 text-[#D9B4B4]">SHOP</Link>
-            <Link href="/shop" onClick={() => setIsMenuOpen(false)} className="py-2 hover:text-[#D9B4B4] text-[#FEF9F6]">CATEGORIES</Link>
-            <Link href="/#about" onClick={() => setIsMenuOpen(false)} className="py-2 hover:text-[#D9B4B4] text-[#FEF9F6]">ABOUT US</Link>
-            <Link href="/#contact" onClick={() => setIsMenuOpen(false)} className="py-2 hover:text-[#D9B4B4] text-[#FEF9F6]">CONTACT</Link>
+            {/* Close Button */}
+            <button
+              onClick={() => setIsMenuOpen(false)}
+              className="absolute top-5 right-5 min-w-[44px] min-h-[44px] flex items-center justify-center text-[#FEF9F6] hover:text-[#D9B4B4] transition-colors"
+            >
+              <X className="w-7 h-7" />
+            </button>
+
+            <nav className="flex flex-col items-center gap-1 flex-1 justify-center">
+              <Link href="/#home" onClick={() => setIsMenuOpen(false)} className="w-full py-4 min-h-[48px] flex items-center justify-center hover:text-[#D9B4B4] hover:bg-white/5 rounded-xl transition-all text-[#FEF9F6] text-base tracking-[0.2em]">HOME</Link>
+              <Link href="/shop" onClick={() => setIsMenuOpen(false)} className="w-full py-4 min-h-[48px] flex items-center justify-center hover:text-[#D9B4B4] hover:bg-white/5 rounded-xl transition-all text-[#FEF9F6] text-base tracking-[0.2em]">SHOP</Link>
+              <Link href="/shop" onClick={() => setIsMenuOpen(false)} className="w-full py-4 min-h-[48px] flex items-center justify-center hover:text-[#D9B4B4] hover:bg-white/5 rounded-xl transition-all text-[#FEF9F6] text-base tracking-[0.2em]">CATEGORIES</Link>
+              <Link href="/#about" onClick={() => setIsMenuOpen(false)} className="w-full py-4 min-h-[48px] flex items-center justify-center hover:text-[#D9B4B4] hover:bg-white/5 rounded-xl transition-all text-[#FEF9F6] text-base tracking-[0.2em]">ABOUT US</Link>
+              <Link href="/#contact" onClick={() => setIsMenuOpen(false)} className="w-full py-4 min-h-[48px] flex items-center justify-center hover:text-[#D9B4B4] hover:bg-white/5 rounded-xl transition-all text-[#FEF9F6] text-base tracking-[0.2em]">CONTACT</Link>
+            </nav>
+
             <div className="flex items-center justify-center gap-4 pt-4 border-t border-[#FEF9F6]/10 text-[#FEF9F6]">
               <div
                 id="mobile-cart-icon"

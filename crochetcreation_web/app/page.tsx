@@ -549,7 +549,7 @@ export default function CrochetCreationPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col relative bg-[#FEF9F6]">
+    <div className="min-h-screen flex flex-col relative bg-[#FEF9F6] overflow-x-hidden">
 
       {/* Dynamic Style Overrides for instant skinning */}
       <style>{`
@@ -681,7 +681,7 @@ export default function CrochetCreationPage() {
           backgroundColor: scrollY > 20 ? `${activeTheme.primaryDark}E6` : 'transparent'
         }}
       >
-        <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 md:px-6 flex items-center justify-between">
 
           {/* Logo */}
           <div
@@ -697,7 +697,7 @@ export default function CrochetCreationPage() {
                 className="object-cover"
               />
             </div>
-            <span className="text-xl md:text-2xl font-serif font-semibold tracking-wide text-[#FEF9F6]">
+            <span className="text-base md:text-2xl font-serif font-semibold tracking-wide text-[#FEF9F6]">
               Crochet Creation
             </span>
           </div>
@@ -791,28 +791,53 @@ export default function CrochetCreationPage() {
             </div>
           </div>
 
-          {/* Mobile Menu Button */}
-          <button
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="lg:hidden p-2 text-[#FEF9F6] hover:text-[#D9B4B4] transition-colors"
-          >
-            {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
+          {/* Mobile Icons */}
+          <div className="flex items-center gap-3 lg:hidden">
+            <div
+              id="mobile-cart-icon-header"
+              onClick={() => typeof window !== 'undefined' && window.dispatchEvent(new Event('open-cart'))}
+              className={`relative min-w-[44px] min-h-[44px] flex items-center justify-center cursor-pointer transition-transform duration-300 ${cartBouncing ? 'scale-110' : ''}`}
+            >
+              <ShoppingBag className={`w-5 h-5 text-[#D9B4B4] ${cartBouncing ? 'animate-bounce' : ''}`} />
+              {cartItemsCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-[#D9B4B4] text-[#6B5656] text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center">
+                  {cartItemsCount}
+                </span>
+              )}
+            </div>
+            <button
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="min-w-[44px] min-h-[44px] flex items-center justify-center text-[#FEF9F6] hover:text-[#D9B4B4] transition-colors"
+            >
+              {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
+          </div>
         </div>
 
-        {/* Mobile Navigation Drawer */}
+        {/* Mobile Navigation Drawer — Full-Screen Overlay */}
         {isMenuOpen && (
           <div
-            className="lg:hidden absolute top-full left-0 w-full border-b border-[#FEF9F6]/10 py-6 px-6 z-30 flex flex-col gap-4 text-sm font-semibold tracking-widest uppercase text-center shadow-2xl backdrop-blur-lg transition-all animate-in fade-in slide-in-from-top-4 duration-300"
+            className="lg:hidden fixed inset-0 z-[60] flex flex-col pt-20 pb-8 px-6 text-sm font-semibold tracking-widest uppercase text-center backdrop-blur-xl transition-all animate-in fade-in duration-200"
             style={{
-              backgroundColor: `${activeTheme.primaryDark}F2`
+              backgroundColor: `${activeTheme.primaryDark}F5`
             }}
           >
-            <a href="#home" onClick={() => setIsMenuOpen(false)} className="py-2 hover:text-[#D9B4B4] transition-colors text-[#FEF9F6]">HOME</a>
-            <a href="/shop" onClick={() => setIsMenuOpen(false)} className="py-2 hover:text-[#D9B4B4] transition-colors text-[#FEF9F6]">SHOP</a>
-            <a href="/shop" onClick={() => setIsMenuOpen(false)} className="py-2 hover:text-[#D9B4B4] transition-colors text-[#FEF9F6]">CATEGORIES</a>
-            <a href="#about" onClick={() => setIsMenuOpen(false)} className="py-2 hover:text-[#D9B4B4] transition-colors text-[#FEF9F6]">ABOUT US</a>
-            <a href="#contact" onClick={() => setIsMenuOpen(false)} className="py-2 hover:text-[#D9B4B4] transition-colors text-[#FEF9F6]">CONTACT</a>
+            {/* Close Button */}
+            <button
+              onClick={() => setIsMenuOpen(false)}
+              className="absolute top-5 right-5 min-w-[44px] min-h-[44px] flex items-center justify-center text-[#FEF9F6] hover:text-[#D9B4B4] transition-colors"
+            >
+              <X className="w-7 h-7" />
+            </button>
+
+            <nav className="flex flex-col items-center gap-1 flex-1 justify-center">
+              <a href="#home" onClick={() => setIsMenuOpen(false)} className="w-full py-4 min-h-[48px] flex items-center justify-center hover:text-[#D9B4B4] hover:bg-white/5 rounded-xl transition-all text-[#FEF9F6] text-base tracking-[0.2em]">HOME</a>
+              <a href="/shop" onClick={() => setIsMenuOpen(false)} className="w-full py-4 min-h-[48px] flex items-center justify-center hover:text-[#D9B4B4] hover:bg-white/5 rounded-xl transition-all text-[#FEF9F6] text-base tracking-[0.2em]">SHOP</a>
+              <a href="/shop" onClick={() => setIsMenuOpen(false)} className="w-full py-4 min-h-[48px] flex items-center justify-center hover:text-[#D9B4B4] hover:bg-white/5 rounded-xl transition-all text-[#FEF9F6] text-base tracking-[0.2em]">CATEGORIES</a>
+              <a href="#about" onClick={() => setIsMenuOpen(false)} className="w-full py-4 min-h-[48px] flex items-center justify-center hover:text-[#D9B4B4] hover:bg-white/5 rounded-xl transition-all text-[#FEF9F6] text-base tracking-[0.2em]">ABOUT US</a>
+              <a href="#contact" onClick={() => setIsMenuOpen(false)} className="w-full py-4 min-h-[48px] flex items-center justify-center hover:text-[#D9B4B4] hover:bg-white/5 rounded-xl transition-all text-[#FEF9F6] text-base tracking-[0.2em]">CONTACT</a>
+            </nav>
+
             <div className="flex items-center justify-center gap-4 pt-4 border-t border-[#FEF9F6]/10 text-[#FEF9F6]">
               <div
                 id="mobile-cart-icon"
@@ -898,7 +923,7 @@ export default function CrochetCreationPage() {
       </header>
 
       {/* 1. Header/Hero Panel (Dark Textured #6B5656) */}
-      <section id="home" className="relative lg:sticky lg:top-0 z-0 bg-crochet-charcoal text-[#FEF9F6] pt-24 pb-20 overflow-hidden h-[90vh] min-h-[700px] w-full flex flex-col justify-between scroll-mt-28">
+      <section id="home" className="relative lg:sticky lg:top-0 z-0 bg-crochet-charcoal text-[#FEF9F6] pt-20 md:pt-24 pb-12 md:pb-20 overflow-hidden min-h-[85vh] md:min-h-[90vh] md:h-[90vh] w-full flex flex-col justify-between scroll-mt-28">
 
         {/* Parallax inner wrapper */}
         <div
@@ -967,14 +992,14 @@ export default function CrochetCreationPage() {
           </div>
 
           {/* Center Content */}
-          <div className="max-w-3xl mx-auto text-center mt-12 md:mt-20 px-6 relative z-20 flex flex-col items-center">
+          <div className="max-w-3xl mx-auto text-center mt-8 md:mt-20 px-4 md:px-6 relative z-20 flex flex-col items-center">
 
             {/* Logo Icon details */}
             <div className="w-12 h-12 rounded-full border border-[#D9B4B4] flex items-center justify-center mb-6">
               <Heart className="w-5 h-5 fill-[#D9B4B4] text-[#D9B4B4]" />
             </div>
 
-            <h2 className="text-3xl md:text-6xl font-serif font-light tracking-wide leading-relaxed max-w-xl">
+            <h2 className="text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-serif font-light tracking-wide leading-snug md:leading-relaxed max-w-xl">
               Find Something You Love
             </h2>
             <p className="text-xs md:text-sm tracking-widest text-[#D9B4B4] uppercase mt-4 mb-8">
@@ -983,13 +1008,13 @@ export default function CrochetCreationPage() {
 
             <button
               onClick={() => document.getElementById('shop')?.scrollIntoView({ behavior: 'smooth' })}
-              className="border-2 border-[#D9B4B4] hover:bg-[#D9B4B4] hover:text-[#6B5656] text-[#D9B4B4] text-xs font-sans font-semibold uppercase tracking-widest px-8 py-3.5 rounded-full transition-all duration-300 active:scale-95 shadow-lg"
+              className="border-2 border-[#D9B4B4] hover:bg-[#D9B4B4] hover:text-[#6B5656] text-[#D9B4B4] text-xs font-sans font-semibold uppercase tracking-widest px-6 md:px-8 py-3 md:py-3.5 rounded-full transition-all duration-300 active:scale-95 shadow-lg min-h-[44px]"
             >
               View all products
             </button>
 
             {/* Heart shaped yarn ball */}
-            <div className="mt-12 md:mt-16 w-56 h-56 md:w-64 md:h-64 relative">
+            <div className="mt-8 md:mt-16 w-40 h-40 sm:w-56 sm:h-56 md:w-64 md:h-64 relative">
               <Image
                 src={getImageSrc('heroYarn')}
                 alt="Marilyn Heart Yarn"
@@ -1076,7 +1101,7 @@ export default function CrochetCreationPage() {
         </div>
 
         {/* Scroll-Triggered SVG Crochet Thread Animation */}
-        <div className="absolute left-1 md:left-6 top-0 h-full w-12 md:w-28 pointer-events-none z-30">
+        <div className="hidden md:absolute left-1 md:left-6 top-0 h-full w-12 md:w-28 pointer-events-none z-30">
           <svg className="w-full h-full overflow-visible" viewBox="-40 0 120 5600" preserveAspectRatio="none">
             {/* Delicate template path representing the base crochet lace draft */}
             <path
@@ -1274,8 +1299,8 @@ export default function CrochetCreationPage() {
         </div>
 
         {/* 2. Value Proposition (Cream Background) */}
-        <section id="elements" className="py-20 md:py-28 pl-14 pr-6 md:px-12 bg-[#FEF9F6] border-b border-[#EADBDB]/50 scroll-mt-28">
-          <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-y-16 gap-x-12">
+        <section id="elements" className="py-12 md:py-28 px-4 md:px-12 bg-[#FEF9F6] border-b border-[#EADBDB]/50 scroll-mt-28">
+          <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-3 gap-y-8 md:gap-y-16 gap-x-4 md:gap-x-12">
 
             {/* Card 1 */}
             <div className="flex flex-col items-center text-center space-y-4 group">
@@ -1335,24 +1360,24 @@ export default function CrochetCreationPage() {
         </section>
 
         {/* 3. "Buy A Finished Product" Section */}
-        <section id="shop" className="py-20 pl-14 pr-6 md:px-12 max-w-7xl mx-auto w-full scroll-mt-28">
+        <section id="shop" className="py-12 md:py-20 px-4 md:px-12 max-w-7xl mx-auto w-full scroll-mt-28">
 
           {/* Title row */}
-          <div className="flex items-center justify-between mb-8 border-b border-[#EADBDB] pb-4">
-            <h2 className="text-xl md:text-2xl font-serif font-medium tracking-wide text-[#6B5656]">BUY A FINISHED PRODUCT</h2>
+          <div className="flex items-center justify-between mb-6 md:mb-8 border-b border-[#EADBDB] pb-3 md:pb-4">
+            <h2 className="text-base sm:text-xl md:text-2xl font-serif font-medium tracking-wide text-[#6B5656]">BUY A FINISHED PRODUCT</h2>
             <Link href="/shop" className="text-xs font-bold text-[#D9B4B4] hover:text-[#6B5656] uppercase tracking-widest flex items-center gap-1 transition-colors">
               SEE ALL <ChevronRight className="w-4 h-4" />
             </Link>
           </div>
 
           {/* Filter bar with subtle stripe pattern */}
-          <div className="bg-crochet-stripe h-12 rounded-lg flex items-center px-4 overflow-x-auto gap-4 md:gap-8 justify-between shadow-inner mb-12">
-            <div className="flex items-center gap-4 md:gap-8 min-w-max">
+          <div className="bg-crochet-stripe h-12 rounded-lg flex items-center px-2 md:px-4 overflow-x-auto gap-2 md:gap-8 justify-between shadow-inner mb-8 md:mb-12 scrollbar-hide snap-x">
+            <div className="flex items-center gap-2 md:gap-8 min-w-max">
               {['TOYS', 'SCARVES AND HATS', 'ACCESSORIES', 'PULLOVERS', 'DRESSES', 'FOR KIDS'].map((filter) => (
                 <button
                   key={filter}
                   onClick={() => setActiveFilter(filter)}
-                  className={`text-[10px] font-black uppercase tracking-widest transition-all px-3 py-1 rounded ${activeFilter === filter
+                  className={`text-[9px] md:text-[10px] font-black uppercase tracking-widest transition-all px-2.5 md:px-3 py-1.5 rounded whitespace-nowrap snap-start min-h-[36px] flex items-center ${activeFilter === filter
                     ? 'bg-[#6B5656] text-[#FEF9F6] shadow-sm'
                     : 'text-[#6B5656] hover:text-black'
                     }`}
@@ -1365,7 +1390,7 @@ export default function CrochetCreationPage() {
           </div>
 
           {/* Product Grid - 3 Columns */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-3 md:gap-6">
             {displayProducts.length > 0 ? (
               displayProducts.map((product) => (
                 <div key={product._id || product.id} className="flex flex-col h-full bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 group">
@@ -1387,30 +1412,30 @@ export default function CrochetCreationPage() {
                       </div>
                     </div>
                   </div>
-                  <div className="p-5 flex-1 flex flex-col">
+                  <div className="p-3 md:p-5 flex-1 flex flex-col">
                     <div className="flex-1">
-                      <span className="text-[10px] font-bold text-[#D9B4B4] uppercase tracking-widest block">{product.category}</span>
+                      <span className="text-[8px] md:text-[10px] font-bold text-[#D9B4B4] uppercase tracking-widest block">{product.category}</span>
                       <h4 
                         onClick={() => router.push(`/product/${product._id || product.id}`)}
-                        className="text-lg font-bold text-gray-900 leading-tight mt-1 cursor-pointer hover:text-[#6B5656] transition-colors line-clamp-2"
+                        className="text-sm md:text-lg font-bold text-gray-900 leading-tight mt-1 cursor-pointer hover:text-[#6B5656] transition-colors line-clamp-2"
                       >
                         {product.title || product.name}
                       </h4>
-                      <p className="text-xs text-gray-500 mt-2 line-clamp-2 leading-relaxed">{product.description}</p>
+                      <p className="text-[10px] md:text-xs text-gray-500 mt-1 md:mt-2 line-clamp-2 leading-relaxed hidden sm:block">{product.description}</p>
                     </div>
-                    <div className="flex items-center justify-between mt-auto pt-4">
-                      <span className="text-xl font-extrabold text-gray-900">₹{typeof product.price === 'number' ? product.price.toFixed(2) : product.price}</span>
-                      <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-between mt-auto pt-3 md:pt-4">
+                      <span className="text-sm md:text-xl font-extrabold text-gray-900">₹{typeof product.price === 'number' ? product.price.toFixed(2) : product.price}</span>
+                      <div className="flex items-center gap-1.5 md:gap-3">
                         <button
                           onClick={(e) => handleAddToCart(product, e)}
                           title="Add to Basket"
-                          className="w-10 h-10 flex items-center justify-center border border-gray-200 rounded-full text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors active:scale-95 shadow-xs"
+                          className="w-11 h-11 md:w-10 md:h-10 min-w-[44px] min-h-[44px] flex items-center justify-center border border-gray-200 rounded-full text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors active:scale-95 shadow-xs"
                         >
                           <ShoppingBag className="w-4 h-4" />
                         </button>
                         <button
                           onClick={(e) => handleBuyNow(product, e)}
-                          className="px-6 py-2.5 bg-[#6B5656] hover:bg-[#5C4949] text-white text-sm font-semibold rounded-full transition-all active:scale-95 shadow-xs whitespace-nowrap flex-shrink-0"
+                          className="px-3.5 md:px-6 py-2.5 md:py-2.5 bg-[#6B5656] hover:bg-[#5C4949] text-white text-[10px] md:text-sm font-semibold rounded-full transition-all active:scale-95 shadow-xs whitespace-nowrap flex-shrink-0 min-h-[44px] flex items-center justify-center"
                         >
                           Buy Now
                         </button>
@@ -1431,7 +1456,7 @@ export default function CrochetCreationPage() {
 
         {/* 4. "Do It Yourself" (DIY) Section */}
         <section id="blog" className="py-12 bg-stone-100/30 border-y border-[#EADBDB]/30 scroll-mt-28">
-          <div className="max-w-7xl mx-auto pl-14 pr-6 md:px-12 grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="max-w-7xl mx-auto px-4 md:px-12 grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
 
             {/* Left Column Block */}
             <div className="flex flex-col h-full rounded-2xl overflow-hidden border border-[#EADBDB] shadow-sm">
@@ -1493,7 +1518,7 @@ export default function CrochetCreationPage() {
         </section>
 
         {/* 5. "Crochet and Hand Knitting" Section */}
-        <section id="about" className="py-24 pl-14 pr-6 md:px-12 max-w-7xl mx-auto w-full scroll-mt-28">
+        <section id="about" className="py-12 md:py-24 px-4 md:px-12 max-w-7xl mx-auto w-full scroll-mt-28">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
 
             {/* Left Column (Text & Buttons) */}
@@ -1538,7 +1563,7 @@ export default function CrochetCreationPage() {
             {/* Right Column (Images & Text) */}
             <div className="lg:col-span-7 space-y-12">
               {/* Stacked Sweaters Image */}
-              <div className="h-96 relative rounded-2xl overflow-hidden border border-[#EADBDB] shadow-md">
+              <div className="h-56 md:h-96 relative rounded-2xl overflow-hidden border border-[#EADBDB] shadow-md">
                 <Image
                   src={getImageSrc('stackedSweaters')}
                   alt="Stacked Sweaters"
@@ -1549,7 +1574,7 @@ export default function CrochetCreationPage() {
               </div>
 
               {/* Verbatim Texts */}
-              <div className="space-y-8 bg-white p-8 rounded-2xl border border-[#EADBDB]/60 shadow-sm leading-relaxed text-stone-600">
+              <div className="space-y-6 md:space-y-8 bg-white p-4 md:p-8 rounded-2xl border border-[#EADBDB]/60 shadow-sm leading-relaxed text-stone-600">
                 <div className="space-y-4">
                   <h4 className="text-lg font-bold text-[#6B5656] flex items-center gap-2">
                     <span className="w-6 h-0.5 bg-[#D9B4B4]"></span> Hi, Welcome to Crochet Creation
@@ -1571,7 +1596,7 @@ export default function CrochetCreationPage() {
         </section>
 
         {/* 6. Customer Reviews (Knit Textured Background) */}
-        <section id="portfolio" className="relative py-24 overflow-hidden text-center scroll-mt-28">
+        <section id="portfolio" className="relative py-12 md:py-24 overflow-hidden text-center scroll-mt-28">
           {/* Full Knit Background */}
           <div className="absolute inset-0 z-0">
             <Image
@@ -1584,9 +1609,9 @@ export default function CrochetCreationPage() {
             <div className="absolute inset-0 bg-[#FEF9F6]/90 mix-blend-overlay" />
           </div>
 
-          <div className="max-w-3xl mx-auto pl-14 pr-6 md:px-12 relative z-10 space-y-8">
+          <div className="max-w-3xl mx-auto px-4 md:px-12 relative z-10 space-y-6 md:space-y-8">
             <span className="text-[10px] font-black tracking-widest text-[#D9B4B4] uppercase block">WHAT THEY SAY</span>
-            <h2 className="text-2xl md:text-4xl font-serif font-medium text-[#6B5656]">CUSTOMER REVIEWS</h2>
+            <h2 className="text-xl md:text-4xl font-serif font-medium text-[#6B5656]">CUSTOMER REVIEWS</h2>
 
             <div className="flex flex-col items-center space-y-6">
               {/* Alice avatar in pink ring */}
@@ -1625,7 +1650,7 @@ export default function CrochetCreationPage() {
             </svg>
           </div>
 
-          <div className="max-w-7xl mx-auto pl-14 pr-6 md:px-12 grid grid-cols-1 lg:grid-cols-12 gap-12 relative z-20">
+          <div className="max-w-7xl mx-auto px-4 md:px-12 grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-12 relative z-20">
 
             {/* Left Side: Logo & Question */}
             <div className="lg:col-span-7 space-y-6">
@@ -1679,7 +1704,7 @@ export default function CrochetCreationPage() {
           </div>
 
           {/* Footer legal bar */}
-          <div className="max-w-7xl mx-auto pl-14 pr-6 md:px-12 border-t border-[#FEF9F6]/10 mt-12 pt-8 flex flex-col md:flex-row items-center justify-between text-[10px] text-stone-400 font-bold uppercase tracking-wider gap-4">
+          <div className="max-w-7xl mx-auto px-4 md:px-12 border-t border-[#FEF9F6]/10 mt-8 md:mt-12 pt-6 md:pt-8 flex flex-col md:flex-row items-center justify-between text-[9px] md:text-[10px] text-stone-400 font-bold uppercase tracking-wider gap-3 md:gap-4">
             <span>© 2026 Crochet Creation Studio. All Rights Reserved.</span>
             <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
               <button onClick={() => setPolicyModal('privacy')} className="hover:text-[#D9B4B4] transition-colors uppercase font-bold">Privacy Policy</button>
