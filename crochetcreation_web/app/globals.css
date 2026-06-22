@@ -280,3 +280,122 @@ html {
 .animate-draw-path {
   animation: drawPath 2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
+
+/* ═══════════════════════════════════════════════════
+   ERP ADMIN DARK THEME CUSTOM STYLES
+   ═══════════════════════════════════════════════════ */
+.dark {
+  color-scheme: dark;
+}
+
+/* Base dark container overrides */
+.dark .bg-white {
+  background-color: #0f172a !important; /* Slate-900 */
+}
+.dark .bg-gray-50,
+.dark .bg-gray-55,
+.dark .bg-[#FEF9F6],
+.dark .bg-[#F7F5F2] {
+  background-color: #020617 !important; /* Slate-950 */
+}
+.dark .bg-[#FDFBF9] {
+  background-color: #0f172a !important; /* Slate-900 */
+}
+
+/* activeTab / input / layout containers */
+.dark .bg-gray-100 {
+  background-color: #090d16 !important; /* Slate-950 dark */
+}
+
+/* Border overrides */
+.dark .border-gray-100,
+.dark .border-stone-100 {
+  border-color: #1e293b !important; /* Slate-800 */
+}
+.dark .border-gray-200,
+.dark .border-stone-200,
+.dark .border-stone-250,
+.dark .border-gray-250 {
+  border-color: #334155 !important; /* Slate-700 */
+}
+.dark .border-[#EADBDB] {
+  border-color: #1e293b !important;
+}
+
+/* Text color overrides */
+.dark .text-slate-900,
+.dark .text-stone-850,
+.dark .text-stone-800 {
+  color: #f8fafc !important; /* Slate-50 */
+}
+.dark .text-slate-805,
+.dark .text-slate-800,
+.dark .text-slate-700,
+.dark .text-stone-600,
+.dark .text-stone-550,
+.dark .text-gray-700,
+.dark .text-gray-655,
+.dark .text-gray-650 {
+  color: #cbd5e1 !important; /* Slate-300 */
+}
+.dark .text-gray-500,
+.dark .text-stone-500,
+.dark .text-stone-450,
+.dark .text-gray-400,
+.dark .text-stone-400 {
+  color: #94a3b8 !important; /* Slate-400 */
+}
+
+/* Hover effects */
+.dark .hover\:bg-gray-50\/50:hover,
+.dark .hover\:bg-gray-55\/70:hover,
+.dark .hover\:bg-gray-50:hover,
+.dark .hover\:bg-stone-50:hover {
+  background-color: #1e293b !important; /* Slate-800 */
+}
+
+/* KPI icon containers */
+.dark .bg-emerald-50 {
+  background-color: rgba(16, 185, 129, 0.15) !important;
+  color: #34d399 !important;
+  border-color: rgba(16, 185, 129, 0.2) !important;
+}
+.dark .bg-amber-50 {
+  background-color: rgba(245, 158, 11, 0.15) !important;
+  color: #fbbf24 !important;
+  border-color: rgba(245, 158, 11, 0.2) !important;
+}
+.dark .bg-sky-50 {
+  background-color: rgba(14, 165, 233, 0.15) !important;
+  color: #38bdf8 !important;
+  border-color: rgba(14, 165, 233, 0.2) !important;
+}
+.dark .bg-red-50 {
+  background-color: rgba(239, 68, 68, 0.15) !important;
+  color: #f87171 !important;
+  border-color: rgba(239, 68, 68, 0.2) !important;
+}
+
+/* SVG Chart adjustments for dark theme */
+.dark line[stroke="#F1F1F1"] {
+  stroke: #1e293b !important;
+}
+.dark text[fill="#A0A0A0"],
+.dark text[fill="#888888"],
+.dark text[fill="#6B5656"] {
+  fill: #94a3b8 !important;
+}
+
+/* Inputs and Forms */
+.dark input,
+.dark select,
+.dark textarea {
+  background-color: #020617 !important; /* Slate-950 */
+  border-color: #334155 !important; /* Slate-700 */
+  color: #f8fafc !important; /* Slate-50 */
+}
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #475569 !important;
+}
+

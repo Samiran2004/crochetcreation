@@ -45,7 +45,7 @@ export default function CreateManualOrder() {
   const [paymentMethod, setPaymentMethod] = useState('COD');
   const [notes, setNotes] = useState('');
   const [items, setItems] = useState<LineItem[]>([
-    { id: crypto.randomUUID(), title: '', price: 0, quantity: 1 }
+    { id: Math.random().toString(36).substring(2, 9), title: '', price: 0, quantity: 1 }
   ]);
 
   const [loading, setLoading] = useState(false);
@@ -66,7 +66,7 @@ export default function CreateManualOrder() {
 
   // Item management
   const addItem = () => {
-    setItems(prev => [...prev, { id: crypto.randomUUID(), title: '', price: 0, quantity: 1 }]);
+    setItems(prev => [...prev, { id: Math.random().toString(36).substring(2, 9), title: '', price: 0, quantity: 1 }]);
   };
 
   const removeItem = (id: string) => {
