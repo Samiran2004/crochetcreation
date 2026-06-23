@@ -24,6 +24,7 @@ import {
   Lock,
   LogOut
 } from 'lucide-react';
+import { FadeUpWrapper, ScaleInWrapper, StaggerContainer, StaggerItem } from './components/AnimationWrappers';
 
 // Local image assets — copied directly into public/assets/
 const IMAGES = {
@@ -932,7 +933,7 @@ export default function CrochetCreationPage() {
         >
 
           {/* Left Decorative Column (Pink ribbon, spool, buttons) */}
-          <div className="hidden md:flex absolute left-8 top-24 w-36 flex-col items-center gap-6 select-none pointer-events-none z-10">
+          <ScaleInWrapper delay={0.2} className="hidden md:flex absolute left-8 top-24 w-36 flex-col items-center gap-6 select-none pointer-events-none z-10">
             {/* Spool */}
             <svg className="w-8 h-10 text-amber-100" viewBox="0 0 32 40" fill="currentColor">
               <rect x="6" y="2" width="20" height="4" rx="1" fill="#D3C1B5" />
@@ -956,10 +957,10 @@ export default function CrochetCreationPage() {
                 <div className="grid grid-cols-2 gap-0.5 w-2 h-2"><div className="bg-[#6B5656] rounded-full w-0.5 h-0.5"></div><div className="bg-[#6B5656] rounded-full w-0.5 h-0.5"></div><div className="bg-[#6B5656] rounded-full w-0.5 h-0.5"></div><div className="bg-[#6B5656] rounded-full w-0.5 h-0.5"></div></div>
               </div>
             </div>
-          </div>
+          </ScaleInWrapper>
 
           {/* Right Decorative Column (Thread spools, needles) */}
-          <div className="hidden md:flex absolute right-8 top-24 w-36 flex-col items-center gap-6 select-none pointer-events-none z-10">
+          <ScaleInWrapper delay={0.3} className="hidden md:flex absolute right-8 top-24 w-36 flex-col items-center gap-6 select-none pointer-events-none z-10">
             {/* Spools stack */}
             <div className="flex flex-col gap-3">
               {/* Spool 1: Pink */}
@@ -989,32 +990,41 @@ export default function CrochetCreationPage() {
               <line x1="40" y1="90" x2="10" y2="10" strokeLinecap="round" strokeWidth="1.5" />
               <circle cx="10" cy="10" r="3" fill="#C0B4D9" />
             </svg>
-          </div>
+          </ScaleInWrapper>
 
           {/* Center Content */}
-          <div className="max-w-3xl mx-auto text-center mt-8 md:mt-20 px-4 md:px-6 relative z-20 flex flex-col items-center">
+          <StaggerContainer className="max-w-3xl mx-auto text-center mt-8 md:mt-20 px-4 md:px-6 relative z-20 flex flex-col items-center">
 
             {/* Logo Icon details */}
-            <div className="w-12 h-12 rounded-full border border-[#D9B4B4] flex items-center justify-center mb-6">
-              <Heart className="w-5 h-5 fill-[#D9B4B4] text-[#D9B4B4]" />
-            </div>
+            <StaggerItem yOffset={30}>
+              <div className="w-12 h-12 rounded-full border border-[#D9B4B4] flex items-center justify-center mb-6">
+                <Heart className="w-5 h-5 fill-[#D9B4B4] text-[#D9B4B4]" />
+              </div>
+            </StaggerItem>
 
-            <h2 className="text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-serif font-light tracking-wide leading-snug md:leading-relaxed max-w-xl">
-              Find Something You Love
-            </h2>
-            <p className="text-xs md:text-sm tracking-widest text-[#D9B4B4] uppercase mt-4 mb-8">
-              and personalize it to be 100% yours
-            </p>
+            <StaggerItem yOffset={30}>
+              <h2 className="text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-serif font-light tracking-wide leading-snug md:leading-relaxed max-w-xl">
+                Find Something You Love
+              </h2>
+            </StaggerItem>
+            
+            <StaggerItem yOffset={30}>
+              <p className="text-xs md:text-sm tracking-widest text-[#D9B4B4] uppercase mt-4 mb-8">
+                and personalize it to be 100% yours
+              </p>
+            </StaggerItem>
 
-            <button
-              onClick={() => document.getElementById('shop')?.scrollIntoView({ behavior: 'smooth' })}
-              className="border-2 border-[#D9B4B4] hover:bg-[#D9B4B4] hover:text-[#6B5656] text-[#D9B4B4] text-xs font-sans font-semibold uppercase tracking-widest px-6 md:px-8 py-3 md:py-3.5 rounded-full transition-all duration-300 active:scale-95 shadow-lg min-h-[44px]"
-            >
-              View all products
-            </button>
+            <StaggerItem yOffset={20}>
+              <button
+                onClick={() => document.getElementById('shop')?.scrollIntoView({ behavior: 'smooth' })}
+                className="border-2 border-[#D9B4B4] hover:bg-[#D9B4B4] hover:text-gray-900 text-[#D9B4B4] text-xs font-sans font-semibold uppercase tracking-widest px-6 md:px-8 py-3 md:py-3.5 rounded-full transition-all duration-300 ease-in-out active:scale-95 shadow-lg min-h-[44px]"
+              >
+                View all products
+              </button>
+            </StaggerItem>
 
             {/* Heart shaped yarn ball */}
-            <div className="mt-8 md:mt-16 w-40 h-40 sm:w-56 sm:h-56 md:w-64 md:h-64 relative">
+            <ScaleInWrapper delay={0.4} className="mt-8 md:mt-16 w-40 h-40 sm:w-56 sm:h-56 md:w-64 md:h-64 relative">
               <Image
                 src={getImageSrc('heroYarn')}
                 alt="Marilyn Heart Yarn"
@@ -1085,8 +1095,8 @@ export default function CrochetCreationPage() {
                   <path d="M 66 82 C 70 82, 72 86, 68 88 C 66 89, 65 85, 66 82" />
                 </svg>
               </div>
-            </div>
-          </div>
+            </ScaleInWrapper>
+          </StaggerContainer>
 
         </div> {/* End of Parallax inner wrapper */}
       </section>
@@ -1300,149 +1310,153 @@ export default function CrochetCreationPage() {
 
         {/* 2. Value Proposition (Cream Background) */}
         <section id="elements" className="py-12 md:py-28 px-4 md:px-12 bg-[#FEF9F6] border-b border-[#EADBDB]/50 scroll-mt-28">
-          <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-3 gap-y-8 md:gap-y-16 gap-x-4 md:gap-x-12">
+          <StaggerContainer className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-3 gap-y-8 md:gap-y-16 gap-x-4 md:gap-x-12">
 
             {/* Card 1 */}
-            <div className="flex flex-col items-center text-center space-y-4 group">
-              <div className="w-14 h-14 rounded-full border border-[#D9B4B4] flex items-center justify-center text-[#D9B4B4] group-hover:bg-[#D9B4B4] group-hover:text-white transition-all duration-300">
-                <Heart className="w-6 h-6" />
+            <StaggerItem className="flex flex-col items-center text-center space-y-4">
+              <div className="w-14 h-14 rounded-full border border-[#D9B4B4] flex items-center justify-center text-[#D9B4B4] hover:bg-[#D9B4B4] group transition-all duration-300">
+                <Heart className="w-6 h-6 text-[#D9B4B4] group-hover:text-white transition-colors duration-300" />
               </div>
               <h4 className="text-sm font-bold uppercase tracking-wider text-[#6B5656]">Find something you love</h4>
               <p className="text-xs text-stone-500 max-w-xs leading-relaxed">Our store is a world of vintage and beautiful items designed to inspire warmth.</p>
-            </div>
+            </StaggerItem>
 
             {/* Card 2 */}
-            <div className="flex flex-col items-center text-center space-y-4 group">
-              <div className="w-14 h-14 rounded-full border border-[#D9B4B4] flex items-center justify-center text-[#D9B4B4] group-hover:bg-[#D9B4B4] group-hover:text-white transition-all duration-300">
-                <Gift className="w-6 h-6" />
+            <StaggerItem className="flex flex-col items-center text-center space-y-4">
+              <div className="w-14 h-14 rounded-full border border-[#D9B4B4] flex items-center justify-center text-[#D9B4B4] hover:bg-[#D9B4B4] group transition-all duration-300">
+                <Gift className="w-6 h-6 text-[#D9B4B4] group-hover:text-white transition-colors duration-300" />
               </div>
               <h4 className="text-sm font-bold uppercase tracking-wider text-[#6B5656]">If you are looking for a gift</h4>
               <p className="text-xs text-stone-500 max-w-xs leading-relaxed">The best present is a handmade one that tells a story and lasts a lifetime.</p>
-            </div>
+            </StaggerItem>
 
             {/* Card 3 */}
-            <div className="flex flex-col items-center text-center space-y-4 group">
-              <div className="w-14 h-14 rounded-full border border-[#D9B4B4] flex items-center justify-center text-[#D9B4B4] group-hover:bg-[#D9B4B4] group-hover:text-white transition-all duration-300">
-                <ShoppingBag className="w-6 h-6" />
+            <StaggerItem className="flex flex-col items-center text-center space-y-4">
+              <div className="w-14 h-14 rounded-full border border-[#D9B4B4] flex items-center justify-center text-[#D9B4B4] hover:bg-[#D9B4B4] group transition-all duration-300">
+                <ShoppingBag className="w-6 h-6 text-[#D9B4B4] group-hover:text-white transition-colors duration-300" />
               </div>
               <h4 className="text-sm font-bold uppercase tracking-wider text-[#6B5656]">Buy and sell with confidence</h4>
               <p className="text-xs text-stone-500 max-w-xs leading-relaxed">It would be easier, faster and safer to buy items from verified organic knits.</p>
-            </div>
+            </StaggerItem>
 
             {/* Card 4 */}
-            <div className="flex flex-col items-center text-center space-y-4 group">
-              <div className="w-14 h-14 rounded-full border border-[#D9B4B4] flex items-center justify-center text-[#D9B4B4] group-hover:bg-[#D9B4B4] group-hover:text-white transition-all duration-300">
-                <Lightbulb className="w-6 h-6" />
+            <StaggerItem className="flex flex-col items-center text-center space-y-4">
+              <div className="w-14 h-14 rounded-full border border-[#D9B4B4] flex items-center justify-center text-[#D9B4B4] hover:bg-[#D9B4B4] group transition-all duration-300">
+                <Lightbulb className="w-6 h-6 text-[#D9B4B4] group-hover:text-white transition-colors duration-300" />
               </div>
               <h4 className="text-sm font-bold uppercase tracking-wider text-[#6B5656]">Create any idea</h4>
               <p className="text-xs text-stone-500 max-w-xs leading-relaxed">Models of any complexity in a short time, stitched according to your details.</p>
-            </div>
+            </StaggerItem>
 
             {/* Card 5 */}
-            <div className="flex flex-col items-center text-center space-y-4 group">
-              <div className="w-14 h-14 rounded-full border border-[#D9B4B4] flex items-center justify-center text-[#D9B4B4] group-hover:bg-[#D9B4B4] group-hover:text-white transition-all duration-300">
-                <Send className="w-6 h-6" />
+            <StaggerItem className="flex flex-col items-center text-center space-y-4">
+              <div className="w-14 h-14 rounded-full border border-[#D9B4B4] flex items-center justify-center text-[#D9B4B4] hover:bg-[#D9B4B4] group transition-all duration-300">
+                <Send className="w-6 h-6 text-[#D9B4B4] group-hover:text-white transition-colors duration-300" />
               </div>
               <h4 className="text-sm font-bold uppercase tracking-wider text-[#6B5656]">Worldwide shipping</h4>
               <p className="text-xs text-stone-500 max-w-xs leading-relaxed">Express delivery of parcels around the world with full tracking details.</p>
-            </div>
+            </StaggerItem>
 
             {/* Card 6 */}
-            <div className="flex flex-col items-center text-center space-y-4 group">
-              <div className="w-14 h-14 rounded-full border border-[#D9B4B4] flex items-center justify-center text-[#D9B4B4] group-hover:bg-[#D9B4B4] group-hover:text-white transition-all duration-300">
-                <Scissors className="w-6 h-6" />
+            <StaggerItem className="flex flex-col items-center text-center space-y-4">
+              <div className="w-14 h-14 rounded-full border border-[#D9B4B4] flex items-center justify-center text-[#D9B4B4] hover:bg-[#D9B4B4] group transition-all duration-300">
+                <Scissors className="w-6 h-6 text-[#D9B4B4] group-hover:text-white transition-colors duration-300" />
               </div>
               <h4 className="text-sm font-bold uppercase tracking-wider text-[#6B5656]">Knitwear restoration</h4>
               <p className="text-xs text-stone-500 max-w-xs leading-relaxed">Restoration of holes, elimination of puffs and care services for knits.</p>
-            </div>
+            </StaggerItem>
 
-          </div>
+          </StaggerContainer>
         </section>
 
         {/* 3. "Buy A Finished Product" Section */}
         <section id="shop" className="py-12 md:py-20 px-4 md:px-12 max-w-7xl mx-auto w-full scroll-mt-28">
 
-          {/* Title row */}
-          <div className="flex items-center justify-between mb-6 md:mb-8 border-b border-[#EADBDB] pb-3 md:pb-4">
-            <h2 className="text-base sm:text-xl md:text-2xl font-serif font-medium tracking-wide text-[#6B5656]">BUY A FINISHED PRODUCT</h2>
-            <Link href="/shop" className="text-xs font-bold text-[#D9B4B4] hover:text-[#6B5656] uppercase tracking-widest flex items-center gap-1 transition-colors">
-              SEE ALL <ChevronRight className="w-4 h-4" />
-            </Link>
-          </div>
-
-          {/* Filter bar with subtle stripe pattern */}
-          <div className="bg-crochet-stripe h-12 rounded-lg flex items-center px-2 md:px-4 overflow-x-auto gap-2 md:gap-8 justify-between shadow-inner mb-8 md:mb-12 scrollbar-hide snap-x">
-            <div className="flex items-center gap-2 md:gap-8 min-w-max">
-              {['TOYS', 'SCARVES AND HATS', 'ACCESSORIES', 'PULLOVERS', 'DRESSES', 'FOR KIDS'].map((filter) => (
-                <button
-                  key={filter}
-                  onClick={() => setActiveFilter(filter)}
-                  className={`text-[9px] md:text-[10px] font-black uppercase tracking-widest transition-all px-2.5 md:px-3 py-1.5 rounded whitespace-nowrap snap-start min-h-[36px] flex items-center ${activeFilter === filter
-                    ? 'bg-[#6B5656] text-[#FEF9F6] shadow-sm'
-                    : 'text-[#6B5656] hover:text-black'
-                    }`}
-                >
-                  {filter}
-                </button>
-              ))}
+          {/* Title row & Filters */}
+          <FadeUpWrapper className="space-y-6 md:space-y-10">
+            <div className="flex items-center justify-between mb-6 md:mb-8 border-b border-[#EADBDB] pb-3 md:pb-4">
+              <h2 className="text-base sm:text-xl md:text-2xl font-serif font-medium tracking-wide text-[#6B5656]">BUY A FINISHED PRODUCT</h2>
+              <Link href="/shop" className="text-xs font-bold text-[#D9B4B4] hover:text-[#6B5656] uppercase tracking-widest flex items-center gap-1 transition-colors">
+                SEE ALL <ChevronRight className="w-4 h-4" />
+              </Link>
             </div>
-            <ChevronRight className="w-4 h-4 text-[#6B5656] shrink-0 animate-pulse" />
-          </div>
+
+            {/* Filter bar with subtle stripe pattern */}
+            <div className="bg-crochet-stripe h-12 rounded-lg flex items-center px-2 md:px-4 overflow-x-auto gap-2 md:gap-8 justify-between shadow-inner mb-8 md:mb-12 scrollbar-hide snap-x">
+              <div className="flex items-center gap-2 md:gap-8 min-w-max">
+                {['TOYS', 'SCARVES AND HATS', 'ACCESSORIES', 'PULLOVERS', 'DRESSES', 'FOR KIDS'].map((filter) => (
+                  <button
+                    key={filter}
+                    onClick={() => setActiveFilter(filter)}
+                    className={`text-[9px] md:text-[10px] font-black uppercase tracking-widest transition-all px-2.5 md:px-3 py-1.5 rounded whitespace-nowrap snap-start min-h-[36px] flex items-center ${activeFilter === filter
+                      ? 'bg-[#6B5656] text-[#FEF9F6] shadow-sm'
+                      : 'text-[#6B5656] hover:text-black'
+                      }`}
+                  >
+                    {filter}
+                  </button>
+                ))}
+              </div>
+              <ChevronRight className="w-4 h-4 text-[#6B5656] shrink-0 animate-pulse" />
+            </div>
+          </FadeUpWrapper>
 
           {/* Product Grid - 3 Columns */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-3 md:gap-6">
+          <StaggerContainer className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-3 md:gap-6">
             {displayProducts.length > 0 ? (
               displayProducts.map((product) => (
-                <div key={product._id || product.id} className="flex flex-col h-full bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 group">
-                  <div className="relative aspect-[4/5] w-full bg-stone-50 overflow-hidden group cursor-pointer" onClick={() => router.push(`/product/${product._id || product.id}`)}>
-                    <Image
-                      src={product.image_url || getImageSrc('craftingTools')}
-                      alt={product.title || product.name}
-                      fill
-                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 380px"
-                      className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
-                    />
-                    <span className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm text-[10px] uppercase tracking-wider font-bold px-3 py-1.5 rounded-full shadow-sm text-stone-600 border border-gray-100/50 z-10">
-                      {product.badge || 'HANDMADE'}
-                    </span>
-                    <div className="absolute inset-0 bg-[#6B5656]/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center z-10">
-                      <div className="bg-white/95 backdrop-blur-sm text-[#6B5656] text-[8px] font-black uppercase tracking-widest px-4 py-2 rounded-full shadow-md transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300 flex items-center gap-1.5">
-                        <Search className="w-3.5 h-3.5 text-[#D9B4B4]" />
-                        View Details
+                <StaggerItem key={product._id || product.id} className="h-full">
+                  <div className="flex flex-col h-full bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 group">
+                    <div className="relative aspect-[4/5] w-full bg-stone-50 overflow-hidden group cursor-pointer" onClick={() => router.push(`/product/${product._id || product.id}`)}>
+                      <Image
+                        src={product.image_url || getImageSrc('craftingTools')}
+                        alt={product.title || product.name}
+                        fill
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 380px"
+                        className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
+                      />
+                      <span className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm text-[10px] uppercase tracking-wider font-bold px-3 py-1.5 rounded-full shadow-sm text-stone-600 border border-gray-100/50 z-10">
+                        {product.badge || 'HANDMADE'}
+                      </span>
+                      <div className="absolute inset-0 bg-[#6B5656]/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center z-10">
+                        <div className="bg-white/95 backdrop-blur-sm text-[#6B5656] text-[8px] font-black uppercase tracking-widest px-4 py-2 rounded-full shadow-md transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300 flex items-center gap-1.5">
+                          <Search className="w-3.5 h-3.5 text-[#D9B4B4]" />
+                          View Details
+                        </div>
+                      </div>
+                    </div>
+                    <div className="p-3 md:p-5 flex-1 flex flex-col">
+                      <div className="flex-1">
+                        <span className="text-[8px] md:text-[10px] font-bold text-[#D9B4B4] uppercase tracking-widest block">{product.category}</span>
+                        <h4 
+                          onClick={() => router.push(`/product/${product._id || product.id}`)}
+                          className="text-sm md:text-lg font-bold text-gray-900 leading-tight mt-1 cursor-pointer hover:text-[#6B5656] transition-colors line-clamp-2"
+                        >
+                          {product.title || product.name}
+                        </h4>
+                        <p className="text-[10px] md:text-xs text-gray-500 mt-1 md:mt-2 line-clamp-2 leading-relaxed hidden sm:block">{product.description}</p>
+                      </div>
+                      <div className="flex items-center justify-between mt-auto pt-3 md:pt-4">
+                        <span className="text-sm md:text-xl font-extrabold text-gray-900">₹{typeof product.price === 'number' ? product.price.toFixed(2) : product.price}</span>
+                        <div className="flex items-center gap-1.5 md:gap-3">
+                          <button
+                            onClick={(e) => handleAddToCart(product, e)}
+                            title="Add to Basket"
+                            className="w-11 h-11 md:w-10 md:h-10 min-w-[44px] min-h-[44px] flex items-center justify-center border border-gray-200 rounded-full text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors active:scale-95 shadow-xs"
+                          >
+                            <ShoppingBag className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={(e) => handleBuyNow(product, e)}
+                            className="px-3.5 md:px-6 py-2.5 md:py-2.5 bg-[#6B5656] hover:bg-[#5C4949] text-white text-[10px] md:text-sm font-semibold rounded-full transition-all active:scale-95 shadow-xs whitespace-nowrap flex-shrink-0 min-h-[44px] flex items-center justify-center"
+                          >
+                            Buy Now
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
-                  <div className="p-3 md:p-5 flex-1 flex flex-col">
-                    <div className="flex-1">
-                      <span className="text-[8px] md:text-[10px] font-bold text-[#D9B4B4] uppercase tracking-widest block">{product.category}</span>
-                      <h4 
-                        onClick={() => router.push(`/product/${product._id || product.id}`)}
-                        className="text-sm md:text-lg font-bold text-gray-900 leading-tight mt-1 cursor-pointer hover:text-[#6B5656] transition-colors line-clamp-2"
-                      >
-                        {product.title || product.name}
-                      </h4>
-                      <p className="text-[10px] md:text-xs text-gray-500 mt-1 md:mt-2 line-clamp-2 leading-relaxed hidden sm:block">{product.description}</p>
-                    </div>
-                    <div className="flex items-center justify-between mt-auto pt-3 md:pt-4">
-                      <span className="text-sm md:text-xl font-extrabold text-gray-900">₹{typeof product.price === 'number' ? product.price.toFixed(2) : product.price}</span>
-                      <div className="flex items-center gap-1.5 md:gap-3">
-                        <button
-                          onClick={(e) => handleAddToCart(product, e)}
-                          title="Add to Basket"
-                          className="w-11 h-11 md:w-10 md:h-10 min-w-[44px] min-h-[44px] flex items-center justify-center border border-gray-200 rounded-full text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors active:scale-95 shadow-xs"
-                        >
-                          <ShoppingBag className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={(e) => handleBuyNow(product, e)}
-                          className="px-3.5 md:px-6 py-2.5 md:py-2.5 bg-[#6B5656] hover:bg-[#5C4949] text-white text-[10px] md:text-sm font-semibold rounded-full transition-all active:scale-95 shadow-xs whitespace-nowrap flex-shrink-0 min-h-[44px] flex items-center justify-center"
-                        >
-                          Buy Now
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                </StaggerItem>
               ))
             ) : (
               <div className="col-span-full py-12 flex flex-col items-center justify-center bg-white border border-dashed border-[#EADBDB] rounded-2xl text-center">
@@ -1451,12 +1465,12 @@ export default function CrochetCreationPage() {
                 <p className="text-xs text-stone-500">Add products using the backend API to see them here.</p>
               </div>
             )}
-          </div>
+          </StaggerContainer>
         </section>
 
         {/* 4. "Do It Yourself" (DIY) Section */}
         <section id="blog" className="py-12 bg-stone-100/30 border-y border-[#EADBDB]/30 scroll-mt-28">
-          <div className="max-w-7xl mx-auto px-4 md:px-12 grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+          <FadeUpWrapper className="max-w-7xl mx-auto px-4 md:px-12 grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
 
             {/* Left Column Block */}
             <div className="flex flex-col h-full rounded-2xl overflow-hidden border border-[#EADBDB] shadow-sm">
@@ -1481,7 +1495,7 @@ export default function CrochetCreationPage() {
                 </p>
                 <button
                   onClick={() => setCustomRequestModal(true)}
-                  className="bg-[#D9B4B4] hover:bg-[#FEF9F6] text-[#6B5656] text-[10px] uppercase font-black tracking-widest px-6 py-3.5 rounded-full transition-colors shadow mt-2"
+                  className="bg-[#D9B4B4] hover:bg-[#FEF9F6] text-[#6B5656] hover:text-gray-900 text-[10px] uppercase font-black tracking-widest px-6 py-3.5 rounded-full transition-all duration-300 ease-in-out shadow mt-2"
                 >
                   enroll in courses
                 </button>
@@ -1514,12 +1528,12 @@ export default function CrochetCreationPage() {
               </div>
             </div>
 
-          </div>
+          </FadeUpWrapper>
         </section>
 
         {/* 5. "Crochet and Hand Knitting" Section */}
         <section id="about" className="py-12 md:py-24 px-4 md:px-12 max-w-7xl mx-auto w-full scroll-mt-28">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+          <FadeUpWrapper className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
 
             {/* Left Column (Text & Buttons) */}
             <div className="lg:col-span-5 space-y-8 lg:sticky lg:top-24">
@@ -1592,7 +1606,7 @@ export default function CrochetCreationPage() {
               </div>
             </div>
 
-          </div>
+          </FadeUpWrapper>
         </section>
 
         {/* 6. Customer Reviews (Knit Textured Background) */}
@@ -1609,7 +1623,7 @@ export default function CrochetCreationPage() {
             <div className="absolute inset-0 bg-[#FEF9F6]/90 mix-blend-overlay" />
           </div>
 
-          <div className="max-w-3xl mx-auto px-4 md:px-12 relative z-10 space-y-6 md:space-y-8">
+          <FadeUpWrapper className="max-w-3xl mx-auto px-4 md:px-12 relative z-10 space-y-6 md:space-y-8">
             <span className="text-[10px] font-black tracking-widest text-[#D9B4B4] uppercase block">WHAT THEY SAY</span>
             <h2 className="text-xl md:text-4xl font-serif font-medium text-[#6B5656]">CUSTOMER REVIEWS</h2>
 
@@ -1637,7 +1651,7 @@ export default function CrochetCreationPage() {
                 ALICE, 23/03/2021
               </span>
             </div>
-          </div>
+          </FadeUpWrapper>
         </section>
 
         {/* 7. Footer Panel (Dark Textured #6B5656) */}
@@ -1650,7 +1664,7 @@ export default function CrochetCreationPage() {
             </svg>
           </div>
 
-          <div className="max-w-7xl mx-auto px-4 md:px-12 grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-12 relative z-20">
+          <FadeUpWrapper className="max-w-7xl mx-auto px-4 md:px-12 grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-12 relative z-20">
 
             {/* Left Side: Logo & Question */}
             <div className="lg:col-span-7 space-y-6">
@@ -1701,7 +1715,7 @@ export default function CrochetCreationPage() {
               </div>
 
             </div>
-          </div>
+          </FadeUpWrapper>
 
           {/* Footer legal bar */}
           <div className="max-w-7xl mx-auto px-4 md:px-12 border-t border-[#FEF9F6]/10 mt-8 md:mt-12 pt-6 md:pt-8 flex flex-col md:flex-row items-center justify-between text-[9px] md:text-[10px] text-stone-400 font-bold uppercase tracking-wider gap-3 md:gap-4">

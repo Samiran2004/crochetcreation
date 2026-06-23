@@ -202,7 +202,7 @@ export default function CreateManualOrder() {
                 setCustomerMobile('');
                 setNotes('');
                 setPaymentMethod('COD');
-                setItems([{ id: crypto.randomUUID(), title: '', price: 0, quantity: 1 }]);
+                setItems([{ id: Math.random().toString(36).substring(2, 9), title: '', price: 0, quantity: 1 }]);
                 setLinkedAccount(null);
                 setEmailSent(false);
               }}

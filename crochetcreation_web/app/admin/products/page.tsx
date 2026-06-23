@@ -20,7 +20,8 @@ import {
   HelpCircle,
   Search,
   SlidersHorizontal,
-  Package
+  Package,
+  Truck
 } from 'lucide-react';
 
 interface Product {
@@ -28,6 +29,8 @@ interface Product {
   title: string;
   description: string;
   price: number;
+  originalPrice?: number;
+  sellingPrice?: number;
   category: string;
   image_url: string;
   image_urls?: string[];
@@ -35,6 +38,7 @@ interface Product {
   materials?: string;
   care_instructions?: string;
   in_stock?: boolean;
+  delivery_time?: string;
 }
 
 export default function AdminProducts() {
@@ -54,11 +58,14 @@ export default function AdminProducts() {
     title: '',
     description: '',
     price: '',
+    originalPrice: '',
+    sellingPrice: '',
     category: 'TOYS',
     size: '',
     materials: '',
     care_instructions: '',
     in_stock: 'true',
+    delivery_time: '5-7 working days',
   });
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
@@ -101,11 +108,14 @@ export default function AdminProducts() {
       title: '',
       description: '',
       price: '',
+      originalPrice: '',
+      sellingPrice: '',
       category: 'TOYS',
       size: '',
       materials: '',
       care_instructions: '',
       in_stock: 'true',
+      delivery_time: '5-7 working days',
     });
     setSelectedFiles([]);
     setPreviewUrls([]);
@@ -119,11 +129,14 @@ export default function AdminProducts() {
       title: product.title,
       description: product.description,
       price: product.price.toString(),
+      originalPrice: product.originalPrice ? product.originalPrice.toString() : product.price.toString(),
+      sellingPrice: product.sellingPrice ? product.sellingPrice.toString() : product.price.toString(),
       category: product.category,
       size: product.size || '',
       materials: product.materials || '',
       care_instructions: product.care_instructions || '',
       in_stock: product.in_stock !== false ? 'true' : 'false',
+      delivery_time: product.delivery_time || '5-7 working days',
     });
     setSelectedFiles([]);
     setPreviewUrls([]);
@@ -163,12 +176,20 @@ export default function AdminProducts() {
       const submissionData = new FormData();
       submissionData.append('title', formData.title);
       submissionData.append('description', formData.description);
-      submissionData.append('price', formData.price);
+      const basePrice = formData.sellingPrice || formData.price || formData.originalPrice || '0';
+      submissionData.append('price', basePrice);
+      if (formData.originalPrice) {
+        submissionData.append('originalPrice', formData.originalPrice);
+      }
+      if (formData.sellingPrice) {
+        submissionData.append('sellingPrice', formData.sellingPrice);
+      }
       submissionData.append('category', formData.category.toUpperCase());
       submissionData.append('size', formData.size);
       submissionData.append('materials', formData.materials);
       submissionData.append('care_instructions', formData.care_instructions);
       submissionData.append('in_stock', formData.in_stock);
+      submissionData.append('delivery_time', formData.delivery_time);
       
       if (selectedFiles.length > 0) {
         selectedFiles.forEach(file => {
@@ -435,7 +456,14 @@ export default function AdminProducts() {
                         </div>
                       </div>
                     </td>
-                    <td className="py-4 px-6 font-bold text-stone-900 text-sm">₹{product.price.toFixed(2)}</td>
+                    <td className="py-4 px-6 text-stone-900 text-sm">
+                      <div className="flex flex-col">
+                        <span className="font-bold">₹{(product.sellingPrice ?? product.price).toFixed(2)}</span>
+                        {product.originalPrice && product.originalPrice > (product.sellingPrice ?? product.price) && (
+                          <span className="text-[10px] text-stone-400 line-through">₹{product.originalPrice.toFixed(2)}</span>
+                        )}
+                      </div>
+                    </td>
                     <td className="py-4 px-6">
                       {product.in_stock !== false ? (
                         <span className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 border border-emerald-250/20 px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider">
@@ -520,36 +548,52 @@ export default function AdminProducts() {
                     />
                   </div>
 
-                  {/* Category & Price */}
+                  {/* Category */}
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider flex items-center gap-1.5">
+                      <Folder className="w-3.5 h-3.5 text-stone-450" /> Category
+                    </label>
+                    <select
+                      name="category"
+                      value={formData.category}
+                      onChange={handleInputChange}
+                      className="w-full bg-stone-50 border border-stone-250 hover:border-stone-400 focus:border-[#D9B4B4] focus:bg-white px-3 py-2.5 rounded-xl text-xs focus:outline-none text-stone-850 font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer"
+                    >
+                      <option value="TOYS">Toys / Amigurumi</option>
+                      <option value="HOME">Home Decor</option>
+                      <option value="BAGS">Bags & Purses</option>
+                      <option value="GARMENTS">Garments</option>
+                      <option value="ACCESSORIES">Accessories</option>
+                    </select>
+                  </div>
+
+                  {/* Pricing Fields */}
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider flex items-center gap-1.5">
-                        <Folder className="w-3.5 h-3.5 text-stone-450" /> Category
-                      </label>
-                      <select
-                        name="category"
-                        value={formData.category}
-                        onChange={handleInputChange}
-                        className="w-full bg-stone-50 border border-stone-250 hover:border-stone-400 focus:border-[#D9B4B4] focus:bg-white px-3 py-2.5 rounded-xl text-xs focus:outline-none text-stone-850 font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer"
-                      >
-                        <option value="TOYS">Toys / Amigurumi</option>
-                        <option value="HOME">Home Decor</option>
-                        <option value="BAGS">Bags & Purses</option>
-                        <option value="GARMENTS">Garments</option>
-                        <option value="ACCESSORIES">Accessories</option>
-                      </select>
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider flex items-center gap-1.5">
-                        <IndianRupee className="w-3.5 h-3.5 text-stone-450" /> Price (₹)
+                        <IndianRupee className="w-3.5 h-3.5 text-stone-450" /> Original Price (MRP)
                       </label>
                       <input
                         type="number"
                         step="0.01"
-                        name="price"
+                        name="originalPrice"
                         required
-                        value={formData.price}
+                        value={formData.originalPrice}
+                        onChange={handleInputChange}
+                        placeholder="e.g. 1599.00"
+                        className="w-full bg-stone-50 border border-stone-250 hover:border-stone-400 focus:border-[#D9B4B4] focus:bg-white px-4 py-2.5 rounded-xl text-xs focus:outline-none text-stone-850 placeholder-stone-400 font-bold transition-all duration-200"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider flex items-center gap-1.5">
+                        <IndianRupee className="w-3.5 h-3.5 text-stone-450" /> Selling Price (₹)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        name="sellingPrice"
+                        value={formData.sellingPrice}
                         onChange={handleInputChange}
                         placeholder="e.g. 1299.00"
                         className="w-full bg-stone-50 border border-stone-250 hover:border-stone-400 focus:border-[#D9B4B4] focus:bg-white px-4 py-2.5 rounded-xl text-xs focus:outline-none text-stone-850 placeholder-stone-400 font-bold transition-all duration-200"
@@ -586,6 +630,21 @@ export default function AdminProducts() {
                         Out of Stock
                       </button>
                     </div>
+                  </div>
+
+                  {/* Estimated Crafting & Delivery */}
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider flex items-center gap-1.5">
+                      <Truck className="w-3.5 h-3.5 text-stone-450" /> Estimated Crafting & Delivery
+                    </label>
+                    <input
+                      type="text"
+                      name="delivery_time"
+                      value={formData.delivery_time}
+                      onChange={handleInputChange}
+                      placeholder="e.g. 5-7 working days"
+                      className="w-full bg-stone-50 border border-stone-250 hover:border-stone-400 focus:border-[#D9B4B4] focus:bg-white px-4 py-2.5 rounded-xl text-xs focus:outline-none text-stone-850 placeholder-stone-400 font-bold transition-all duration-200"
+                    />
                   </div>
 
                   {/* Image Upload Area */}

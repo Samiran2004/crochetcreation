@@ -9,6 +9,8 @@ class ProductModel(BaseModel):
     title: str = Field(..., min_length=1)
     description: str
     price: float = Field(..., gt=0)
+    originalPrice: Optional[float] = Field(default=None, gt=0)
+    sellingPrice: Optional[float] = Field(default=None, gt=0)
     category: str
     image_url: str
     image_urls: Optional[List[str]] = Field(default_factory=list)
@@ -16,6 +18,7 @@ class ProductModel(BaseModel):
     materials: Optional[str] = Field(default="")
     care_instructions: Optional[str] = Field(default="")
     in_stock: Optional[bool] = Field(default=True)
+    delivery_time: Optional[str] = Field(default="5-7 working days")
     width: Optional[int] = Field(default=None)
     height: Optional[int] = Field(default=None)
 

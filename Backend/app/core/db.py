@@ -110,9 +110,6 @@ class MockCollection:
 class MockDatabase:
     def __init__(self):
         self._store = {}
-        
-    def __getitem__(self, name):
-        return MockCollection(name, self)
         # Prepopulate default admin user
         self._store["users"] = [{
             "_id": ObjectId("647a7b8e1f3d8a5c4e9d0e12"),
@@ -140,6 +137,8 @@ class MockDatabase:
             "title": "Beautiful Woolen Crochet Flower Pot",
             "description": "Lovingly hand-knitted mini flower pot made from premium quality organic cotton. Perfect for car dashboards, work desks, and cozy corners.",
             "price": 499.00,
+            "originalPrice": 799.00,
+            "sellingPrice": 499.00,
             "category": "TOYS",
             "image_url": "/assets/marilyn_crafting_tools.png",
             "image_urls": ["/assets/marilyn_crafting_tools.png", "/assets/marilyn_knit_texture.png"],
@@ -165,6 +164,9 @@ class MockDatabase:
             "status": "Pending",
             "created_at": datetime.utcnow()
         }]
+        
+    def __getitem__(self, name):
+        return MockCollection(name, self)
 
 class Database:
     client = None

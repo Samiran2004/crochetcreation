@@ -1,5 +1,5 @@
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, status, Depends
-from typing import List
+from typing import List, Optional
 from app.models.product import ProductModel
 from app.services.cloudinary_upload import upload_image_to_cloudinary, delete_image_by_url
 from app.core.db import get_database
@@ -15,10 +15,13 @@ async def create_product(
     description: str = Form(...),
     price: float = Form(...),
     category: str = Form(...),
+    originalPrice: Optional[float] = Form(None),
+    sellingPrice: Optional[float] = Form(None),
     size: str = Form(""),
     materials: str = Form(""),
     care_instructions: str = Form(""),
     in_stock: bool = Form(True),
+    delivery_time: Optional[str] = Form("5-7 working days"),
     image: UploadFile = File(None),
     images: List[UploadFile] = File(None),
     current_admin: UserInDB = Depends(get_current_admin_user)
@@ -50,11 +53,17 @@ async def create_product(
             
         image_url = uploaded_urls[0]
         
+        # Ensure sellingPrice defaults to originalPrice if not provided
+        orig_price = originalPrice if originalPrice is not None else price
+        sell_price = sellingPrice if sellingPrice is not None else orig_price
+
         # Prepare product data for insertion
         product_data = {
             "title": title,
             "description": description,
-            "price": price,
+            "price": sell_price,
+            "originalPrice": orig_price,
+            "sellingPrice": sell_price,
             "category": category,
             "image_url": image_url,
             "image_urls": uploaded_urls,
@@ -62,6 +71,7 @@ async def create_product(
             "materials": materials,
             "care_instructions": care_instructions,
             "in_stock": in_stock,
+            "delivery_time": delivery_time,
             "width": width,
             "height": height
         }
@@ -144,10 +154,13 @@ async def update_product(
     description: str = Form(None),
     price: float = Form(None),
     category: str = Form(None),
+    originalPrice: Optional[float] = Form(None),
+    sellingPrice: Optional[float] = Form(None),
     size: str = Form(None),
     materials: str = Form(None),
     care_instructions: str = Form(None),
     in_stock: bool = Form(None),
+    delivery_time: Optional[str] = Form(None),
     image: UploadFile = File(None),
     images: List[UploadFile] = File(None),
     current_admin: UserInDB = Depends(get_current_admin_user)
@@ -175,6 +188,27 @@ async def update_product(
             update_data["description"] = description
         if price is not None:
             update_data["price"] = price
+        if originalPrice is not None:
+            update_data["originalPrice"] = originalPrice
+        if sellingPrice is not None:
+            update_data["sellingPrice"] = sellingPrice
+            
+        # Ensure sellingPrice defaults to originalPrice if not provided and sync with price
+        final_original = originalPrice if originalPrice is not None else existing_product.get("originalPrice")
+        final_selling = sellingPrice if sellingPrice is not None else existing_product.get("sellingPrice")
+        
+        if final_original is not None and final_selling is None:
+            final_selling = final_original
+            update_data["sellingPrice"] = final_selling
+        elif final_selling is not None and final_original is None:
+            final_original = final_selling
+            update_data["originalPrice"] = final_original
+            
+        if final_selling is not None:
+            update_data["price"] = final_selling
+        elif price is not None:
+            update_data["price"] = price
+
         if category is not None:
             update_data["category"] = category
         if size is not None:
@@ -185,6 +219,8 @@ async def update_product(
             update_data["care_instructions"] = care_instructions
         if in_stock is not None:
             update_data["in_stock"] = in_stock
+        if delivery_time is not None:
+            update_data["delivery_time"] = delivery_time
             
         uploaded_urls = []
         width = None
