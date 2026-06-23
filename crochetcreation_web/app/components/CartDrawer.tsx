@@ -11,6 +11,7 @@ export interface CartItem {
   image_url: string;
   category: string;
   quantity: number;
+  size?: string;
 }
 
 // Global helpers to interact with cart from any page
@@ -26,10 +27,11 @@ export const addToCart = (product: {
   price: number;
   image_url: string;
   category: string;
+  size?: string;
 }, quantity = 1) => {
   if (typeof window === 'undefined') return;
   const items = getCartItems();
-  const existingIndex = items.findIndex((item) => item.id === product.id);
+  const existingIndex = items.findIndex((item) => item.id === product.id && item.size === product.size);
 
   if (existingIndex > -1) {
     items[existingIndex].quantity += quantity;
@@ -41,6 +43,7 @@ export const addToCart = (product: {
       image_url: product.image_url,
       category: product.category,
       quantity: quantity,
+      size: product.size,
     });
   }
 
@@ -95,10 +98,10 @@ export default function CartDrawer() {
     };
   }, []);
 
-  const updateQuantity = (id: string, delta: number) => {
+  const updateQuantity = (id: string, delta: number, size?: string) => {
     const updated = items
       .map((item) => {
-        if (item.id === id) {
+        if (item.id === id && item.size === size) {
           const nextQty = item.quantity + delta;
           return { ...item, quantity: nextQty };
         }
@@ -114,8 +117,8 @@ export default function CartDrawer() {
     window.dispatchEvent(new Event('cart-change'));
   };
 
-  const removeItem = (id: string) => {
-    const updated = items.filter((item) => item.id !== id);
+  const removeItem = (id: string, size?: string) => {
+    const updated = items.filter((item) => !(item.id === id && item.size === size));
     localStorage.setItem('crochet_cart', JSON.stringify(updated));
     const totalCount = updated.reduce((sum, item) => sum + item.quantity, 0);
     localStorage.setItem('crochet_cart_count', totalCount.toString());
@@ -149,6 +152,7 @@ export default function CartDrawer() {
         const productUrl = `${origin}/product/${item.id}`;
         itemsSummary += `\n📦 *Item ${index + 1}:*\n` +
           `- *Name:* ${item.name}\n` +
+          (item.size ? `- *Size:* ${item.size}\n` : '') +
           `- *Category:* ${item.category}\n` +
           `- *Price:* ₹${item.price.toFixed(2)}\n` +
           `- *Quantity:* ${item.quantity}\n` +
@@ -417,9 +421,16 @@ export default function CartDrawer() {
                   {/* Product Details */}
                   <div className="flex-grow flex flex-col justify-between py-0.5">
                     <div>
-                      <span className="text-[9px] font-bold text-[#D9B4B4] uppercase tracking-widest block">
-                        {item.category}
-                      </span>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[9px] font-bold text-[#D9B4B4] uppercase tracking-widest block">
+                          {item.category}
+                        </span>
+                        {item.size && (
+                          <span className="text-[9px] bg-stone-100 text-stone-600 px-1.5 py-0.5 rounded font-bold border border-stone-200">
+                            SIZE: {item.size}
+                          </span>
+                        )}
+                      </div>
                       <h4 className="text-xs font-bold text-[#6B5656] line-clamp-1 pr-6">
                         {item.name}
                       </h4>
@@ -432,7 +443,7 @@ export default function CartDrawer() {
                     <div className="flex items-center gap-3 mt-2">
                       <div className="flex items-center border border-[#EADBDB] rounded-lg bg-stone-50">
                         <button
-                          onClick={() => updateQuantity(item.id, -1)}
+                          onClick={() => updateQuantity(item.id, -1, item.size)}
                           className="p-1 hover:text-[#D9B4B4] transition-colors"
                         >
                           <Minus className="w-3 h-3" />
@@ -441,7 +452,7 @@ export default function CartDrawer() {
                           {item.quantity}
                         </span>
                         <button
-                          onClick={() => updateQuantity(item.id, 1)}
+                          onClick={() => updateQuantity(item.id, 1, item.size)}
                           className="p-1 hover:text-[#D9B4B4] transition-colors"
                         >
                           <Plus className="w-3 h-3" />
@@ -452,7 +463,7 @@ export default function CartDrawer() {
 
                   {/* Remove Button */}
                   <button
-                    onClick={() => removeItem(item.id)}
+                    onClick={() => removeItem(item.id, item.size)}
                     className="absolute top-3 right-3 text-stone-400 hover:text-red-500 transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />

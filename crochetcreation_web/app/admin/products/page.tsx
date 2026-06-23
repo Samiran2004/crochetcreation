@@ -39,6 +39,7 @@ interface Product {
   care_instructions?: string;
   in_stock?: boolean;
   delivery_time?: string;
+  has_sizes?: boolean;
 }
 
 export default function AdminProducts() {
@@ -66,6 +67,7 @@ export default function AdminProducts() {
     care_instructions: '',
     in_stock: 'true',
     delivery_time: '5-7 working days',
+    has_sizes: 'false',
   });
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
@@ -116,6 +118,7 @@ export default function AdminProducts() {
       care_instructions: '',
       in_stock: 'true',
       delivery_time: '5-7 working days',
+      has_sizes: 'false',
     });
     setSelectedFiles([]);
     setPreviewUrls([]);
@@ -137,6 +140,7 @@ export default function AdminProducts() {
       care_instructions: product.care_instructions || '',
       in_stock: product.in_stock !== false ? 'true' : 'false',
       delivery_time: product.delivery_time || '5-7 working days',
+      has_sizes: product.has_sizes !== false && product.has_sizes !== undefined ? 'true' : 'false',
     });
     setSelectedFiles([]);
     setPreviewUrls([]);
@@ -190,6 +194,7 @@ export default function AdminProducts() {
       submissionData.append('care_instructions', formData.care_instructions);
       submissionData.append('in_stock', formData.in_stock);
       submissionData.append('delivery_time', formData.delivery_time);
+      submissionData.append('has_sizes', formData.category.toUpperCase() === 'GARMENTS' ? formData.has_sizes : 'false');
       
       if (selectedFiles.length > 0) {
         selectedFiles.forEach(file => {
@@ -452,6 +457,9 @@ export default function AdminProducts() {
                                 {product.size}
                               </span>
                             )}
+                            <span className="bg-stone-50 text-stone-500 border border-stone-200/50 px-2 py-0.5 rounded-full font-semibold flex items-center gap-1">
+                              <span>🚚</span> {product.delivery_time || '5-7 working days'}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -459,9 +467,24 @@ export default function AdminProducts() {
                     <td className="py-4 px-6 text-stone-900 text-sm">
                       <div className="flex flex-col">
                         <span className="font-bold">₹{(product.sellingPrice ?? product.price).toFixed(2)}</span>
-                        {product.originalPrice && product.originalPrice > (product.sellingPrice ?? product.price) && (
-                          <span className="text-[10px] text-stone-400 line-through">₹{product.originalPrice.toFixed(2)}</span>
-                        )}
+                        {(() => {
+                          const originalPrice = product.originalPrice ?? null;
+                          const sellingPrice = product.sellingPrice ?? product.price ?? null;
+                          const hasDiscount = originalPrice !== null && originalPrice > sellingPrice;
+                          const discountPercent = hasDiscount ? Math.round(((originalPrice - sellingPrice) / originalPrice) * 100) : 0;
+                          
+                          if (hasDiscount && discountPercent > 0) {
+                            return (
+                              <>
+                                <span className="text-[10px] text-stone-400 line-through">₹{originalPrice.toFixed(2)}</span>
+                                <span className="text-[9px] font-bold text-[#16a34a] bg-[#16a34a]/10 px-1.5 py-0.5 rounded-md mt-1 self-start">
+                                  {discountPercent}% OFF
+                                </span>
+                              </>
+                            );
+                          }
+                          return null;
+                        })()}
                       </div>
                     </td>
                     <td className="py-4 px-6">
@@ -631,6 +654,42 @@ export default function AdminProducts() {
                       </button>
                     </div>
                   </div>
+
+                  {/* Enable Size Selection (GARMENTS only) */}
+                  {formData.category.toUpperCase() === 'GARMENTS' && (
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider flex items-center gap-1.5">
+                        <Ruler className="w-3.5 h-3.5 text-stone-450" /> Size Selection Options
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setFormData(prev => ({ ...prev, has_sizes: 'true' }))}
+                          className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all duration-300 uppercase tracking-wider text-center ${
+                            formData.has_sizes === 'true'
+                              ? 'bg-[#FEF9F6] border-[#D9B4B4] text-[#6B5656] shadow-sm'
+                              : 'bg-stone-50 border-stone-200 text-stone-400 hover:bg-stone-100'
+                          }`}
+                        >
+                          Enable sizes (S, M, L)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setFormData(prev => ({ ...prev, has_sizes: 'false' }))}
+                          className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all duration-300 uppercase tracking-wider text-center ${
+                            formData.has_sizes === 'false'
+                              ? 'bg-[#FEF9F6] border-[#D9B4B4] text-[#6B5656] shadow-sm'
+                              : 'bg-stone-50 border-stone-200 text-stone-400 hover:bg-stone-100'
+                          }`}
+                        >
+                          Disable sizes
+                        </button>
+                      </div>
+                      <p className="text-[9px] text-stone-400 mt-0.5">
+                        Choose whether size selection is active on the details page for this garment.
+                      </p>
+                    </div>
+                  )}
 
                   {/* Estimated Crafting & Delivery */}
                   <div className="space-y-1">

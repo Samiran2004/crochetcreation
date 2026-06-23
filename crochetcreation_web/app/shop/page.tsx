@@ -654,24 +654,54 @@ export default function ShopPage() {
                     <p className="text-[10px] md:text-xs text-gray-500 mt-1 md:mt-2 line-clamp-2 leading-relaxed hidden sm:block">
                       {p.description}
                     </p>
+                    <div className="flex items-center gap-1.5 text-[9px] font-semibold text-stone-500 mt-2 bg-stone-50/80 px-2 py-1 rounded-md self-start border border-stone-100/50">
+                      <span className="text-xs">🚚</span>
+                      <span>{p.delivery_time || '5-7 working days'}</span>
+                    </div>
                   </div>
 
                   {/* Actions & Price */}
-                  <div className="flex items-center justify-between mt-auto pt-3 md:pt-4">
-                    <span className="text-sm md:text-xl font-extrabold text-gray-900">
-                      ₹{p.price?.toFixed(2)}
-                    </span>
-                    <div className="flex items-center gap-1.5 md:gap-3">
+                  <div className="flex items-center justify-between mt-auto pt-3 md:pt-4 gap-2">
+                    {(() => {
+                      const originalPrice = p.originalPrice ?? null;
+                      const sellingPrice = p.sellingPrice ?? p.price ?? null;
+                      
+                      if (sellingPrice === null) return null;
+                      
+                      const hasDiscount = originalPrice !== null && originalPrice > sellingPrice;
+                      const discountPercent = hasDiscount ? Math.round(((originalPrice - sellingPrice) / originalPrice) * 100) : 0;
+                      
+                      return (
+                        <div className="flex flex-col min-w-0">
+                          <div className="flex items-baseline gap-1 md:gap-1.5 flex-wrap">
+                            <span className="text-sm md:text-lg lg:text-xl font-extrabold text-gray-900 whitespace-nowrap">
+                              ₹{typeof sellingPrice === 'number' ? sellingPrice.toFixed(2) : parseFloat(sellingPrice).toFixed(2)}
+                            </span>
+                            {hasDiscount && (
+                              <span className="text-[10px] md:text-xs text-gray-400 line-through whitespace-nowrap">
+                                ₹{typeof originalPrice === 'number' ? originalPrice.toFixed(2) : parseFloat(originalPrice).toFixed(2)}
+                              </span>
+                            )}
+                          </div>
+                          {hasDiscount && discountPercent > 0 && (
+                            <span className="text-[9px] font-bold text-[#16a34a] bg-[#16a34a]/10 px-1.5 py-0.5 rounded-md mt-1 self-start whitespace-nowrap">
+                              {discountPercent}% OFF
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()}
+                    <div className="flex items-center gap-1 md:gap-2 shrink-0">
                       <button
                         onClick={(e) => handleAddToCart(p, e)}
                         title="Add to Basket"
-                        className="w-11 h-11 md:w-10 md:h-10 min-w-[44px] min-h-[44px] flex items-center justify-center border border-gray-200 rounded-full text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors active:scale-95 shadow-xs"
+                        className="w-9 h-9 md:w-10 md:h-10 min-w-[36px] min-h-[36px] flex items-center justify-center border border-gray-200 rounded-full text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors active:scale-95 shadow-xs"
                       >
                         <CartIcon className="w-4 h-4" />
                       </button>
                       <button
                         onClick={(e) => handleBuyNow(p, e)}
-                        className="px-3.5 md:px-6 py-2.5 md:py-2.5 bg-[#6B5656] hover:bg-[#5C4949] text-white text-[10px] md:text-sm font-semibold rounded-full transition-all active:scale-95 shadow-xs whitespace-nowrap flex-shrink-0 min-h-[44px] flex items-center justify-center"
+                        className="px-3 md:px-4 py-2 bg-[#6B5656] hover:bg-[#5C4949] text-white text-[10px] md:text-xs font-semibold rounded-full transition-all active:scale-95 shadow-xs whitespace-nowrap flex-shrink-0 min-h-[36px] flex items-center justify-center"
                       >
                         Buy Now
                       </button>

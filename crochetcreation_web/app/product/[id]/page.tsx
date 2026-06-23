@@ -303,11 +303,12 @@ export default function ProductDetailPage() {
       name: product.title || product.name,
       price: typeof product.price === 'string' ? parseFloat(product.price) : (product.price || 0),
       image_url: product.image_url || (product.images && product.images[0]) || '',
-      category: product.category || 'General'
+      category: product.category || 'General',
+      size: (product.category?.toUpperCase() === 'GARMENTS' && product.has_sizes) ? selectedSize : undefined
     }, quantity);
     setCartBouncing(true);
     setTimeout(() => setCartBouncing(false), 800);
-    showToast(`Added ${quantity} × ${product.name} to cart! 🧶`);
+    showToast(`Added ${quantity} × ${product.title || product.name} to cart! 🧶`);
   };
 
   const handleBuyNow = () => {
@@ -331,7 +332,7 @@ export default function ProductDetailPage() {
 
     setCheckoutLoading(true);
     try {
-      const productName = product?.name || 'Handcrafted Product';
+      const productName = product?.title || product?.name || 'Handcrafted Product';
       const productPrice = product?.price || 0;
       const totalPrice = productPrice * quantity;
       const categoryName = product?.category || 'General';
@@ -340,6 +341,9 @@ export default function ProductDetailPage() {
       const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
       const productDetailUrl = `${origin}/product/${product?._id || productId}`;
       const productImageUrl = product?.image_url || '';
+
+      const hasSize = product.category?.toUpperCase() === 'GARMENTS' && product.has_sizes;
+      const sizeText = hasSize ? `- *Size:* ${selectedSize}\n` : '';
 
       // Save order to the database first
       const savedToken = localStorage.getItem('token') || token;
@@ -357,7 +361,8 @@ export default function ProductDetailPage() {
               product_id: product?._id || productId || '',
               title: productName,
               price: productPrice,
-              quantity: quantity
+              quantity: quantity,
+              size: hasSize ? selectedSize : undefined
             }
           ],
           total_amount: totalPrice,
@@ -392,6 +397,7 @@ export default function ProductDetailPage() {
         `Hello! I would like to place a custom order with the following details:\n\n` +
         `📦 *Product Details:*\n` +
         `- *Name:* ${productName}\n` +
+        sizeText +
         `- *Category:* ${categoryName}\n` +
         `- *Price:* ₹${productPrice.toFixed(2)}\n` +
         `- *Quantity:* ${quantity}\n` +
@@ -756,28 +762,30 @@ export default function ProductDetailPage() {
             {/* Product Variants (Size & Color selector) */}
             <div className="space-y-4 pt-2 border-t border-[#EADBDB]/50">
               {/* Size Selection */}
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-[9px] font-bold uppercase tracking-widest text-stone-400">Select Size</span>
-                  <span className="text-xs font-semibold text-[#6B5656]">{selectedSize === 'S' ? 'Small' : selectedSize === 'M' ? 'Medium' : 'Large'}</span>
+              {product.category?.toUpperCase() === 'GARMENTS' && product.has_sizes && (
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-[9px] font-bold uppercase tracking-widest text-stone-400">Select Size</span>
+                    <span className="text-xs font-semibold text-[#6B5656]">{selectedSize === 'S' ? 'Small' : selectedSize === 'M' ? 'Medium' : 'Large'}</span>
+                  </div>
+                  <div className="flex gap-2">
+                    {['S', 'M', 'L'].map((sz) => (
+                      <button
+                        key={sz}
+                        type="button"
+                        onClick={() => setSelectedSize(sz)}
+                        className={`w-9 h-9 rounded-full border text-[11px] font-black transition-all flex items-center justify-center ${
+                          selectedSize === sz
+                            ? 'border-[#4A3F35] bg-[#4A3F35] text-white shadow-xs scale-105'
+                            : 'border-stone-250 text-stone-600 hover:border-stone-400 hover:bg-stone-50'
+                        }`}
+                      >
+                        {sz}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  {['S', 'M', 'L'].map((sz) => (
-                    <button
-                      key={sz}
-                      type="button"
-                      onClick={() => setSelectedSize(sz)}
-                      className={`w-9 h-9 rounded-full border text-[11px] font-black transition-all flex items-center justify-center ${
-                        selectedSize === sz
-                          ? 'border-[#4A3F35] bg-[#4A3F35] text-white shadow-xs scale-105'
-                          : 'border-stone-250 text-stone-600 hover:border-stone-400 hover:bg-stone-50'
-                      }`}
-                    >
-                      {sz}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              )}
 
               {/* Color Selection */}
               <div>
@@ -1067,10 +1075,42 @@ export default function ProductDetailPage() {
                       <div className="space-y-1">
                         <span className="text-[9px] font-bold text-[#D9B4B4] uppercase tracking-widest block">{item.category}</span>
                         <h4 className="text-sm font-bold text-gray-900 leading-tight group-hover:text-[#6B5656] transition-colors line-clamp-1">{item.title || item.name}</h4>
+                        <div className="flex items-center gap-1 text-[8px] font-semibold text-stone-500 mt-1">
+                          <span>🚚</span>
+                          <span>{item.delivery_time || '5-7 working days'}</span>
+                        </div>
                       </div>
-                      <div className="flex items-center justify-between pt-3 mt-2 border-t border-stone-100">
-                        <span className="text-sm font-black text-gray-900">₹{item.price?.toFixed(2)}</span>
-                        <span className="text-[9px] font-bold text-[#D9B4B4] uppercase tracking-widest flex items-center gap-0.5">
+                      <div className="flex items-center justify-between pt-3 mt-2 border-t border-stone-100 gap-1.5">
+                        {(() => {
+                          const originalPrice = item.originalPrice ?? null;
+                          const sellingPrice = item.sellingPrice ?? item.price ?? null;
+                          
+                          if (sellingPrice === null) return null;
+                          
+                          const hasDiscount = originalPrice !== null && originalPrice > sellingPrice;
+                          const discountPercent = hasDiscount ? Math.round(((originalPrice - sellingPrice) / originalPrice) * 100) : 0;
+                          
+                          return (
+                            <div className="flex flex-col min-w-0">
+                              <div className="flex items-baseline gap-1 flex-wrap">
+                                <span className="text-sm font-black text-gray-900 whitespace-nowrap">
+                                  ₹{typeof sellingPrice === 'number' ? sellingPrice.toFixed(2) : parseFloat(sellingPrice).toFixed(2)}
+                                </span>
+                                {hasDiscount && (
+                                  <span className="text-[10px] text-gray-400 line-through whitespace-nowrap">
+                                    ₹{typeof originalPrice === 'number' ? originalPrice.toFixed(2) : parseFloat(originalPrice).toFixed(2)}
+                                  </span>
+                                )}
+                              </div>
+                              {hasDiscount && discountPercent > 0 && (
+                                <span className="text-[8px] font-bold text-[#16a34a] bg-[#16a34a]/10 px-1.5 py-0.5 rounded-md mt-0.5 self-start whitespace-nowrap">
+                                  {discountPercent}% OFF
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()}
+                        <span className="text-[9px] font-bold text-[#D9B4B4] uppercase tracking-widest flex items-center gap-0.5 shrink-0">
                           DETAILS ➔
                         </span>
                       </div>

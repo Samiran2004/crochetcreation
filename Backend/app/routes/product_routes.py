@@ -22,6 +22,7 @@ async def create_product(
     care_instructions: str = Form(""),
     in_stock: bool = Form(True),
     delivery_time: Optional[str] = Form("5-7 working days"),
+    has_sizes: bool = Form(False),
     image: UploadFile = File(None),
     images: List[UploadFile] = File(None),
     current_admin: UserInDB = Depends(get_current_admin_user)
@@ -72,6 +73,7 @@ async def create_product(
             "care_instructions": care_instructions,
             "in_stock": in_stock,
             "delivery_time": delivery_time,
+            "has_sizes": has_sizes,
             "width": width,
             "height": height
         }
@@ -161,6 +163,7 @@ async def update_product(
     care_instructions: str = Form(None),
     in_stock: bool = Form(None),
     delivery_time: Optional[str] = Form(None),
+    has_sizes: Optional[bool] = Form(None),
     image: UploadFile = File(None),
     images: List[UploadFile] = File(None),
     current_admin: UserInDB = Depends(get_current_admin_user)
@@ -221,6 +224,8 @@ async def update_product(
             update_data["in_stock"] = in_stock
         if delivery_time is not None:
             update_data["delivery_time"] = delivery_time
+        if has_sizes is not None:
+            update_data["has_sizes"] = has_sizes
             
         uploaded_urls = []
         width = None

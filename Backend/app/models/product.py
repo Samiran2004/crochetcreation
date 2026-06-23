@@ -19,6 +19,7 @@ class ProductModel(BaseModel):
     care_instructions: Optional[str] = Field(default="")
     in_stock: Optional[bool] = Field(default=True)
     delivery_time: Optional[str] = Field(default="5-7 working days")
+    has_sizes: Optional[bool] = Field(default=False)
     width: Optional[int] = Field(default=None)
     height: Optional[int] = Field(default=None)
 
