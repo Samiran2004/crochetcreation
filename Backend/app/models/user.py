@@ -34,6 +34,8 @@ class Address(BaseModel):
     state: str
     postal_code: str
     is_default: bool = False
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
 class UserResponse(UserBase):
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
@@ -85,3 +87,5 @@ class AddressCreate(BaseModel):
     state: str
     postal_code: str
     is_default: bool = False
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None

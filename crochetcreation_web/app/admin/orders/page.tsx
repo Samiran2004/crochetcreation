@@ -38,6 +38,9 @@ interface Order {
   rawItems: any[];
   is_manual: boolean;
   notes: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  shipping_address?: string | null;
 }
 
 export default function AdminOrders() {
@@ -94,7 +97,10 @@ export default function AdminOrders() {
           payment: o.payment_method || 'COD',
           rawItems: o.items || [],
           is_manual: o.is_manual || false,
-          notes: o.notes || null
+          notes: o.notes || null,
+          latitude: o.latitude || null,
+          longitude: o.longitude || null,
+          shipping_address: o.shipping_address || o.address || null
         }));
         setOrders(formattedOrders);
         
@@ -432,6 +438,11 @@ export default function AdminOrders() {
                     {selectedOrder.mobile && (
                       <p className="text-stone-500 text-[10px] flex items-center gap-1.5">
                         <Phone className="w-3 h-3 text-stone-400" /> {selectedOrder.mobile}
+                      </p>
+                    )}
+                    {selectedOrder.shipping_address && (
+                      <p className="text-stone-650 text-[10px] leading-relaxed pt-1.5 border-t border-stone-200/50">
+                        🏡 <span className="font-semibold text-stone-500">Address:</span> {selectedOrder.shipping_address}
                       </p>
                     )}
                   </div>

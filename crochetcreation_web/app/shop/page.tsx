@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { addToCart } from '../components/CartDrawer';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import AddressMapPicker from '../components/AddressMapPicker';
 import { 
   Search, 
   ChevronRight, 
@@ -57,12 +58,22 @@ export default function ShopPage() {
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutSuccess, setCheckoutSuccess] = useState(false);
   const [whatsappUrl, setWhatsappUrl] = useState('');
-  const [checkoutFormData, setCheckoutFormData] = useState({
+  const [checkoutFormData, setCheckoutFormData] = useState<{
+    name: string;
+    email: string;
+    mobile: string;
+    address: string;
+    paymentMethod: string;
+    latitude?: number;
+    longitude?: number;
+  }>({
     name: '',
     email: '',
     mobile: '',
     address: '',
-    paymentMethod: 'COD'
+    paymentMethod: 'COD',
+    latitude: undefined,
+    longitude: undefined
   });
 
   const activeTheme = {
@@ -104,6 +115,27 @@ export default function ShopPage() {
       };
     }
   }, []);
+
+  // Fetch updated user profile details to get saved addresses
+  useEffect(() => {
+    if (!token) return;
+    const fetchProfile = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/users/me`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setUserProfile(data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch profile', err);
+      }
+    };
+    fetchProfile();
+  }, [token]);
 
   // Fetch products and custom settings
   const loadData = async () => {
@@ -207,7 +239,7 @@ export default function ShopPage() {
     setCheckoutFormData({
       name: userProfile ? `${userProfile.first_name || ''} ${userProfile.last_name || ''}`.trim() : '',
       email: userProfile ? userProfile.email : '',
-      mobile: userProfile ? userProfile.mobile || '' : '',
+      mobile: userProfile ? (userProfile.phone || userProfile.mobile || '') : '',
       address: '',
       paymentMethod: 'COD'
     });
@@ -254,7 +286,10 @@ export default function ShopPage() {
             }
           ],
           total_amount: totalPrice,
-          payment_method: checkoutFormData.paymentMethod
+          payment_method: checkoutFormData.paymentMethod,
+          shipping_address: checkoutFormData.address,
+          latitude: checkoutFormData.latitude,
+          longitude: checkoutFormData.longitude
         };
 
         const orderResponse = await fetch(`${API_URL}/api/orders/`, {
@@ -684,15 +719,59 @@ export default function ShopPage() {
                     </div>
                   </div>
 
+                  {userProfile?.addresses && userProfile.addresses.length > 0 && (
+                    <div>
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-[#6B5656] block mb-1">Select Saved Address</label>
+                      <select
+                        onChange={(e) => {
+                          const selectedId = e.target.value;
+                          if (!selectedId) return;
+                          const addr = (userProfile.addresses as any[]).find((a: any) => a.id === selectedId);
+                          if (addr) {
+                            const combinedAddress = `${addr.street_address}, ${addr.city}, ${addr.state} - ${addr.postal_code}`;
+                            setCheckoutFormData((prev) => ({
+                              ...prev,
+                              name: addr.full_name || prev.name,
+                              mobile: addr.phone || prev.mobile,
+                              address: combinedAddress,
+                              latitude: addr.latitude || undefined,
+                              longitude: addr.longitude || undefined
+                            }));
+                          }
+                        }}
+                        className="w-full bg-[#FEF9F6] border border-[#EADBDB] rounded-xl px-4 py-2.5 text-xs focus:ring-1 focus:ring-[#6B5656] focus:outline-none text-[#6B5656] font-medium"
+                        defaultValue=""
+                      >
+                        <option value="" disabled>-- Choose from your saved addresses --</option>
+                        {userProfile.addresses.map((addr: any) => (
+                          <option key={addr.id} value={addr.id}>
+                            {addr.full_name} ({addr.phone}) - {addr.street_address}, {addr.city}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
                   <div>
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-[#6B5656] block mb-1">Shipping Address</label>
-                    <textarea
-                      rows={3}
-                      required
-                      placeholder="House No, Street, Landmark, City, Pin Code"
-                      value={checkoutFormData.address}
-                      onChange={(e) => setCheckoutFormData({ ...checkoutFormData, address: e.target.value })}
-                      className="w-full bg-[#FEF9F6] border border-[#EADBDB] rounded-xl px-4 py-2.5 text-xs focus:ring-1 focus:ring-[#6B5656] focus:outline-none resize-none"
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-[#6B5656] block mb-1.5">Shipping Address</label>
+                    <AddressMapPicker
+                      onAddressSelect={(addr) => {
+                        const combinedAddress = `${addr.street_address}, ${addr.city}, ${addr.state} - ${addr.postal_code}`;
+                        setCheckoutFormData((prev) => ({
+                          ...prev,
+                          address: combinedAddress,
+                          latitude: addr.latitude,
+                          longitude: addr.longitude
+                        }));
+                      }}
+                      initialAddress={{
+                        street_address: checkoutFormData.address ? checkoutFormData.address.split(',')[0] || '' : '',
+                        city: checkoutFormData.address ? checkoutFormData.address.split(',')[1]?.trim() || '' : '',
+                        state: checkoutFormData.address ? checkoutFormData.address.split(',')[2]?.split('-')[0]?.trim() || '' : '',
+                        postal_code: checkoutFormData.address ? checkoutFormData.address.split('-')[1]?.trim() || '' : '',
+                        latitude: checkoutFormData.latitude,
+                        longitude: checkoutFormData.longitude
+                      }}
                     />
                   </div>
 

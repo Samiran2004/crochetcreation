@@ -4,6 +4,14 @@ from datetime import datetime
 
 PyObjectId = Annotated[str, BeforeValidator(str)]
 
+class Address(BaseModel):
+    street_address: str
+    city: str
+    state: str
+    postal_code: str
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+
 class OrderItem(BaseModel):
     product_id: Optional[str] = None
     title: str
@@ -18,6 +26,9 @@ class OrderCreate(BaseModel):
     total_amount: float
     payment_method: str = "COD"  # "COD", "UPI", "CARD"
     user_id: Optional[PyObjectId] = None
+    shipping_address: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
 class ManualOrderCreate(BaseModel):
     """Schema for admin-created manual/DM orders."""
@@ -28,6 +39,9 @@ class ManualOrderCreate(BaseModel):
     total_amount: float
     payment_method: str = "COD"
     notes: Optional[str] = None
+    shipping_address: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
 class OrderResponse(BaseModel):
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
@@ -42,6 +56,9 @@ class OrderResponse(BaseModel):
     is_manual: bool = False
     notes: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
+    shipping_address: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
     class Config:
         populate_by_name = True
