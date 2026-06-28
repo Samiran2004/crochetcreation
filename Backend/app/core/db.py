@@ -25,6 +25,15 @@ class MockInsertResult:
     def __init__(self, inserted_id):
         self.inserted_id = inserted_id
 
+class MockUpdateResult:
+    def __init__(self, modified_count=0, upserted_id=None):
+        self.modified_count = modified_count
+        self.upserted_id = upserted_id
+
+class MockDeleteResult:
+    def __init__(self, deleted_count=0):
+        self.deleted_count = deleted_count
+
 class MockCollection:
     def __init__(self, name, db):
         self.name = name
@@ -83,17 +92,35 @@ class MockCollection:
                 if "$set" in update:
                     new_doc.update(update["$set"])
                 await self.insert_one(new_doc)
-            return None
+                return MockUpdateResult(modified_count=1, upserted_id=new_doc.get("_id"))
+            return MockUpdateResult(modified_count=0)
         if "$set" in update:
             doc.update(update["$set"])
-        return None
+        return MockUpdateResult(modified_count=1)
         
     async def delete_one(self, filter):
         doc = await self.find_one(filter)
         if doc:
             self.db._store[self.name].remove(doc)
-        return None
+            return MockDeleteResult(deleted_count=1)
+        return MockDeleteResult(deleted_count=0)
         
+    async def find_one_and_update(self, filter, update, upsert=False, return_document=False):
+        doc = await self.find_one(filter)
+        if not doc:
+            if upsert:
+                new_doc = filter.copy()
+                if "$set" in update:
+                    new_doc.update(update["$set"])
+                await self.insert_one(new_doc)
+                return new_doc
+            return None
+        if "$set" in update:
+            doc.update(update["$set"])
+        if return_document:
+            return doc
+        return None
+
     async def count_documents(self, filter=None):
         filter = filter or {}
         count = 0
@@ -122,14 +149,16 @@ class MockDatabase:
         }]
         # Prepopulate default settings
         self._store["homepage_images"] = [{
-            "_id": "images",
-            "hero_yarn": {"url": "/assets/marilyn_hero_yarn.png", "public_id": "mock_hero_yarn"},
-            "knit_texture": {"url": "/assets/marilyn_knit_texture.png", "public_id": "mock_knit_texture"},
-            "stacked_sweaters": {"url": "/assets/marilyn_stacked_sweaters.png", "public_id": "mock_stacked_sweaters"},
-            "woman_knitting": {"url": "/assets/marilyn_woman_knitting.png", "public_id": "mock_woman_knitting"},
-            "crafting_tools": {"url": "/assets/marilyn_crafting_tools.png", "public_id": "mock_crafting_tools"},
-            "customer_alice": {"url": "/assets/marilyn_customer_alice.png", "public_id": "mock_customer_alice"},
-            "logo": {"url": "/assets/crochet_creation_logo.png", "public_id": "mock_logo"}
+            "_id": "homepage_images",
+            "images": {
+                "heroYarn": {"url": "/assets/marilyn_hero_yarn.png", "public_id": "mock_hero_yarn"},
+                "craftingTools": {"url": "/assets/marilyn_crafting_tools.png", "public_id": "mock_crafting_tools"},
+                "stackedSweaters": {"url": "/assets/marilyn_stacked_sweaters.png", "public_id": "mock_stacked_sweaters"},
+                "womanKnitting": {"url": "/assets/marilyn_woman_knitting.png", "public_id": "mock_woman_knitting"},
+                "knitTexture": {"url": "/assets/marilyn_knit_texture.png", "public_id": "mock_knit_texture"},
+                "customerAlice": {"url": "/assets/marilyn_customer_alice.png", "public_id": "mock_customer_alice"},
+                "logo": {"url": "/assets/crochet_creation_logo.png", "public_id": "mock_logo"}
+            }
         }]
         # Seed a dummy product
         self._store["products"] = [{

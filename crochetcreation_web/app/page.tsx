@@ -25,6 +25,8 @@ import {
   LogOut
 } from 'lucide-react';
 import { FadeUpWrapper, ScaleInWrapper, StaggerContainer, StaggerItem } from './components/AnimationWrappers';
+import Navbar from './components/Navbar';
+import type { NavbarTheme } from './components/Navbar';
 
 // Local image assets — copied directly into public/assets/
 const IMAGES = {
@@ -675,253 +677,24 @@ export default function CrochetCreationPage() {
         </div>
       )}
 
-      {/* Premium Floating Sticky Navigation Bar */}
-      <header
-        className={`fixed top-0 left-0 w-full z-50 transition-all duration-300 ${scrollY > 20 ? 'backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.08)] border-b border-[#FEF9F6]/10 py-3.5' : 'bg-transparent py-6'}`}
-        style={{
-          backgroundColor: scrollY > 20 ? `${activeTheme.primaryDark}E6` : 'transparent'
+      {/* Navbar Component */}
+      <Navbar
+        themeColor={themeColor}
+        themeColors={THEME_COLORS}
+        onThemeChange={setThemeColor}
+        customLogo={getImageSrc('logo')}
+        scrollY={scrollY}
+        token={token}
+        userProfile={userProfile}
+        onLogout={handleLogout}
+        onOpenAuth={() => {
+          setAuthError(null);
+          setAuthSuccessMsg(null);
+          setAuthModalOpen(true);
         }}
-      >
-        <div className="max-w-7xl mx-auto px-4 md:px-6 flex items-center justify-between">
-
-          {/* Logo */}
-          <div
-            className="flex items-center gap-2.5 group cursor-pointer select-none"
-            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          >
-            <div className="relative w-9 h-9 rounded-full overflow-hidden border border-[#D9B4B4]/30 shadow-sm bg-white flex-shrink-0 group-hover:rotate-12 group-hover:scale-105 transition-all duration-300">
-              <Image
-                src={getImageSrc('logo')}
-                alt="Crochet Creation Logo"
-                fill
-                sizes="36px"
-                className="object-cover"
-              />
-            </div>
-            <span className="text-base md:text-2xl font-serif font-semibold tracking-wide text-[#FEF9F6]">
-              Crochet Creation
-            </span>
-          </div>
-
-          {/* Desktop Nav */}
-          <nav className="hidden lg:flex items-center gap-8 text-xs font-semibold tracking-widest uppercase text-[#FEF9F6]">
-            <a href="#home" className="relative py-1 hover:text-[#D9B4B4] transition-all duration-300 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1.5px] after:bg-[#D9B4B4] hover:after:w-full after:transition-all after:duration-300">HOME</a>
-            <span className="relative">
-              <a href="/shop" className="relative py-1 hover:text-[#D9B4B4] transition-all duration-300 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1.5px] after:bg-[#D9B4B4] hover:after:w-full after:transition-all after:duration-300">SHOP</a>
-              <span className="absolute -top-3 -right-6 bg-[#D9B4B4] text-[#6B5656] text-[8px] font-black px-1.5 py-0.5 rounded-full animate-bounce">NEW</span>
-            </span>
-            <a href="/shop" className="relative py-1 hover:text-[#D9B4B4] transition-all duration-300 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1.5px] after:bg-[#D9B4B4] hover:after:w-full after:transition-all after:duration-300">CATEGORIES</a>
-            <a href="#about" className="relative py-1 hover:text-[#D9B4B4] transition-all duration-300 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1.5px] after:bg-[#D9B4B4] hover:after:w-full after:transition-all after:duration-300">ABOUT US</a>
-            <a href="#contact" className="relative py-1 hover:text-[#D9B4B4] transition-all duration-300 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1.5px] after:bg-[#D9B4B4] hover:after:w-full after:transition-all after:duration-300">CONTACT</a>
-          </nav>
-
-          {/* Icons & Utility */}
-          <div className="hidden lg:flex items-center gap-4 text-xs font-medium tracking-wider text-[#FEF9F6]">
-            <div
-              id="header-cart-icon"
-              onClick={() => typeof window !== 'undefined' && window.dispatchEvent(new Event('open-cart'))}
-              className={`flex items-center gap-1.5 hover:text-[#D9B4B4] cursor-pointer transition-transform duration-300 ${cartBouncing ? 'scale-110 text-[#D9B4B4]' : ''}`}
-            >
-              <ShoppingBag className={`w-4 h-4 text-[#D9B4B4] ${cartBouncing ? 'animate-bounce' : ''}`} />
-              <span>{cartItemsCount} items</span>
-            </div>
-            <span className="text-stone-400">|</span>
-            <button className="hover:text-[#D9B4B4] transition-colors">
-              <Search className="w-4 h-4" />
-            </button>
-            <span className="text-stone-400">|</span>
-            {/* User Profile / Auth Button */}
-            {token && userProfile ? (
-              <div className="flex items-center gap-2 text-stone-250 transition-colors">
-                {userProfile.is_admin && (
-                  <button
-                    onClick={() => router.push('/admin/dashboard')}
-                    className="mr-1 text-[9px] bg-[#6B5656] hover:bg-[#D9B4B4] hover:text-[#6B5656] text-white px-2 py-1 rounded font-bold uppercase tracking-wider transition-all duration-300"
-                  >
-                    Admin
-                  </button>
-                )}
-                <Link href="/dashboard" className="text-[10px] font-bold uppercase tracking-wider text-stone-300 hover:text-white transition-colors">
-                  Hi, {userProfile.first_name}
-                </Link>
-                <button
-                  onClick={handleLogout}
-                  title="Logout"
-                  className="hover:text-[#D9B4B4] transition-colors p-1"
-                >
-                  <LogOut className="w-4 h-4" />
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => {
-                  setAuthError(null);
-                  setAuthSuccessMsg(null);
-                  setAuthModalOpen(true);
-                }}
-                title="Login / Register"
-                className="hover:text-[#D9B4B4] transition-colors p-1 flex items-center gap-1"
-              >
-                <User className="w-4 h-4" />
-                <span className="text-[10px] font-bold">LOGIN</span>
-              </button>
-            )}
-            <span className="text-stone-400">|</span>
-            {/* Color Palette Customizer */}
-            <div className="flex items-center gap-1.5 ml-1">
-              <button
-                onClick={() => setThemeColor('rose')}
-                title="Rose Pink"
-                className={`w-3.5 h-3.5 rounded-full bg-[#D9B4B4] border ${themeColor === 'rose' ? 'border-[#FEF9F6] scale-125' : 'border-transparent'} hover:scale-110 transition-transform`}
-              />
-              <button
-                onClick={() => setThemeColor('mustard')}
-                title="Mustard Gold"
-                className={`w-3.5 h-3.5 rounded-full bg-[#E6C17A] border ${themeColor === 'mustard' ? 'border-[#FEF9F6] scale-125' : 'border-transparent'} hover:scale-110 transition-transform`}
-              />
-              <button
-                onClick={() => setThemeColor('green')}
-                title="Forest Green"
-                className={`w-3.5 h-3.5 rounded-full bg-[#A8BC98] border ${themeColor === 'green' ? 'border-[#FEF9F6] scale-125' : 'border-transparent'} hover:scale-110 transition-transform`}
-              />
-              <button
-                onClick={() => setThemeColor('teal')}
-                title="Calm Teal"
-                className={`w-3.5 h-3.5 rounded-full bg-[#9CBEC2] border ${themeColor === 'teal' ? 'border-[#FEF9F6] scale-125' : 'border-transparent'} hover:scale-110 transition-transform`}
-              />
-            </div>
-          </div>
-
-          {/* Mobile Icons */}
-          <div className="flex items-center gap-3 lg:hidden">
-            <div
-              id="mobile-cart-icon-header"
-              onClick={() => typeof window !== 'undefined' && window.dispatchEvent(new Event('open-cart'))}
-              className={`relative min-w-[44px] min-h-[44px] flex items-center justify-center cursor-pointer transition-transform duration-300 ${cartBouncing ? 'scale-110' : ''}`}
-            >
-              <ShoppingBag className={`w-5 h-5 text-[#D9B4B4] ${cartBouncing ? 'animate-bounce' : ''}`} />
-              {cartItemsCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-[#D9B4B4] text-[#6B5656] text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center">
-                  {cartItemsCount}
-                </span>
-              )}
-            </div>
-            <button
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="min-w-[44px] min-h-[44px] flex items-center justify-center text-[#FEF9F6] hover:text-[#D9B4B4] transition-colors"
-            >
-              {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile Navigation Drawer — Full-Screen Overlay */}
-        {isMenuOpen && (
-          <div
-            className="lg:hidden fixed inset-0 z-[60] flex flex-col pt-20 pb-8 px-6 text-sm font-semibold tracking-widest uppercase text-center backdrop-blur-xl transition-all animate-in fade-in duration-200"
-            style={{
-              backgroundColor: `${activeTheme.primaryDark}F5`
-            }}
-          >
-            {/* Close Button */}
-            <button
-              onClick={() => setIsMenuOpen(false)}
-              className="absolute top-5 right-5 min-w-[44px] min-h-[44px] flex items-center justify-center text-[#FEF9F6] hover:text-[#D9B4B4] transition-colors"
-            >
-              <X className="w-7 h-7" />
-            </button>
-
-            <nav className="flex flex-col items-center gap-1 flex-1 justify-center">
-              <a href="#home" onClick={() => setIsMenuOpen(false)} className="w-full py-4 min-h-[48px] flex items-center justify-center hover:text-[#D9B4B4] hover:bg-white/5 rounded-xl transition-all text-[#FEF9F6] text-base tracking-[0.2em]">HOME</a>
-              <a href="/shop" onClick={() => setIsMenuOpen(false)} className="w-full py-4 min-h-[48px] flex items-center justify-center hover:text-[#D9B4B4] hover:bg-white/5 rounded-xl transition-all text-[#FEF9F6] text-base tracking-[0.2em]">SHOP</a>
-              <a href="/shop" onClick={() => setIsMenuOpen(false)} className="w-full py-4 min-h-[48px] flex items-center justify-center hover:text-[#D9B4B4] hover:bg-white/5 rounded-xl transition-all text-[#FEF9F6] text-base tracking-[0.2em]">CATEGORIES</a>
-              <a href="#about" onClick={() => setIsMenuOpen(false)} className="w-full py-4 min-h-[48px] flex items-center justify-center hover:text-[#D9B4B4] hover:bg-white/5 rounded-xl transition-all text-[#FEF9F6] text-base tracking-[0.2em]">ABOUT US</a>
-              <a href="#contact" onClick={() => setIsMenuOpen(false)} className="w-full py-4 min-h-[48px] flex items-center justify-center hover:text-[#D9B4B4] hover:bg-white/5 rounded-xl transition-all text-[#FEF9F6] text-base tracking-[0.2em]">CONTACT</a>
-            </nav>
-
-            <div className="flex items-center justify-center gap-4 pt-4 border-t border-[#FEF9F6]/10 text-[#FEF9F6]">
-              <div
-                id="mobile-cart-icon"
-                onClick={() => {
-                  setIsMenuOpen(false);
-                  typeof window !== 'undefined' && window.dispatchEvent(new Event('open-cart'));
-                }}
-                className={`flex items-center gap-1.5 cursor-pointer transition-transform duration-300 ${cartBouncing ? 'scale-110 text-[#D9B4B4]' : ''}`}
-              >
-                <ShoppingBag className={`w-4 h-4 text-[#D9B4B4] ${cartBouncing ? 'animate-bounce' : ''}`} />
-                <span>{cartItemsCount} items</span>
-              </div>
-              <span>|</span>
-              <Search className="w-4 h-4" />
-              <span>|</span>
-              {token && userProfile ? (
-                <div className="flex items-center gap-2 text-stone-250 transition-colors">
-                  {userProfile.is_admin && (
-                    <button
-                      onClick={() => {
-                        router.push('/admin/dashboard');
-                        setIsMenuOpen(false);
-                      }}
-                      className="mr-1 text-[9px] bg-[#6B5656] hover:bg-[#D9B4B4] hover:text-[#6B5656] text-white px-2 py-1 rounded font-bold uppercase tracking-wider transition-all duration-300"
-                    >
-                      Admin
-                    </button>
-                  )}
-                  <Link href="/dashboard" className="text-[10px] font-bold uppercase tracking-wider text-stone-300 hover:text-white transition-colors">
-                    Hi, {userProfile.first_name}
-                  </Link>
-                  <button
-                    onClick={() => {
-                      handleLogout();
-                      setIsMenuOpen(false);
-                    }}
-                    title="Logout"
-                    className="hover:text-[#D9B4B4] transition-colors p-1"
-                  >
-                    <LogOut className="w-4 h-4" />
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={() => {
-                    setAuthError(null);
-                    setAuthSuccessMsg(null);
-                    setAuthModalOpen(true);
-                    setIsMenuOpen(false);
-                  }}
-                  title="Login / Register"
-                  className="hover:text-[#D9B4B4] transition-colors p-1 flex items-center gap-1"
-                >
-                  <User className="w-4 h-4" />
-                  <span className="text-[10px] font-bold">LOGIN</span>
-                </button>
-              )}
-            </div>
-            {/* Mobile Color Palette Customizer */}
-            <div className="flex items-center justify-center gap-3 pt-3 border-t border-[#FEF9F6]/10 text-[#FEF9F6]">
-              <span className="text-[10px] text-stone-300 tracking-wider">THEME:</span>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setThemeColor('rose')}
-                  className={`w-4 h-4 rounded-full bg-[#D9B4B4] border ${themeColor === 'rose' ? 'border-[#FEF9F6] scale-125' : 'border-transparent'} transition-transform`}
-                />
-                <button
-                  onClick={() => setThemeColor('mustard')}
-                  className={`w-4 h-4 rounded-full bg-[#E6C17A] border ${themeColor === 'mustard' ? 'border-[#FEF9F6] scale-125' : 'border-transparent'} transition-transform`}
-                />
-                <button
-                  onClick={() => setThemeColor('green')}
-                  className={`w-4 h-4 rounded-full bg-[#A8BC98] border ${themeColor === 'green' ? 'border-[#FEF9F6] scale-125' : 'border-transparent'} transition-transform`}
-                />
-                <button
-                  onClick={() => setThemeColor('teal')}
-                  className={`w-4 h-4 rounded-full bg-[#9CBEC2] border ${themeColor === 'teal' ? 'border-[#FEF9F6] scale-125' : 'border-transparent'} transition-transform`}
-                />
-              </div>
-            </div>
-          </div>
-        )}
-      </header>
+        cartItemsCount={cartItemsCount}
+        currentPage="Home"
+      />
 
       {/* 1. Header/Hero Panel (Dark Textured #6B5656) */}
       <section id="home" className="relative lg:sticky lg:top-0 z-0 bg-crochet-charcoal text-[#FEF9F6] pt-20 md:pt-24 pb-12 md:pb-20 overflow-hidden min-h-[85vh] md:min-h-[90vh] md:h-[90vh] w-full flex flex-col justify-between scroll-mt-28">

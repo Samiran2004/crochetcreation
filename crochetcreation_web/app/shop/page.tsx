@@ -6,52 +6,17 @@ import { addToCart } from '../components/CartDrawer';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { 
-  ShoppingBag, 
   Search, 
-  LogOut, 
-  User, 
-  Menu, 
-  X, 
   ChevronRight, 
-  Filter, 
   Sparkles,
   ShoppingBag as CartIcon,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  X
 } from 'lucide-react';
+import Navbar from '../components/Navbar';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-
-const THEME_STYLES: Record<string, { primary: string; primaryDark: string; accent: string; bgGrad: string; textDark: string }> = {
-  rose: {
-    primary: '#D9B4B4',
-    primaryDark: '#6B5656',
-    accent: '#FEF9F6',
-    bgGrad: 'from-[#6B5656] to-[#4A3E3E]',
-    textDark: '#4A3E3E'
-  },
-  mustard: {
-    primary: '#E6C17A',
-    primaryDark: '#5C4A2E',
-    accent: '#FCFAF2',
-    bgGrad: 'from-[#5C4A2E] to-[#3B2F1D]',
-    textDark: '#3B2F1D'
-  },
-  green: {
-    primary: '#A8BC98',
-    primaryDark: '#3E4D36',
-    accent: '#FAFBF9',
-    bgGrad: 'from-[#3E4D36] to-[#253020]',
-    textDark: '#253020'
-  },
-  teal: {
-    primary: '#9CBEC2',
-    primaryDark: '#3A4E52',
-    accent: '#F9FCFD',
-    bgGrad: 'from-[#3A4E52] to-[#243235]',
-    textDark: '#243235'
-  }
-};
 
 const CATEGORIES = [
   { id: 'ALL', label: 'All Creations' },
@@ -100,7 +65,12 @@ export default function ShopPage() {
     paymentMethod: 'COD'
   });
 
-  const activeTheme = THEME_STYLES[themeColor] || THEME_STYLES.rose;
+  const activeTheme = {
+    rose: { primary: '#D9B4B4', primaryDark: '#6B5656', bgGrad: 'from-[#6B5656] to-[#4A3E3E]', textDark: '#4A3E3E' },
+    mustard: { primary: '#E6C17A', primaryDark: '#5C4A2E', bgGrad: 'from-[#5C4A2E] to-[#3B2F1D]', textDark: '#3B2F1D' },
+    green: { primary: '#A8BC98', primaryDark: '#3E4D36', bgGrad: 'from-[#3E4D36] to-[#253020]', textDark: '#253020' },
+    teal: { primary: '#9CBEC2', primaryDark: '#3A4E52', bgGrad: 'from-[#3A4E52] to-[#243235]', textDark: '#243235' }
+  }[themeColor] || { primary: '#D9B4B4', primaryDark: '#6B5656' };
 
   // Load configurations and cart count from localStorage
   useEffect(() => {
@@ -237,7 +207,7 @@ export default function ShopPage() {
     setCheckoutFormData({
       name: userProfile ? `${userProfile.first_name || ''} ${userProfile.last_name || ''}`.trim() : '',
       email: userProfile ? userProfile.email : '',
-      mobile: userProfile ? userProfile.phone || '' : '',
+      mobile: userProfile ? userProfile.mobile || '' : '',
       address: '',
       paymentMethod: 'COD'
     });
@@ -382,150 +352,24 @@ export default function ShopPage() {
         </div>
       )}
 
-      {/* Floating Header */}
-      <header
-        className="fixed top-0 left-0 w-full z-50 transition-all duration-300 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.08)] border-b border-[#FEF9F6]/10 py-3.5"
-        style={{ backgroundColor: `${activeTheme.primaryDark}E6` }}
-      >
-        <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5 group cursor-pointer select-none">
-            <div className="relative w-9 h-9 rounded-full overflow-hidden border border-[#D9B4B4]/30 shadow-sm bg-white flex-shrink-0 group-hover:rotate-12 group-hover:scale-105 transition-all duration-300">
-              <Image 
-                src={customImages['logo'] || '/assets/crochet_creation_logo.png'} 
-                alt="Logo" 
-                fill 
-                sizes="36px" 
-                className="object-cover" 
-              />
-            </div>
-            <span className="text-xl md:text-2xl font-serif font-semibold tracking-wide text-[#FEF9F6]">
-              Crochet Creation
-            </span>
-          </Link>
-
-          {/* Nav links exactly matching page.tsx navigation */}
-          <nav className="hidden lg:flex items-center gap-8 text-xs font-semibold tracking-widest uppercase text-[#FEF9F6]">
-            <Link href="/#home" className="relative py-1 hover:text-[#D9B4B4] transition-all duration-300 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1.5px] after:bg-[#D9B4B4] hover:after:w-full after:transition-all after:duration-300">HOME</Link>
-            <span className="relative">
-              <Link href="/shop" className="relative py-1 text-[#D9B4B4] transition-all duration-300 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full after:h-[1.5px] after:bg-[#D9B4B4] after:transition-all after:duration-300">SHOP</Link>
-              <span className="absolute -top-3 -right-6 bg-[#D9B4B4] text-[#6B5656] text-[8px] font-black px-1.5 py-0.5 rounded-full animate-bounce">NEW</span>
-            </span>
-            <Link href="/shop" className="relative py-1 hover:text-[#D9B4B4] transition-all duration-300 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1.5px] after:bg-[#D9B4B4] hover:after:w-full after:transition-all after:duration-300">CATEGORIES</Link>
-            <Link href="/#about" className="relative py-1 hover:text-[#D9B4B4] transition-all duration-300 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1.5px] after:bg-[#D9B4B4] hover:after:w-full after:transition-all after:duration-300">ABOUT US</Link>
-            <Link href="/#contact" className="relative py-1 hover:text-[#D9B4B4] transition-all duration-300 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1.5px] after:bg-[#D9B4B4] hover:after:w-full after:transition-all after:duration-300">CONTACT</Link>
-          </nav>
-
-          <div className="hidden lg:flex items-center gap-4 text-xs font-medium tracking-wider text-[#FEF9F6]">
-            <div
-              id="header-cart-icon"
-              onClick={() => typeof window !== 'undefined' && window.dispatchEvent(new Event('open-cart'))}
-              className={`flex items-center gap-1.5 hover:text-[#D9B4B4] cursor-pointer transition-transform duration-300 ${cartBouncing ? 'scale-110 text-[#D9B4B4]' : ''}`}
-            >
-              <ShoppingBag className={`w-4 h-4 text-[#D9B4B4] ${cartBouncing ? 'animate-bounce' : ''}`} />
-              <span>{cartItemsCount} items</span>
-            </div>
-            <span className="text-stone-400">|</span>
-            {token && userProfile ? (
-              <div className="flex items-center gap-2 transition-colors">
-                {userProfile.is_admin && (
-                  <Link
-                    href="/admin/dashboard"
-                    className="mr-1 text-[9px] bg-[#6B5656] hover:bg-[#D9B4B4] hover:text-[#6B5656] text-white px-2 py-1 rounded font-bold uppercase tracking-wider transition-all duration-300"
-                  >
-                    Admin
-                  </Link>
-                )}
-                <Link href="/dashboard" className="text-[10px] font-bold uppercase tracking-wider text-stone-300 hover:text-white transition-colors">
-                  Hi, {userProfile.first_name}
-                </Link>
-                <button onClick={handleLogout} className="hover:text-[#D9B4B4] transition-colors p-1">
-                  <LogOut className="w-4 h-4" />
-                </button>
-              </div>
-            ) : (
-              <Link href="/#login" className="hover:text-[#D9B4B4] transition-colors p-1 flex items-center gap-1">
-                <User className="w-4 h-4" />
-                <span className="text-[10px] font-bold">LOGIN</span>
-              </Link>
-            )}
-            <span className="text-stone-400">|</span>
-            <div className="flex items-center gap-1.5 ml-1">
-              {['rose', 'mustard', 'green', 'teal'].map((color) => (
-                <button
-                  key={color}
-                  onClick={() => handleThemeChange(color)}
-                  className={`w-3.5 h-3.5 rounded-full border ${themeColor === color ? 'border-[#FEF9F6] scale-125' : 'border-transparent'} hover:scale-110 transition-transform`}
-                  style={{
-                    backgroundColor: color === 'rose' ? '#D9B4B4' : color === 'mustard' ? '#E6C17A' : color === 'green' ? '#A8BC98' : '#9CBEC2'
-                  }}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* Mobile Icons */}
-          <div className="flex items-center gap-3 lg:hidden">
-            <div
-              id="mobile-cart-icon-header"
-              onClick={() => typeof window !== 'undefined' && window.dispatchEvent(new Event('open-cart'))}
-              className={`relative min-w-[44px] min-h-[44px] flex items-center justify-center cursor-pointer transition-transform duration-300 ${cartBouncing ? 'scale-110' : ''}`}
-            >
-              <ShoppingBag className={`w-5 h-5 text-[#D9B4B4] ${cartBouncing ? 'animate-bounce' : ''}`} />
-              {cartItemsCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-[#D9B4B4] text-[#6B5656] text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center">
-                  {cartItemsCount}
-                </span>
-              )}
-            </div>
-            <button
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="min-w-[44px] min-h-[44px] flex items-center justify-center text-[#FEF9F6] hover:text-[#D9B4B4] transition-colors"
-            >
-              {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile Navigation Drawer — Full-Screen Overlay */}
-        {isMenuOpen && (
-          <div
-            className="lg:hidden fixed inset-0 z-[60] flex flex-col pt-20 pb-8 px-6 text-sm font-semibold tracking-widest uppercase text-center backdrop-blur-xl transition-all animate-in fade-in duration-200"
-            style={{
-              backgroundColor: `${activeTheme.primaryDark}F5`
-            }}
-          >
-            {/* Close Button */}
-            <button
-              onClick={() => setIsMenuOpen(false)}
-              className="absolute top-5 right-5 min-w-[44px] min-h-[44px] flex items-center justify-center text-[#FEF9F6] hover:text-[#D9B4B4] transition-colors"
-            >
-              <X className="w-7 h-7" />
-            </button>
-
-            <nav className="flex flex-col items-center gap-1 flex-1 justify-center">
-              <Link href="/#home" onClick={() => setIsMenuOpen(false)} className="w-full py-4 min-h-[48px] flex items-center justify-center hover:text-[#D9B4B4] hover:bg-white/5 rounded-xl transition-all text-[#FEF9F6] text-base tracking-[0.2em]">HOME</Link>
-              <Link href="/shop" onClick={() => setIsMenuOpen(false)} className="w-full py-4 min-h-[48px] flex items-center justify-center hover:text-[#D9B4B4] hover:bg-white/5 rounded-xl transition-all text-[#FEF9F6] text-base tracking-[0.2em]">SHOP</Link>
-              <Link href="/shop" onClick={() => setIsMenuOpen(false)} className="w-full py-4 min-h-[48px] flex items-center justify-center hover:text-[#D9B4B4] hover:bg-white/5 rounded-xl transition-all text-[#FEF9F6] text-base tracking-[0.2em]">CATEGORIES</Link>
-              <Link href="/#about" onClick={() => setIsMenuOpen(false)} className="w-full py-4 min-h-[48px] flex items-center justify-center hover:text-[#D9B4B4] hover:bg-white/5 rounded-xl transition-all text-[#FEF9F6] text-base tracking-[0.2em]">ABOUT US</Link>
-              <Link href="/#contact" onClick={() => setIsMenuOpen(false)} className="w-full py-4 min-h-[48px] flex items-center justify-center hover:text-[#D9B4B4] hover:bg-white/5 rounded-xl transition-all text-[#FEF9F6] text-base tracking-[0.2em]">CONTACT</Link>
-            </nav>
-
-            <div className="flex items-center justify-center gap-4 pt-4 border-t border-[#FEF9F6]/10 text-[#FEF9F6]">
-              <div
-                id="mobile-cart-icon"
-                onClick={() => {
-                  setIsMenuOpen(false);
-                  typeof window !== 'undefined' && window.dispatchEvent(new Event('open-cart'));
-                }}
-                className={`flex items-center gap-1.5 cursor-pointer transition-transform duration-300 ${cartBouncing ? 'scale-110 text-[#D9B4B4]' : ''}`}
-              >
-                <ShoppingBag className={`w-4 h-4 text-[#D9B4B4] ${cartBouncing ? 'animate-bounce' : ''}`} />
-                <span>{cartItemsCount} items</span>
-              </div>
-            </div>
-          </div>
-        )}
-      </header>
+      {/* Navbar Component */}
+      <Navbar
+        themeColor={themeColor}
+        themeColors={{
+          rose: { primary: '#D9B4B4', primaryDark: '#6B5656' },
+          mustard: { primary: '#E6C17A', primaryDark: '#5C4A2E' },
+          green: { primary: '#A8BC98', primaryDark: '#3E4D36' },
+          teal: { primary: '#9CBEC2', primaryDark: '#3A4E52' }
+        }}
+        onThemeChange={handleThemeChange}
+        customLogo={customImages['logo'] || '/assets/crochet_creation_logo.png'}
+        token={token}
+        userProfile={userProfile}
+        onLogout={handleLogout}
+        cartItemsCount={cartItemsCount}
+        currentPage="Shop"
+        alwaysOpaque={true}
+      />
 
       {/* Main Container */}
       <main className="max-w-7xl mx-auto px-6 pt-28 pb-20">

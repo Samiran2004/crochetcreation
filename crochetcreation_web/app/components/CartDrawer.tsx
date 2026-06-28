@@ -486,10 +486,10 @@ export default function CartDrawer() {
               <button
                 onClick={() => {
                   // Pre-populate fields if user is logged in
-                  const token = localStorage.getItem('crochet_token');
+                  const token = localStorage.getItem('token');
                   if (token) {
                     try {
-                      const user = JSON.parse(localStorage.getItem('crochet_user') || '{}');
+                      const user = JSON.parse(localStorage.getItem('user') || '{}');
                       setFormData((prev) => ({
                         ...prev,
                         name: user.name || '',

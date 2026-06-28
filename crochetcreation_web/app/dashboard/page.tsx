@@ -20,6 +20,7 @@ import {
   CheckCircle,
   AlertCircle
 } from 'lucide-react';
+import Navbar from '../components/Navbar';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -377,58 +378,26 @@ export default function UserDashboard() {
         </div>
       )}
 
-      {/* Identical Header Structure */}
-      <header className="sticky top-0 z-40 transition-colors shadow-sm duration-300" style={{ backgroundColor: themeStyles.primaryDark }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-          <Link href="/" className="font-serif text-2xl lg:text-3xl font-light tracking-wide text-[#FEF9F6] hover:text-[#D9B4B4] transition-colors">
-            Crochet Creation
-          </Link>
-
-          <nav className="hidden lg:flex items-center gap-8 text-xs font-semibold tracking-widest uppercase text-[#FEF9F6]">
-            <Link href="/" className="relative py-1 hover:text-[#D9B4B4] transition-all duration-300 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1.5px] after:bg-[#D9B4B4] hover:after:w-full after:transition-all after:duration-300">HOME</Link>
-            <Link href="/shop" className="relative py-1 hover:text-[#D9B4B4] transition-all duration-300 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1.5px] after:bg-[#D9B4B4] hover:after:w-full after:transition-all after:duration-300">SHOP</Link>
-            <Link href="/shop" className="relative py-1 hover:text-[#D9B4B4] transition-all duration-300 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1.5px] after:bg-[#D9B4B4] hover:after:w-full after:transition-all after:duration-300">CATEGORIES</Link>
-            <Link href="/#about" className="relative py-1 hover:text-[#D9B4B4] transition-all duration-300 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1.5px] after:bg-[#D9B4B4] hover:after:w-full after:transition-all after:duration-300">ABOUT US</Link>
-            <Link href="/#contact" className="relative py-1 hover:text-[#D9B4B4] transition-all duration-300 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1.5px] after:bg-[#D9B4B4] hover:after:w-full after:transition-all after:duration-300">CONTACT</Link>
-          </nav>
-
-          <div className="hidden lg:flex items-center gap-4 text-xs font-medium tracking-wider text-[#FEF9F6]">
-            <div
-              onClick={() => typeof window !== 'undefined' && window.dispatchEvent(new Event('open-cart'))}
-              className="flex items-center gap-1.5 hover:text-[#D9B4B4] cursor-pointer transition-all duration-300"
-            >
-              <ShoppingBag className="w-4 h-4 text-[#D9B4B4]" />
-              <span>{cartItemsCount} items</span>
-            </div>
-            <span className="text-stone-400">|</span>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[#D9B4B4]">Dashboard</span>
-              <span className="text-stone-400">|</span>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-stone-300">Hi, {userProfile?.first_name}</span>
-              <button onClick={handleLogout} className="hover:text-[#D9B4B4] transition-colors p-1" title="Sign Out">
-                <LogOut className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="lg:hidden p-2 text-[#FEF9F6] hover:text-[#D9B4B4]">
-            {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
-        </div>
-
-        {/* Mobile menu */}
-        {isMenuOpen && (
-          <div className="lg:hidden absolute top-full left-0 w-full py-6 px-6 z-30 flex flex-col gap-4 text-sm font-semibold tracking-widest uppercase text-center shadow-2xl backdrop-blur-lg bg-[#6B5656] text-[#FEF9F6] border-b border-[#FEF9F6]/10">
-            <Link href="/" onClick={() => setIsMenuOpen(false)} className="py-2 hover:text-[#D9B4B4]">HOME</Link>
-            <Link href="/shop" onClick={() => setIsMenuOpen(false)} className="py-2 hover:text-[#D9B4B4]">SHOP</Link>
-            <Link href="/#about" onClick={() => setIsMenuOpen(false)} className="py-2 hover:text-[#D9B4B4]">ABOUT US</Link>
-            <Link href="/#contact" onClick={() => setIsMenuOpen(false)} className="py-2 hover:text-[#D9B4B4]">CONTACT</Link>
-            <button onClick={handleLogout} className="py-2 text-stone-300 hover:text-white border-t border-[#FEF9F6]/10 mt-2 flex items-center justify-center gap-2">
-              <LogOut className="w-4 h-4" /> SIGN OUT
-            </button>
-          </div>
-        )}
-      </header>
+      {/* Navbar Component */}
+      <Navbar
+        themeColor={themeColor}
+        themeColors={{
+          rose: { primary: '#D9B4B4', primaryDark: '#6B5656' },
+          mustard: { primary: '#E6C17A', primaryDark: '#5C4A2E' },
+          green: { primary: '#A8BC98', primaryDark: '#3E4D36' },
+          teal: { primary: '#9CBEC2', primaryDark: '#3A4E52' }
+        }}
+        onThemeChange={(color) => {
+          setThemeColor(color);
+          localStorage.setItem('themeColor', color);
+        }}
+        token={token}
+        userProfile={userProfile}
+        onLogout={handleLogout}
+        cartItemsCount={cartItemsCount}
+        currentPage="Dashboard"
+        alwaysOpaque={true}
+      />
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-14">
