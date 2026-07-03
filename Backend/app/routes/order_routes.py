@@ -8,6 +8,7 @@ from bson import ObjectId
 from datetime import datetime
 from app.services.email_service import queue_order_confirmation, queue_order_status_update, queue_manual_order_emails
 from app.utils.email_sender import send_order_email
+from app.utils.pdf_generator import generate_invoice_pdf
 
 router = APIRouter(prefix="/api/orders", tags=["orders"])
 
@@ -104,6 +105,17 @@ async def get_orders(
             detail=f"Failed to fetch orders: {str(e)}"
         )
 
+async def generate_and_send_invoice_task(to_email: str, customer_name: str, order_details: dict):
+    """
+    Background task to generate PDF invoice entirely in-memory and send it
+    via the Brevo API as an email attachment.
+    """
+    try:
+        pdf_bytes = await generate_invoice_pdf(order_details)
+        await send_order_email(to_email, customer_name, order_details, pdf_bytes)
+    except Exception as e:
+        print(f"Error generating and sending invoice: {str(e)}")
+
 @router.put("/{order_id}", response_model=OrderResponse)
 async def update_order_status(
     order_id: str,
@@ -144,6 +156,13 @@ async def update_order_status(
             queue_order_status_update(background_tasks, updated_order)
         except Exception as email_err:
             print(f"Error queueing order status update email: {email_err}")
+
+        # If payment is verified & confirmed (order status changed to Processing), send Brevo confirmation with invoice
+        if status_update == "Processing":
+            to_email = updated_order.get("customer_email")
+            name = updated_order.get("customer_name")
+            if to_email:
+                background_tasks.add_task(generate_and_send_invoice_task, to_email, name, updated_order)
 
         return updated_order
 

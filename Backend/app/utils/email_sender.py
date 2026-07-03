@@ -1,4 +1,6 @@
 import logging
+import base64
+from typing import Optional
 import httpx
 from app.core.config import settings
 
@@ -176,9 +178,15 @@ BREVO_HTML_TEMPLATE = """
 </html>
 """
 
-async def send_order_email(to_email: str, customer_name: str, order_details: dict):
+async def send_order_email(
+    to_email: str, 
+    customer_name: str, 
+    order_details: dict, 
+    pdf_bytes: Optional[bytes] = None
+):
     """
     Asynchronously sends an order confirmation email using the Brevo HTTP REST API.
+    Optionally attaches a PDF invoice.
     """
     api_key = settings.BREVO_API_KEY
     sender_email = settings.SENDER_EMAIL
@@ -231,6 +239,15 @@ async def send_order_email(to_email: str, customer_name: str, order_details: dic
         "subject": f"Your Crochet Creation Order Confirmation - #{order_id[-6:] if len(order_id) > 6 else order_id} 🧶",
         "htmlContent": html_content
     }
+
+    if pdf_bytes:
+        base64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
+        payload["attachment"] = [
+            {
+                "content": base64_pdf,
+                "name": f"Invoice_CrochetCreation_{order_id}.pdf"
+            }
+        ]
 
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
