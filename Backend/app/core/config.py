@@ -20,4 +20,8 @@ class Settings:
     RESEND_API_KEY: str = os.getenv("RESEND_API_KEY", "")
     EMAIL_FROM: str = os.getenv("EMAIL_FROM", "crochetcreation@samiransamanta.in")
 
+    # Brevo configuration
+    BREVO_API_KEY: str = os.getenv("BREVO_API_KEY", "")
+    SENDER_EMAIL: str = os.getenv("SENDER_EMAIL", "crochetcreation@samiransamanta.in")
+
 settings = Settings()

@@ -7,6 +7,7 @@ from app.models.user import UserInDB
 from bson import ObjectId
 from datetime import datetime
 from app.services.email_service import queue_order_confirmation, queue_order_status_update, queue_manual_order_emails
+from app.utils.email_sender import send_order_email
 
 router = APIRouter(prefix="/api/orders", tags=["orders"])
 
@@ -35,7 +36,14 @@ async def create_order(
         # Retrieve and return the created order
         inserted_order = await db["orders"].find_one({"_id": result.inserted_id})
         
-        # Send order confirmation emails
+        # Trigger Brevo HTTP REST API email in background
+        if inserted_order:
+            to_email = inserted_order.get("customer_email")
+            name = inserted_order.get("customer_name")
+            order_data = inserted_order
+            background_tasks.add_task(send_order_email, to_email, name, order_data)
+        
+        # Send order confirmation emails via Resend
         try:
             queue_order_confirmation(background_tasks, inserted_order)
         except Exception as email_err:
