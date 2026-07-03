@@ -22,7 +22,8 @@ import {
   ChevronDown,
   Sun,
   Moon,
-  X
+  X,
+  Activity
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -152,6 +153,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       title: 'System',
       items: [
         { name: 'Settings', path: '/admin/settings', icon: Settings },
+        { name: 'Diagnostics', path: '/admin/diagnostics', icon: Activity },
       ]
     }
   ];

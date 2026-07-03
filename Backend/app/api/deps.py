@@ -31,7 +31,13 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> UserInDB:
             detail="Database connection is not initialized."
         )
 
-    user_dict = await db["users"].find_one({"email": email})
+    try:
+        user_dict = await db["users"].find_one({"email": email})
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Database connection timed out or failed. If using MongoDB Atlas, please check if your current public IP is whitelisted in your Atlas Network Access settings. Error: {str(e)}"
+        )
     if user_dict is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

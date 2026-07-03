@@ -24,4 +24,7 @@ class Settings:
     BREVO_API_KEY: str = os.getenv("BREVO_API_KEY", "")
     SENDER_EMAIL: str = os.getenv("SENDER_EMAIL", "crochetcreation@samiransamanta.in")
 
+    # Cron-job.org configuration
+    CRONJOB_API_KEY: str = os.getenv("CRONJOB_API_KEY", "")
+
 settings = Settings()
