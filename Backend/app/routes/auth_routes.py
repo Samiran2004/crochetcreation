@@ -6,7 +6,7 @@ from app.models.user import (
 )
 from app.core.security import get_password_hash, verify_password, create_access_token
 from app.core.db import get_database
-from app.services.email_service import queue_welcome_email, queue_otp_email
+from app.utils.email_sender import send_welcome_email, send_otp_email
 import random
 from datetime import datetime, timedelta
 
@@ -51,9 +51,15 @@ async def register(user_in: UserCreate, background_tasks: BackgroundTasks):
     # Retrieve and return the created user
     created_user = await db["users"].find_one({"_id": result.inserted_id})
     
-    # Send welcome email using Resend
+    # Send welcome email using Brevo REST API
     try:
-        queue_welcome_email(background_tasks, created_user)
+        background_tasks.add_task(
+            send_welcome_email,
+            created_user.get("email"),
+            created_user.get("first_name", "Valued Customer"),
+            created_user.get("last_name", ""),
+            created_user.get("mobile", "")
+        )
     except Exception as e:
         print(f"Error queueing welcome email: {e}")
         
@@ -126,9 +132,9 @@ async def forgot_password(req: ForgotPasswordRequest, background_tasks: Backgrou
         upsert=True
     )
 
-    # Queue email sending task
+    # Queue email sending task via Brevo REST API
     try:
-        queue_otp_email(background_tasks, req.email, otp)
+        background_tasks.add_task(send_otp_email, req.email, otp)
     except Exception as e:
         print(f"Error queueing OTP email: {e}")
         raise HTTPException(

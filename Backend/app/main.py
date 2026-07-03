@@ -50,3 +50,9 @@ async def root():
         "app": "CrochetCreation Backend API",
         "docs_url": "/docs"
     }
+
+@app.get("/ping")
+async def keep_alive_ping():
+    """Endpoint for cron jobs to keep the Render server awake."""
+    return {"status": "Alive", "message": "Server is awake and running!"}
+

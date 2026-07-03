@@ -6,9 +6,7 @@ from app.api.deps import get_current_admin_user, get_current_user
 from app.models.user import UserInDB
 from bson import ObjectId
 from datetime import datetime
-from app.services.email_service import queue_order_confirmation, queue_order_status_update, queue_manual_order_emails
-from app.utils.email_sender import send_order_email
-from app.utils.pdf_generator import generate_invoice_pdf
+from app.utils.email_sender import send_order_email, generate_and_send_invoice_task
 
 router = APIRouter(prefix="/api/orders", tags=["orders"])
 
@@ -27,7 +25,7 @@ async def create_order(
     try:
         # Save order document to MongoDB
         order_dict = order_in.model_dump()
-        order_dict["status"] = "Pending"
+        order_dict["status"] = "Pending Validation"
         order_dict["created_at"] = datetime.utcnow()
         # Explicitly attach the user_id as a BSON ObjectId
         order_dict["user_id"] = ObjectId(current_user.id) if current_user.id else None
@@ -37,19 +35,7 @@ async def create_order(
         # Retrieve and return the created order
         inserted_order = await db["orders"].find_one({"_id": result.inserted_id})
         
-        # Trigger Brevo HTTP REST API email in background
-        if inserted_order:
-            to_email = inserted_order.get("customer_email")
-            name = inserted_order.get("customer_name")
-            order_data = inserted_order
-            background_tasks.add_task(send_order_email, to_email, name, order_data)
-        
-        # Send order confirmation emails via Resend
-        try:
-            queue_order_confirmation(background_tasks, inserted_order)
-        except Exception as email_err:
-            print(f"Error queueing order confirmation email: {email_err}")
-
+        # Do NOT trigger the Brevo email here. It is triggered only upon confirmation/validation.
         return inserted_order
 
     except Exception as e:
@@ -105,16 +91,7 @@ async def get_orders(
             detail=f"Failed to fetch orders: {str(e)}"
         )
 
-async def generate_and_send_invoice_task(to_email: str, customer_name: str, order_details: dict):
-    """
-    Background task to generate PDF invoice entirely in-memory and send it
-    via the Brevo API as an email attachment.
-    """
-    try:
-        pdf_bytes = await generate_invoice_pdf(order_details)
-        await send_order_email(to_email, customer_name, order_details, pdf_bytes)
-    except Exception as e:
-        print(f"Error generating and sending invoice: {str(e)}")
+# Invoice background task is imported from app.utils.email_sender
 
 @router.put("/{order_id}", response_model=OrderResponse)
 async def update_order_status(
@@ -151,12 +128,6 @@ async def update_order_status(
 
         updated_order = await db["orders"].find_one({"_id": ObjectId(order_id)})
         
-        # Send order status update email
-        try:
-            queue_order_status_update(background_tasks, updated_order)
-        except Exception as email_err:
-            print(f"Error queueing order status update email: {email_err}")
-
         # If payment is verified & confirmed (order status changed to Processing), send Brevo confirmation with invoice
         if status_update == "Processing":
             to_email = updated_order.get("customer_email")
@@ -170,6 +141,52 @@ async def update_order_status(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to update order status: {str(e)}"
+        )
+
+@router.put("/{order_id}/confirm", response_model=OrderResponse)
+async def confirm_order(
+    order_id: str,
+    background_tasks: BackgroundTasks,
+    current_admin: UserInDB = Depends(get_current_admin_user)
+):
+    """
+    Admin endpoint to validate and confirm a pending order.
+    Sets status to 'Confirmed' and queues in-memory PDF invoice generation and email sending.
+    """
+    db = get_database()
+    if db is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database connection is not initialized."
+        )
+    try:
+        existing_order = await db["orders"].find_one({"_id": ObjectId(order_id)})
+        if not existing_order:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Order not found"
+            )
+
+        # Confirm order status
+        await db["orders"].update_one(
+            {"_id": ObjectId(order_id)},
+            {"$set": {"status": "Confirmed"}}
+        )
+
+        updated_order = await db["orders"].find_one({"_id": ObjectId(order_id)})
+
+        # Trigger Brevo email with PDF invoice in background (exactly one task)
+        to_email = updated_order.get("customer_email")
+        name = updated_order.get("customer_name")
+        if to_email:
+            background_tasks.add_task(generate_and_send_invoice_task, to_email, name, updated_order)
+
+        return updated_order
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to confirm order: {str(e)}"
         )
 
 @router.delete("/{order_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -228,12 +245,19 @@ async def create_manual_order(
         result = await db["orders"].insert_one(order_dict)
         inserted_order = await db["orders"].find_one({"_id": result.inserted_id})
 
-        # Queue emails in background (non-blocking)
+        # Queue emails in background (non-blocking) via Brevo REST API
         email_sent = False
-        try:
-            email_sent = queue_manual_order_emails(background_tasks, inserted_order)
-        except Exception as email_err:
-            print(f"Error queueing manual order emails: {email_err}")
+        if inserted_order.get("customer_email") and inserted_order.get("user_id"):
+            try:
+                background_tasks.add_task(
+                    send_order_email, 
+                    inserted_order.get("customer_email"), 
+                    inserted_order.get("customer_name", "Valued Customer"), 
+                    inserted_order
+                )
+                email_sent = True
+            except Exception as email_err:
+                print(f"Error queueing manual order confirmation email: {email_err}")
 
         return ManualOrderResponse(order=inserted_order, email_sent=email_sent)
 
