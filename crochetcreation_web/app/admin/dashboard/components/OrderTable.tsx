@@ -334,8 +334,8 @@ export default function OrderTable({
         </div>
       )}
 
-      {/* Enterprise Data Grid */}
-      <div className="overflow-x-auto border border-gray-100 rounded-xl shadow-xs">
+      {/* Enterprise Data Grid - Desktop View */}
+      <div className="hidden md:block overflow-x-auto border border-gray-100 rounded-xl shadow-xs bg-white">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="border-b border-gray-100 text-[10px] font-black text-gray-400 uppercase tracking-widest bg-gray-50/75 select-none">
@@ -378,12 +378,11 @@ export default function OrderTable({
                       isSelected ? 'bg-slate-50/50' : ''
                     }`}
                   >
-                    {/* Checkbox cell with attention left border */}
                     <td 
                       className={`py-3.5 px-4 border-l-4 transition-colors ${
                         needsAttention ? 'border-l-amber-400' : 'border-l-transparent'
                       }`}
-                      onClick={(e) => e.stopPropagation()} // Stop drawer from opening
+                      onClick={(e) => e.stopPropagation()}
                     >
                       <input
                         type="checkbox"
@@ -392,18 +391,12 @@ export default function OrderTable({
                         className="w-4 h-4 rounded border-gray-300 text-slate-950 focus:ring-slate-950 cursor-pointer"
                       />
                     </td>
-                    
-                    {/* Order ID */}
                     <td className="py-3.5 px-4 font-extrabold text-slate-900">
                       ORD-{order._id?.slice(-6).toUpperCase()}
                     </td>
-                    
-                    {/* Date */}
                     <td className="py-3.5 px-4 text-gray-450 font-medium">
                       {order.created_at ? new Date(order.created_at).toLocaleDateString() : 'Unknown'}
                     </td>
-                    
-                    {/* Customer */}
                     <td className="py-3.5 px-4">
                       <div className="flex items-center gap-3">
                         <div className={`w-8 h-8 rounded-full flex items-center justify-center font-extrabold text-[11px] ring-1 ${colorClass}`}>
@@ -415,8 +408,6 @@ export default function OrderTable({
                         </div>
                       </div>
                     </td>
-                    
-                    {/* Payment Status badge */}
                     <td className="py-3.5 px-4">
                       <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest ring-1 ${paymentStyle}`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${paymentDot} ${
@@ -425,8 +416,6 @@ export default function OrderTable({
                         {paymentStatus}
                       </span>
                     </td>
-                    
-                    {/* Fulfillment Status badge */}
                     <td className="py-3.5 px-4">
                       <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest ring-1 ${
                         order.status === 'Delivered' ? 'bg-emerald-50 text-emerald-700 ring-emerald-200' :
@@ -443,16 +432,12 @@ export default function OrderTable({
                         {order.status === 'Pending' || order.status === 'Confirmed' ? 'CONFIRMED' : order.status.toUpperCase()}
                       </span>
                     </td>
-                    
-                    {/* Price */}
                     <td className="py-3.5 px-4 font-extrabold text-slate-800">
                       ₹{order.total_amount?.toFixed(2)}
                     </td>
-                    
-                    {/* Actions column */}
                     <td 
                       className="py-3.5 px-4 text-right sticky right-0 bg-white hover:bg-slate-50/50"
-                      onClick={(e) => e.stopPropagation()} // Stop drawer from opening
+                      onClick={(e) => e.stopPropagation()}
                     >
                       <div className="flex items-center justify-end relative">
                         <button
@@ -461,11 +446,10 @@ export default function OrderTable({
                         >
                           <MoreHorizontal className="w-4 h-4" />
                         </button>
-
                         {activeMenuOrderId === order._id && (
                           <>
-                            <div className="fixed inset-0 z-30" onClick={() => setActiveMenuOrderId(null)}></div>
-                            <div className="absolute right-4 mt-8 w-48 bg-white border border-gray-100 rounded-xl shadow-lg py-2 z-45 animate-in fade-in-50 slide-in-from-top-2 duration-150 text-left">
+                            <div className="fixed inset-0 z-35" onClick={() => setActiveMenuOrderId(null)}></div>
+                            <div className="absolute right-4 mt-8 w-48 bg-white border border-gray-105 rounded-xl shadow-lg py-2 z-40 animate-in fade-in-50 slide-in-from-top-2 duration-150 text-left">
                               <button
                                 onClick={() => {
                                   onOpenDrawer(order);
@@ -476,7 +460,6 @@ export default function OrderTable({
                                 <Eye className="w-3.5 h-3.5 text-gray-400" />
                                 View Details
                               </button>
-                              
                               {paymentStatus === 'Pending Validation' && (
                                 <button
                                   onClick={() => {
@@ -489,7 +472,6 @@ export default function OrderTable({
                                   Validate Payment
                                 </button>
                               )}
-
                               <button
                                 disabled={downloadingId === order._id}
                                 onClick={async () => {
@@ -506,7 +488,6 @@ export default function OrderTable({
                                 <FileText className="w-3.5 h-3.5 text-gray-400" />
                                 {downloadingId === order._id ? 'Downloading...' : 'Download Invoice'}
                               </button>
-
                               {order.status !== 'Cancelled' && (
                                 <button
                                   onClick={async () => {
@@ -515,7 +496,7 @@ export default function OrderTable({
                                       setActiveMenuOrderId(null);
                                     }
                                   }}
-                                  className="w-full px-4 py-2 hover:bg-rose-50 text-xs font-semibold text-rose-600 flex items-center gap-2 border-t border-gray-100 mt-1 pt-1"
+                                  className="w-full px-4 py-2 hover:bg-rose-50 text-xs font-semibold text-rose-605 flex items-center gap-2 border-t border-gray-100 mt-1 pt-1"
                                 >
                                   <X className="w-3.5 h-3.5 text-rose-500" />
                                   Cancel Order
@@ -532,6 +513,142 @@ export default function OrderTable({
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Enterprise Data Grid - Mobile Card View */}
+      <div className="block md:hidden space-y-3">
+        {paginatedOrders.length === 0 ? (
+          <div className="bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 p-8 text-center text-gray-400 dark:text-slate-500 text-xs">
+            No order registers found in matching ledger filters.
+          </div>
+        ) : (
+          paginatedOrders.map((order) => {
+            const { initials, colorClass } = getAvatarDetails(order.customer_name);
+            const { paymentStatus, paymentStyle, paymentDot } = getOrderStatuses(order);
+            const isSelected = selectedIds.has(order._id);
+            const needsAttention = paymentStatus === 'Pending Validation' || paymentStatus === 'Unpaid';
+            
+            return (
+              <div
+                key={order._id}
+                onClick={() => onOpenDrawer(order)}
+                className={`bg-white dark:bg-slate-900 border rounded-xl p-4 space-y-3 shadow-xs active:scale-[0.98] transition-transform duration-100 select-none relative ${
+                  isSelected ? 'border-slate-900 dark:border-white bg-slate-50/10' : 'border-gray-200 dark:border-slate-850'
+                } ${needsAttention ? 'border-l-4 border-l-amber-500' : ''}`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div onClick={(e) => e.stopPropagation()} className="flex items-center min-w-[32px] min-h-[32px]">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={(e) => handleSelectRow(e, order._id)}
+                        className="w-5 h-5 rounded border-gray-300 text-slate-950 focus:ring-slate-950 cursor-pointer"
+                      />
+                    </div>
+                    <span className="font-extrabold text-sm text-slate-900 dark:text-white">
+                      ORD-{order._id?.slice(-6).toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-gray-400 dark:text-slate-500 font-bold">
+                      {order.created_at ? new Date(order.created_at).toLocaleDateString() : 'Unknown'}
+                    </span>
+                    <div onClick={(e) => e.stopPropagation()} className="relative">
+                      <button
+                        onClick={() => setActiveMenuOrderId(activeMenuOrderId === order._id ? null : order._id)}
+                        className="p-1.5 rounded-lg text-gray-400 hover:text-slate-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-800 min-w-[36px] min-h-[36px] flex items-center justify-center"
+                      >
+                        <MoreHorizontal className="w-4.5 h-4.5" />
+                      </button>
+                      {activeMenuOrderId === order._id && (
+                        <>
+                          <div className="fixed inset-0 z-30" onClick={() => setActiveMenuOrderId(null)}></div>
+                          <div className="absolute right-0 mt-1 w-48 bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 rounded-xl shadow-lg py-2 z-40 text-left">
+                            <button
+                              onClick={() => {
+                                onOpenDrawer(order);
+                                setActiveMenuOrderId(null);
+                              }}
+                              className="w-full px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-2 min-h-[40px]"
+                            >
+                              <Eye className="w-4 h-4 text-gray-400" />
+                              View Details
+                            </button>
+                            {paymentStatus === 'Pending Validation' && (
+                              <button
+                                onClick={() => {
+                                  onValidatePayment(order._id);
+                                  setActiveMenuOrderId(null);
+                                }}
+                                className="w-full px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-slate-800 text-xs font-semibold text-amber-700 flex items-center gap-2 min-h-[40px]"
+                              >
+                                <CheckCircle className="w-4 h-4 text-amber-500" />
+                                Validate Payment
+                              </button>
+                            )}
+                            <button
+                              disabled={downloadingId === order._id}
+                              onClick={async () => {
+                                setDownloadingId(order._id);
+                                try {
+                                  await onDownloadInvoice(order._id);
+                                } finally {
+                                  setDownloadingId(null);
+                                  setActiveMenuOrderId(null);
+                                }
+                              }}
+                              className="w-full px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-2 min-h-[40px] disabled:opacity-50"
+                            >
+                              <Download className="w-4 h-4 text-gray-400" />
+                              Download Invoice
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 bg-slate-50/50 dark:bg-slate-950/40 p-2.5 rounded-xl border border-gray-100 dark:border-slate-800/80">
+                  <div className={`w-8.5 h-8.5 rounded-full flex items-center justify-center font-extrabold text-[11px] ring-1 shrink-0 ${colorClass}`}>
+                    {initials}
+                  </div>
+                  <div className="text-left min-w-0 flex-1">
+                    <p className="text-xs font-black text-slate-900 dark:text-white truncate">{order.customer_name}</p>
+                    <p className="text-[10px] text-gray-400 dark:text-slate-500 font-semibold truncate leading-tight mt-0.5">{order.customer_email}</p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between pt-1">
+                  <div className="flex flex-wrap gap-1.5">
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wider ring-1 ${paymentStyle}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${paymentDot} ${
+                        paymentStatus === 'Pending Validation' ? 'animate-pulse' : ''
+                      }`} />
+                      {paymentStatus}
+                    </span>
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wider ring-1 ${
+                      order.status === 'Delivered' ? 'bg-emerald-50 text-emerald-700 ring-emerald-200' :
+                      order.status === 'Pending' || order.status === 'Confirmed' ? 'bg-teal-50 text-teal-700 ring-teal-200' :
+                      order.status === 'Processing' ? 'bg-blue-50 text-blue-700 ring-blue-200' :
+                      'bg-rose-50 text-rose-700 ring-rose-200'
+                    }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${
+                        order.status === 'Delivered' ? 'bg-emerald-500' :
+                        order.status === 'Pending' || order.status === 'Confirmed' ? 'bg-teal-500' :
+                        order.status === 'Processing' ? 'bg-blue-500' :
+                        'bg-rose-500'
+                      }`} />
+                      {order.status === 'Pending' || order.status === 'Confirmed' ? 'CONFIRMED' : order.status.toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="font-extrabold text-xs text-slate-900 dark:text-white">
+                    ₹{order.total_amount?.toFixed(2)}
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
 
       {/* Pagination Footer */}

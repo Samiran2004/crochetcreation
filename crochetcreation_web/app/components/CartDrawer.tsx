@@ -210,24 +210,33 @@ export default function CartDrawer() {
 
       {/* Cart Drawer */}
       <div
-        className={`fixed top-0 right-0 z-50 h-screen w-full sm:w-[480px] bg-[#FEF9F6] shadow-2xl transition-transform duration-500 ease-in-out flex flex-col ${
-          isOpen ? 'translate-x-0' : 'translate-x-full'
+        className={`fixed bottom-0 left-0 right-0 h-[85vh] sm:top-0 sm:right-0 sm:left-auto sm:h-screen w-full sm:w-[480px] bg-[#FEF9F6] sm:rounded-none rounded-t-3xl shadow-2xl transition-all duration-300 ease-in-out flex flex-col z-50 ${
+          isOpen 
+            ? 'translate-y-0 sm:translate-y-0 sm:translate-x-0' 
+            : 'translate-y-full sm:translate-y-0 sm:translate-x-full'
         }`}
       >
         {/* Header */}
-        <div className="p-5 border-b border-[#EADBDB] flex items-center justify-between bg-[#6B5656] text-[#FEF9F6]">
-          <div className="flex items-center gap-2">
-            <ShoppingBag className="w-5 h-5 text-[#D9B4B4]" />
-            <h3 className="font-bold uppercase tracking-wider text-sm">
-              {isCheckoutView ? 'Checkout Information' : 'Shopping Cart'}
-            </h3>
+        <div className="p-5 pt-3 sm:pt-5 border-b border-[#EADBDB] flex flex-col justify-between bg-[#6B5656] text-[#FEF9F6] rounded-t-3xl sm:rounded-none shrink-0">
+          {/* Drag handle for mobile */}
+          <div className="sm:hidden flex justify-center pb-3">
+            <div className="w-12 h-1 bg-white/20 rounded-full" />
           </div>
-          <button
-            onClick={() => setIsOpen(false)}
-            className="p-1.5 rounded-full hover:bg-white/10 transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
+
+          <div className="flex items-center justify-between w-full">
+            <div className="flex items-center gap-2">
+              <ShoppingBag className="w-5 h-5 text-[#D9B4B4]" />
+              <h3 className="font-bold uppercase tracking-wider text-sm">
+                {isCheckoutView ? 'Checkout Information' : 'Shopping Cart'}
+              </h3>
+            </div>
+            <button
+              onClick={() => setIsOpen(false)}
+              className="p-1.5 rounded-full hover:bg-white/10 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Scrollable Container */}
@@ -368,18 +377,18 @@ export default function CartDrawer() {
                 </div>
               </div>
 
-              <div className="pt-4 flex gap-3">
+              <div className="pt-4 flex gap-3 select-none">
                 <button
                   type="button"
                   onClick={() => setIsCheckoutView(false)}
-                  className="flex-1 border border-[#EADBDB] text-stone-600 font-bold py-3.5 rounded-xl text-xs uppercase tracking-wider hover:bg-stone-50 transition-colors"
+                  className="flex-1 border border-[#EADBDB] text-stone-600 font-bold py-3.5 rounded-xl text-xs uppercase tracking-wider hover:bg-stone-50 transition-all duration-100 active:scale-95 min-h-[44px] flex items-center justify-center"
                 >
                   Back to Cart
                 </button>
                 <button
                   type="submit"
                   disabled={checkoutLoading}
-                  className="flex-1 bg-[#6B5656] hover:bg-[#D9B4B4] hover:text-[#6B5656] text-[#FEF9F6] font-bold py-3.5 rounded-xl text-xs uppercase tracking-wider transition-colors shadow flex items-center justify-center gap-1.5"
+                  className="flex-1 bg-[#6B5656] hover:bg-[#D9B4B4] hover:text-[#6B5656] text-[#FEF9F6] font-bold py-3.5 rounded-xl text-xs uppercase tracking-wider transition-all duration-100 shadow flex items-center justify-center gap-1.5 active:scale-95 min-h-[44px]"
                 >
                   {checkoutLoading ? 'Redirecting...' : 'Order on WhatsApp'}
                   <ArrowRight className="w-3.5 h-3.5" />
@@ -476,7 +485,7 @@ export default function CartDrawer() {
 
         {/* Footer */}
         {!isCheckoutView && items.length > 0 && !checkoutSuccess && (
-          <div className="p-5 border-t border-[#EADBDB] bg-white space-y-4">
+          <div className="p-5 border-t border-[#EADBDB] bg-white space-y-4 pb-safe-bottom sm:pb-5 select-none">
             <div className="flex items-center justify-between text-sm">
               <span className="font-medium text-stone-600">Subtotal:</span>
               <span className="font-bold text-lg text-[#6B5656]">₹{subtotal.toFixed(2)}</span>
@@ -500,7 +509,7 @@ export default function CartDrawer() {
                   }
                   setIsCheckoutView(true);
                 }}
-                className="w-full bg-[#6B5656] hover:bg-[#D9B4B4] hover:text-[#6B5656] text-[#FEF9F6] font-bold py-3.5 rounded-xl text-xs uppercase tracking-wider transition-colors shadow flex items-center justify-center gap-1.5"
+                className="w-full bg-[#6B5656] hover:bg-[#D9B4B4] hover:text-[#6B5656] text-[#FEF9F6] font-bold py-3.5 rounded-xl text-xs uppercase tracking-wider transition-all duration-100 shadow flex items-center justify-center gap-1.5 active:scale-95 min-h-[44px]"
               >
                 Proceed to Checkout
                 <ArrowRight className="w-3.5 h-3.5" />

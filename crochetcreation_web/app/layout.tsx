@@ -1,5 +1,5 @@
 import './globals.css';
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import CartDrawer from './components/CartDrawer';
 
 export const metadata: Metadata = {
@@ -9,6 +9,12 @@ export const metadata: Metadata = {
     template: '%s | Crochet Creation',
   },
   description: 'Discover aesthetic, handmade crochet plushies, cozy apparel, and DIY masterclasses crafted with love.',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Crochet',
+  },
   openGraph: {
     type: 'website',
     locale: 'en_US',
@@ -31,6 +37,14 @@ export const metadata: Metadata = {
     description: 'Discover aesthetic, handmade crochet plushies, cozy apparel, and DIY masterclasses crafted with love.',
     images: ['/og-image.jpg'],
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#ffffff',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({

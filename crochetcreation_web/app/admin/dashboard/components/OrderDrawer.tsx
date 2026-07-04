@@ -108,26 +108,33 @@ export default function OrderDrawer({
         onClick={onClose}
       />
       
-      {/* Slide-out Panel */}
-      <div className="fixed right-0 top-0 h-full w-full max-w-xl bg-white shadow-2xl z-[160] transform transition-transform duration-300 translate-x-0 animate-in slide-in-from-right flex flex-col text-left">
+      {/* Slide-out Panel / Bottom Sheet */}
+      <div className="fixed md:right-0 md:top-0 md:h-full bottom-0 left-0 right-0 h-[85vh] md:h-full w-full md:max-w-xl bg-white md:rounded-none rounded-t-3xl shadow-2xl z-[160] transform transition-all duration-300 translate-y-0 md:translate-y-0 md:translate-x-0 animate-in slide-in-from-bottom md:slide-in-from-right flex flex-col text-left">
         
         {/* Header */}
-        <div className="p-5 border-b border-gray-100 flex items-center justify-between bg-slate-950 text-white shrink-0">
-          <div className="space-y-0.5">
-            <h4 className="text-xs font-black uppercase tracking-widest text-gray-400">Order Ledger Detail</h4>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-extrabold text-white">ORD-{order._id?.slice(-6).toUpperCase()}</span>
-              <span className="text-[10px] text-slate-400 font-medium">
-                {order.created_at ? new Date(order.created_at).toLocaleString() : 'Unknown Date'}
-              </span>
-            </div>
+        <div className="p-5 pt-3 md:pt-5 border-b border-gray-100 flex flex-col justify-between bg-slate-950 text-white shrink-0 rounded-t-3xl md:rounded-none">
+          {/* Drag handle for mobile */}
+          <div className="md:hidden flex justify-center pb-3">
+            <div className="w-12 h-1 bg-white/20 rounded-full" />
           </div>
-          <button 
-            onClick={onClose}
-            className="text-white/80 hover:text-white p-1 rounded-lg hover:bg-slate-900 transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
+
+          <div className="flex items-center justify-between w-full">
+            <div className="space-y-0.5">
+              <h4 className="text-xs font-black uppercase tracking-widest text-gray-400">Order Ledger Detail</h4>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-extrabold text-white">ORD-{order._id?.slice(-6).toUpperCase()}</span>
+                <span className="text-[10px] text-slate-400 font-medium">
+                  {order.created_at ? new Date(order.created_at).toLocaleString() : 'Unknown Date'}
+                </span>
+              </div>
+            </div>
+            <button 
+              onClick={onClose}
+              className="text-white/80 hover:text-white p-1 rounded-lg hover:bg-slate-900 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Scrollable Content */}
@@ -260,13 +267,13 @@ export default function OrderDrawer({
         </div>
 
         {/* Footer Quick Actions */}
-        <div className="p-4 bg-slate-50 border-t border-gray-100 flex items-center justify-between gap-4 shrink-0 select-none">
+        <div className="p-4 bg-slate-50 border-t border-gray-100 flex items-center justify-between gap-4 shrink-0 select-none pb-safe-bottom">
           <div className="flex gap-2">
             {order.status !== 'Cancelled' && (
               <button
                 disabled={isUpdating}
                 onClick={handleCancelClick}
-                className="px-4 py-2 bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-50"
+                className="px-4 py-2.5 bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-50 min-h-[44px] active:scale-95 transition-transform"
               >
                 Cancel Order
               </button>
@@ -279,7 +286,7 @@ export default function OrderDrawer({
               <button
                 disabled={isDownloading || isPendingValidation}
                 onClick={handleDownloadClick}
-                className="px-4 py-2 bg-white border border-gray-250 hover:bg-gray-100 text-slate-700 rounded-xl text-xs font-bold uppercase tracking-wider shadow-sm flex items-center gap-1.5 transition-colors disabled:opacity-40"
+                className="px-4 py-2.5 bg-white border border-gray-250 hover:bg-gray-100 text-slate-700 rounded-xl text-xs font-bold uppercase tracking-wider shadow-sm flex items-center gap-1.5 transition-colors disabled:opacity-40 min-h-[44px] active:scale-95 transition-transform"
               >
                 <Download className="w-3.5 h-3.5 text-gray-500" /> 
                 {isDownloading ? 'Downloading...' : 'Invoice'}
@@ -291,25 +298,25 @@ export default function OrderDrawer({
               <button
                 disabled={isUpdating}
                 onClick={() => onValidatePayment(order._id)}
-                className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold uppercase tracking-wider shadow-md flex items-center gap-1.5 transition-colors disabled:opacity-50 animate-pulse"
+                className="px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold uppercase tracking-wider shadow-md flex items-center gap-1.5 transition-colors disabled:opacity-50 animate-pulse min-h-[44px] active:scale-95 transition-transform"
               >
-                <CheckCircle className="w-3.5 h-3.5" /> Validate & Confirm Payment
+                <CheckCircle className="w-3.5 h-3.5" /> Confirm Payment
               </button>
             ) : (order.status === 'Pending' || order.status === 'Processing' || order.status === 'Confirmed') ? (
               <button
                 disabled={isUpdating}
                 onClick={handleDeliverClick}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold uppercase tracking-wider shadow-md flex items-center gap-1.5 transition-colors disabled:opacity-50"
+                className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold uppercase tracking-wider shadow-md flex items-center gap-1.5 transition-colors disabled:opacity-50 min-h-[44px] active:scale-95 transition-transform"
               >
-                <CheckCircle className="w-3.5 h-3.5" /> Mark as Delivered
+                <CheckCircle className="w-3.5 h-3.5" /> Deliver
               </button>
             ) : order.status === 'Delivered' ? (
-              <span className="px-4 py-2 bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-1.5">
-                ✓ Delivered & Completed
+              <span className="px-4 py-2.5 bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-1.5 min-h-[44px]">
+                ✓ Delivered
               </span>
             ) : (
-              <span className="px-4 py-2 bg-rose-50 text-rose-700 ring-1 ring-rose-200 rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-1.5">
-                ✕ Order Cancelled
+              <span className="px-4 py-2.5 bg-rose-50 text-rose-700 ring-1 ring-rose-200 rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-1.5 min-h-[44px]">
+                ✕ Cancelled
               </span>
             )}
           </div>

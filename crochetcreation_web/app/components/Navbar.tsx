@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { ShoppingBag, User, LogOut, Menu, X, Search } from 'lucide-react';
+import { ShoppingBag, User, LogOut, Menu, X, Search, Home } from 'lucide-react';
 
 export interface NavbarTheme {
   primary: string;
@@ -307,8 +307,27 @@ export default function Navbar({
             )}
           </div>
 
-          {/* Mobile Icons */}
-          <div className="flex items-center gap-3 lg:hidden">
+          {/* Mobile Right Action Bar (visible on mobile only, < md) */}
+          <div className="flex md:hidden items-center gap-2">
+            {token && userProfile ? (
+              <span className="text-[10px] font-bold text-[#FEF9F6]/95 bg-white/10 px-3 py-1.5 rounded-xl border border-white/5 select-none">
+                👋 {userProfile.first_name || 'Me'}
+              </span>
+            ) : (
+              <button
+                onClick={() => {
+                  if (onOpenAuth) onOpenAuth();
+                  else router.push('/?login=true');
+                }}
+                className="flex items-center justify-center p-2 text-[#FEF9F6] hover:text-[#D9B4B4] min-w-[44px] min-h-[44px]"
+              >
+                <User className="w-5 h-5" />
+              </button>
+            )}
+          </div>
+
+          {/* Tablet/Medium Screen Icons (visible only on md to lg screens) */}
+          <div className="hidden md:flex lg:hidden items-center gap-3">
             <div
               id="mobile-cart-icon-header"
               onClick={openCart}
@@ -422,6 +441,67 @@ export default function Navbar({
           </div>
         )}
       </header>
+
+      {/* Mobile Bottom Navigation Bar (< md) */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-stone-900/95 backdrop-blur-md border-t border-white/10 z-[140] flex justify-around items-center py-2 pb-safe-bottom shadow-[0_-2px_15px_rgba(0,0,0,0.15)] select-none">
+        <Link 
+          href="/" 
+          className="flex flex-col items-center gap-1 text-[#FEF9F6]/70 hover:text-[#FEF9F6] active:scale-95 transition-all py-1 px-3"
+          onClick={(e) => {
+            if (pathname === '/') {
+              e.preventDefault();
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+          }}
+        >
+          <Home className={`w-5 h-5 ${pathname === '/' ? 'text-[#D9B4B4]' : 'text-[#FEF9F6]/70'}`} />
+          <span className="text-[9px] font-black uppercase tracking-wider">Home</span>
+        </Link>
+        
+        <Link 
+          href="/shop" 
+          className="flex flex-col items-center gap-1 text-[#FEF9F6]/70 hover:text-[#FEF9F6] active:scale-95 transition-all py-1 px-3"
+        >
+          <Search className={`w-5 h-5 ${pathname?.startsWith('/shop') ? 'text-[#D9B4B4]' : 'text-[#FEF9F6]/70'}`} />
+          <span className="text-[9px] font-black uppercase tracking-wider">Shop</span>
+        </Link>
+        
+        <button 
+          onClick={openCart} 
+          className="relative flex flex-col items-center gap-1 text-[#FEF9F6]/70 hover:text-[#FEF9F6] active:scale-95 transition-all py-1 px-3"
+        >
+          <div className="relative">
+            <ShoppingBag className="w-5 h-5 text-[#FEF9F6]/70" />
+            {localCartCount > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 bg-[#D9B4B4] text-[#6B5656] text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center shadow-sm">
+                {localCartCount}
+              </span>
+            )}
+          </div>
+          <span className="text-[9px] font-black uppercase tracking-wider">Cart</span>
+        </button>
+        
+        {token && userProfile ? (
+          <Link 
+            href={userProfile.is_admin ? '/admin/dashboard' : '/dashboard'} 
+            className="flex flex-col items-center gap-1 text-[#FEF9F6]/70 hover:text-[#FEF9F6] active:scale-95 transition-all py-1 px-3"
+          >
+            <User className={`w-5 h-5 ${pathname?.startsWith('/dashboard') || pathname?.startsWith('/admin') ? 'text-[#D9B4B4]' : 'text-[#FEF9F6]/70'}`} />
+            <span className="text-[9px] font-black uppercase tracking-wider">Profile</span>
+          </Link>
+        ) : (
+          <button 
+            onClick={() => {
+              if (onOpenAuth) onOpenAuth();
+              else router.push('/?login=true');
+            }} 
+            className="flex flex-col items-center gap-1 text-[#FEF9F6]/70 hover:text-[#FEF9F6] active:scale-95 transition-all py-1 px-3"
+          >
+            <User className="w-5 h-5 text-[#FEF9F6]/70" />
+            <span className="text-[9px] font-black uppercase tracking-wider">Profile</span>
+          </button>
+        )}
+      </div>
     </>
   );
 }

@@ -642,40 +642,301 @@ export default function InventoryTable({
       )}
 
       {/* Main Stock Data Grid */}
-      <div className="overflow-x-auto border border-gray-100 rounded-xl bg-white min-h-[300px] flex flex-col justify-center">
+      <div className="border border-gray-150 rounded-xl bg-gray-50/20 p-1 min-h-[300px] flex flex-col justify-center">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 gap-3 text-slate-400">
             <Loader2 className="w-8 h-8 animate-spin text-slate-500" />
             <span className="text-xs font-bold uppercase tracking-wider">Syncing live catalog data...</span>
           </div>
         ) : (
-          <table className="w-full text-left border-collapse table-auto">
-            <thead>
-              <tr className="border-b border-gray-100 text-[10px] font-black text-gray-400 uppercase tracking-widest bg-gray-50/75 select-none">
-                <th className="py-3 px-4 w-10">
-                  <input
-                    type="checkbox"
-                    checked={filteredProducts.length > 0 && selectedIds.size === filteredProducts.length}
-                    onChange={handleSelectAll}
-                    className="w-4 h-4 rounded border-gray-300 text-slate-950 focus:ring-slate-950 cursor-pointer"
-                  />
-                </th>
-                <th className="py-3 px-4">Product details</th>
-                <th className="py-3 px-4 w-32">SKU Code</th>
-                <th className="py-3 px-4 w-32">Category</th>
-                <th className="py-3 px-4 w-36">Price</th>
-                <th className="py-3 px-4 w-36">Status</th>
-                <th className="py-3 px-4 w-44">Units Stock</th>
-                <th className="py-3 px-4 text-right w-24">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 text-xs font-semibold text-gray-700">
+          <>
+            {/* Desktop View Table */}
+            <div className="hidden md:block overflow-x-auto rounded-xl bg-white border border-gray-100">
+              <table className="w-full text-left border-collapse table-auto">
+                <thead>
+                  <tr className="border-b border-gray-100 text-[10px] font-black text-gray-400 uppercase tracking-widest bg-gray-50/75 select-none">
+                    <th className="py-3 px-4 w-10">
+                      <input
+                        type="checkbox"
+                        checked={filteredProducts.length > 0 && selectedIds.size === filteredProducts.length}
+                        onChange={handleSelectAll}
+                        className="w-4 h-4 rounded border-gray-300 text-slate-955 focus:ring-slate-955 cursor-pointer"
+                      />
+                    </th>
+                    <th className="py-3 px-4">Product details</th>
+                    <th className="py-3 px-4 w-32">SKU Code</th>
+                    <th className="py-3 px-4 w-32">Category</th>
+                    <th className="py-3 px-4 w-36">Price</th>
+                    <th className="py-3 px-4 w-36">Status</th>
+                    <th className="py-3 px-4 w-44">Units Stock</th>
+                    <th className="py-3 px-4 text-right w-24">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 text-xs font-semibold text-gray-700">
+                  {filteredProducts.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="text-center py-10 text-gray-400 text-xs">
+                        No catalog items match current filter criteria.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredProducts.map((p) => {
+                      const id = p._id || p.id || '';
+                      const isSelected = selectedIds.has(id);
+                      const editData = localEdits[id] || { price: p.price, stock: p.in_stock ? 15 : 0 };
+                      const isDirty = isRowDirty(id);
+                      const syncState = stockSyncStatus[id];
+
+                      return (
+                        <tr 
+                          key={id} 
+                          className={`hover:bg-slate-50/30 transition-colors cursor-pointer ${
+                            isSelected ? 'bg-slate-50/20' : ''
+                          }`}
+                          onClick={() => setSelectedProduct(p)}
+                        >
+                          {/* Checkbox */}
+                          <td className="py-4.5 px-4 w-10" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => handleSelectRow(id, e.target.checked)}
+                              className="w-4 h-4 rounded border-gray-300 text-slate-950 focus:ring-slate-950 cursor-pointer"
+                            />
+                          </td>
+
+                          {/* Product Details info */}
+                          <td className="py-4.5 px-4">
+                            <div className="flex items-center gap-3">
+                              <div className="relative w-12 h-14 rounded-lg overflow-hidden border border-gray-100 shrink-0 bg-stone-50 shadow-xs">
+                                <img
+                                  src={p.image_url}
+                                  alt={p.title}
+                                  className="object-cover w-full h-full"
+                                />
+                              </div>
+                              <div className="text-left max-w-[200px]">
+                                <p className="text-slate-900 font-bold truncate leading-tight">{p.title}</p>
+                                <p className="text-[10px] text-gray-400 font-normal mt-0.5">{p.size || 'Standard Size'}</p>
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* SKU Code */}
+                          <td className="py-4.5 px-4 font-mono text-[10px] tracking-wide text-gray-450 uppercase font-bold">
+                            SKU-CR-{id.slice(-6).toUpperCase()}
+                          </td>
+
+                          {/* Category */}
+                          <td className="py-4.5 px-4 text-gray-500 uppercase text-[9px] font-bold tracking-wider">
+                            {p.category}
+                          </td>
+
+                          {/* Price cell (Directly Inline Editable) */}
+                          <td 
+                            className="py-4.5 px-4 cursor-pointer hover:bg-slate-50/50 rounded-lg group"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveEditCell({ id, field: 'price' });
+                            }}
+                          >
+                            {activeEditCell?.id === id && activeEditCell.field === 'price' ? (
+                              <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                                <span className="text-gray-455 font-bold">₹</span>
+                                <input
+                                  type="number"
+                                  autoFocus
+                                  value={editData.price}
+                                  onChange={(e) => handleCellChange(id, 'price', parseFloat(e.target.value) || 0)}
+                                  onBlur={() => setActiveEditCell(null)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') setActiveEditCell(null);
+                                  }}
+                                  className="w-20 bg-gray-50 border border-gray-200 rounded px-1.5 py-0.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-900"
+                                />
+                              </div>
+                            ) : (
+                              <div className="flex items-center justify-between gap-1.5">
+                                <span className="font-extrabold text-slate-900 text-sm">
+                                  ₹{editData.price?.toFixed(2)}
+                                </span>
+                                <Edit2 className="w-3 h-3 text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+                              </div>
+                            )}
+                          </td>
+
+                          {/* Status Badge */}
+                          <td className="py-4.5 px-4">
+                            {getStockBadge(editData.stock)}
+                          </td>
+
+                          {/* Units Stock cell with Optimistic counter & DB sync indicator */}
+                          <td className="py-4.5 px-4" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => handleStockClick(id, -1)}
+                                className="text-gray-400 hover:text-slate-900 p-0.5 rounded-full transition-colors"
+                              >
+                                <MinusCircle className="w-4 h-4" />
+                              </button>
+                              
+                              <div 
+                                className="w-10 text-center cursor-pointer hover:bg-slate-50 rounded py-0.5 font-extrabold text-slate-900"
+                                onClick={() => setActiveEditCell({ id, field: 'stock' })}
+                              >
+                                {activeEditCell?.id === id && activeEditCell.field === 'stock' ? (
+                                  <input
+                                    type="number"
+                                    autoFocus
+                                    value={editData.stock}
+                                    onChange={(e) => handleCellChange(id, 'stock', parseInt(e.target.value) || 0)}
+                                    onBlur={() => {
+                                      setActiveEditCell(null);
+                                      handleStockInputChange(id, editData.stock);
+                                    }}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') {
+                                        setActiveEditCell(null);
+                                        handleStockInputChange(id, editData.stock);
+                                      }
+                                    }}
+                                    className="w-12 bg-gray-55 border border-gray-200 rounded px-1 py-0.5 text-center text-xs font-bold focus:outline-none focus:ring-1 focus:ring-slate-900"
+                                  />
+                                ) : (
+                                  <span>{editData.stock}</span>
+                                )}
+                              </div>
+
+                              <button
+                                onClick={() => handleStockClick(id, 1)}
+                                className="text-gray-400 hover:text-slate-900 p-0.5 rounded-full transition-colors"
+                              >
+                                <PlusCircle className="w-4 h-4" />
+                              </button>
+
+                              {/* Real-time DB Sync Indicators */}
+                              <div className="w-16 flex items-center justify-start text-[10px]">
+                                {syncState === 'saving' && (
+                                  <span className="flex items-center gap-1 text-slate-400 font-semibold">
+                                    <Loader2 className="w-3 h-3 animate-spin text-slate-500" />
+                                    Saving...
+                                  </span>
+                                )}
+                                {syncState === 'saved' && (
+                                  <span className="flex items-center gap-1 text-emerald-605 font-bold">
+                                    <CheckCircle2 className="w-3.5 h-3.5" />
+                                    Saved
+                                  </span>
+                                )}
+                                {syncState === 'error' && (
+                                  <span className="flex items-center gap-1 text-rose-600 font-bold" title="Reverted to DB state">
+                                    <AlertCircle className="w-3.5 h-3.5" />
+                                    Error
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* Action Column */}
+                          <td className="py-4.5 px-4 text-right relative" onClick={(e) => e.stopPropagation()}>
+                            {isDirty ? (
+                              <div className="flex items-center justify-end gap-1.5">
+                                <button
+                                  disabled={savingRowId === id}
+                                  onClick={() => handleSaveRow(id)}
+                                  className="p-1 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg shadow-xs hover:shadow transition-all"
+                                  title="Save Changes"
+                                >
+                                  <Check className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => handleRevertRow(id)}
+                                  className="p-1 bg-gray-100 hover:bg-gray-200 text-slate-600 rounded-lg transition-colors"
+                                  title="Revert"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="flex items-center justify-end">
+                                <button
+                                  onClick={() => setActiveMenuId(activeMenuId === id ? null : id)}
+                                  className="p-1.5 text-gray-400 hover:text-slate-900 hover:bg-gray-100 rounded-lg transition-colors"
+                                >
+                                  <MoreHorizontal className="w-4 h-4" />
+                                </button>
+
+                                {activeMenuId === id && (
+                                  <>
+                                    <div className="fixed inset-0 z-35" onClick={() => setActiveMenuId(null)}></div>
+                                    <div className="absolute right-4 mt-8 w-40 bg-white border border-gray-100 rounded-xl shadow-lg py-1.5 z-40 animate-in fade-in-50 slide-in-from-top-2 duration-150 text-left">
+                                      <button
+                                        onClick={() => {
+                                          setSelectedProduct(p);
+                                          setActiveMenuId(null);
+                                        }}
+                                        className="w-full px-4 py-2 hover:bg-gray-50 text-xs font-semibold text-slate-700 flex items-center gap-2"
+                                      >
+                                        <FolderOpen className="w-3.5 h-3.5 text-gray-400" />
+                                        View Details
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          setActiveMenuId(null);
+                                          onUpdateProduct?.(id, {}); 
+                                        }}
+                                        className="w-full px-4 py-2 hover:bg-gray-50 text-xs font-semibold text-slate-700 flex items-center gap-2"
+                                      >
+                                        <Edit2 className="w-3.5 h-3.5 text-gray-400" />
+                                        Edit Details
+                                      </button>
+                                      <button
+                                        onClick={() => handleToggleHideProduct(id, p.in_stock !== false)}
+                                        className="w-full px-4 py-2 hover:bg-gray-50 text-xs font-semibold text-slate-700 flex items-center gap-2"
+                                      >
+                                        <EyeOff className="w-3.5 h-3.5 text-gray-400" />
+                                        {p.in_stock !== false ? 'Hide Product' : 'Show Product'}
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          if (window.confirm("Are you sure you want to permanently delete this product?")) {
+                                            if (onDeleteProduct) {
+                                              onDeleteProduct(id);
+                                            } else {
+                                              fetch(`${API_URL}/api/products/${id}`, {
+                                                method: 'DELETE',
+                                                headers: { 'Authorization': `Bearer ${token}` }
+                                              }).then(() => fetchProducts());
+                                            }
+                                          }
+                                          setActiveMenuId(null);
+                                        }}
+                                        className="w-full px-4 py-2 hover:bg-rose-50 text-xs font-semibold text-rose-600 flex items-center gap-2 border-t border-gray-100 mt-1 pt-1"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                                        Delete Product
+                                      </button>
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile View Card Grid */}
+            <div className="block md:hidden space-y-3">
               {filteredProducts.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="text-center py-10 text-gray-400 text-xs">
-                    No catalog items match current filter criteria.
-                  </td>
-                </tr>
+                <div className="text-center py-10 text-gray-400 text-xs">
+                  No catalog items match current filter criteria.
+                </div>
               ) : (
                 filteredProducts.map((p) => {
                   const id = p._id || p.id || '';
@@ -683,197 +944,52 @@ export default function InventoryTable({
                   const editData = localEdits[id] || { price: p.price, stock: p.in_stock ? 15 : 0 };
                   const isDirty = isRowDirty(id);
                   const syncState = stockSyncStatus[id];
-
+                  
                   return (
-                    <tr 
-                      key={id} 
-                      className={`hover:bg-slate-50/30 transition-colors cursor-pointer ${
-                        isSelected ? 'bg-slate-50/20' : ''
-                      }`}
+                    <div
+                      key={id}
                       onClick={() => setSelectedProduct(p)}
+                      className={`bg-white dark:bg-slate-900 border rounded-xl p-4 space-y-3 shadow-xs active:scale-[0.98] transition-transform duration-100 select-none relative ${
+                        isSelected ? 'border-slate-900 dark:border-white bg-slate-50/10' : 'border-gray-250 dark:border-slate-850'
+                      }`}
                     >
-                      {/* Checkbox */}
-                      <td className="py-4.5 px-4 w-10" onClick={(e) => e.stopPropagation()}>
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={(e) => handleSelectRow(id, e.target.checked)}
-                          className="w-4 h-4 rounded border-gray-300 text-slate-950 focus:ring-slate-950 cursor-pointer"
-                        />
-                      </td>
-
-                      {/* Product Details info */}
-                      <td className="py-4.5 px-4">
-                        <div className="flex items-center gap-3">
-                          <div className="relative w-12 h-14 rounded-lg overflow-hidden border border-gray-100 shrink-0 bg-stone-50 shadow-xs">
-                            <img
-                              src={p.image_url}
-                              alt={p.title}
-                              className="object-cover w-full h-full"
-                            />
-                          </div>
-                          <div className="text-left max-w-[200px]">
-                            <p className="text-slate-900 font-bold truncate leading-tight">{p.title}</p>
-                            <p className="text-[10px] text-gray-400 font-normal mt-0.5">{p.size || 'Standard Size'}</p>
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* SKU Code */}
-                      <td className="py-4.5 px-4 font-mono text-[10px] tracking-wide text-gray-450 uppercase font-bold">
-                        SKU-CR-{id.slice(-6).toUpperCase()}
-                      </td>
-
-                      {/* Category */}
-                      <td className="py-4.5 px-4 text-gray-500 uppercase text-[9px] font-bold tracking-wider">
-                        {p.category}
-                      </td>
-
-                      {/* Price cell (Directly Inline Editable) */}
-                      <td 
-                        className="py-4.5 px-4 cursor-pointer hover:bg-slate-50/50 rounded-lg group"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setActiveEditCell({ id, field: 'price' });
-                        }}
-                      >
-                        {activeEditCell?.id === id && activeEditCell.field === 'price' ? (
-                          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                            <span className="text-gray-450 font-bold">₹</span>
-                            <input
-                              type="number"
-                              autoFocus
-                              value={editData.price}
-                              onChange={(e) => handleCellChange(id, 'price', parseFloat(e.target.value) || 0)}
-                              onBlur={() => setActiveEditCell(null)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') setActiveEditCell(null);
-                              }}
-                              className="w-20 bg-gray-50 border border-gray-200 rounded px-1.5 py-0.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-900"
-                            />
-                          </div>
-                        ) : (
-                          <div className="flex items-center justify-between gap-1.5">
-                            <span className="font-extrabold text-slate-900 text-sm">
-                              ₹{editData.price?.toFixed(2)}
-                            </span>
-                            <Edit2 className="w-3 h-3 text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity" />
-                          </div>
-                        )}
-                      </td>
-
-                      {/* Status Badge */}
-                      <td className="py-4.5 px-4">
-                        {getStockBadge(editData.stock)}
-                      </td>
-
-                      {/* Units Stock cell with Optimistic counter & DB sync indicator */}
-                      <td className="py-4.5 px-4" onClick={(e) => e.stopPropagation()}>
+                      {/* Top Row: Checkbox, SKU, Status & Actions */}
+                      <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleStockClick(id, -1)}
-                            className="text-gray-400 hover:text-slate-900 p-0.5 rounded-full transition-colors"
-                          >
-                            <MinusCircle className="w-4 h-4" />
-                          </button>
-                          
-                          <div 
-                            className="w-10 text-center cursor-pointer hover:bg-slate-50 rounded py-0.5 font-extrabold text-slate-900"
-                            onClick={() => setActiveEditCell({ id, field: 'stock' })}
-                          >
-                            {activeEditCell?.id === id && activeEditCell.field === 'stock' ? (
-                              <input
-                                type="number"
-                                autoFocus
-                                value={editData.stock}
-                                onChange={(e) => handleCellChange(id, 'stock', parseInt(e.target.value) || 0)}
-                                onBlur={() => {
-                                  setActiveEditCell(null);
-                                  handleStockInputChange(id, editData.stock);
-                                }}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') {
-                                    setActiveEditCell(null);
-                                    handleStockInputChange(id, editData.stock);
-                                  }
-                                }}
-                                className="w-12 bg-gray-50 border border-gray-200 rounded px-1 py-0.5 text-center text-xs font-bold focus:outline-none focus:ring-1 focus:ring-slate-900"
-                              />
-                            ) : (
-                              <span>{editData.stock}</span>
-                            )}
+                          <div onClick={(e) => e.stopPropagation()} className="flex items-center min-w-[32px] min-h-[32px]">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => handleSelectRow(id, e.target.checked)}
+                              className="w-5 h-5 rounded border-gray-300 text-slate-955 focus:ring-slate-955 cursor-pointer"
+                            />
                           </div>
-
-                          <button
-                            onClick={() => handleStockClick(id, 1)}
-                            className="text-gray-400 hover:text-slate-900 p-0.5 rounded-full transition-colors"
-                          >
-                            <PlusCircle className="w-4 h-4" />
-                          </button>
-
-                          {/* Real-time DB Sync Indicators */}
-                          <div className="w-16 flex items-center justify-start text-[10px]">
-                            {syncState === 'saving' && (
-                              <span className="flex items-center gap-1 text-slate-400 font-semibold">
-                                <Loader2 className="w-3 h-3 animate-spin text-slate-500" />
-                                Saving...
-                              </span>
-                            )}
-                            {syncState === 'saved' && (
-                              <span className="flex items-center gap-1 text-emerald-600 font-bold">
-                                <CheckCircle2 className="w-3.5 h-3.5" />
-                                Saved
-                              </span>
-                            )}
-                            {syncState === 'error' && (
-                              <span className="flex items-center gap-1 text-rose-600 font-bold" title="Reverted to DB state">
-                                <AlertCircle className="w-3.5 h-3.5" />
-                                Error
-                              </span>
-                            )}
-                          </div>
+                          <span className="font-mono text-[9px] uppercase tracking-wider text-gray-400 dark:text-slate-500 font-bold">
+                            SKU-CR-{id.slice(-6).toUpperCase()}
+                          </span>
                         </div>
-                      </td>
-
-                      {/* Action Column */}
-                      <td className="py-4.5 px-4 text-right relative" onClick={(e) => e.stopPropagation()}>
-                        {isDirty ? (
-                          <div className="flex items-center justify-end gap-1.5">
-                            <button
-                              disabled={savingRowId === id}
-                              onClick={() => handleSaveRow(id)}
-                              className="p-1 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg shadow-xs hover:shadow transition-all"
-                              title="Save Changes"
-                            >
-                              <Check className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() => handleRevertRow(id)}
-                              className="p-1 bg-gray-100 hover:bg-gray-200 text-slate-600 rounded-lg transition-colors"
-                              title="Revert"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="flex items-center justify-end">
+                        
+                        <div className="flex items-center gap-2">
+                          {getStockBadge(editData.stock)}
+                          
+                          <div onClick={(e) => e.stopPropagation()} className="relative">
                             <button
                               onClick={() => setActiveMenuId(activeMenuId === id ? null : id)}
-                              className="p-1.5 text-gray-400 hover:text-slate-900 hover:bg-gray-100 rounded-lg transition-colors"
+                              className="p-1.5 text-gray-405 hover:text-slate-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition-colors min-h-[36px] min-w-[36px]"
                             >
-                              <MoreHorizontal className="w-4 h-4" />
+                              <MoreHorizontal className="w-4.5 h-4.5" />
                             </button>
-
+                            
                             {activeMenuId === id && (
                               <>
-                                <div className="fixed inset-0 z-35" onClick={() => setActiveMenuId(null)}></div>
-                                <div className="absolute right-4 mt-8 w-40 bg-white border border-gray-100 rounded-xl shadow-lg py-1.5 z-40 animate-in fade-in-50 slide-in-from-top-2 duration-150 text-left">
+                                <div className="fixed inset-0 z-30" onClick={() => setActiveMenuId(null)}></div>
+                                <div className="absolute right-0 mt-1 w-40 bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 rounded-xl shadow-lg py-1.5 z-40 text-left">
                                   <button
                                     onClick={() => {
                                       setSelectedProduct(p);
                                       setActiveMenuId(null);
                                     }}
-                                    className="w-full px-4 py-2 hover:bg-gray-50 text-xs font-semibold text-slate-700 flex items-center gap-2"
+                                    className="w-full px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-2 min-h-[40px]"
                                   >
                                     <FolderOpen className="w-3.5 h-3.5 text-gray-400" />
                                     View Details
@@ -883,14 +999,14 @@ export default function InventoryTable({
                                       setActiveMenuId(null);
                                       onUpdateProduct?.(id, {}); 
                                     }}
-                                    className="w-full px-4 py-2 hover:bg-gray-50 text-xs font-semibold text-slate-700 flex items-center gap-2"
+                                    className="w-full px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-2 min-h-[40px]"
                                   >
                                     <Edit2 className="w-3.5 h-3.5 text-gray-400" />
                                     Edit Details
                                   </button>
                                   <button
                                     onClick={() => handleToggleHideProduct(id, p.in_stock !== false)}
-                                    className="w-full px-4 py-2 hover:bg-gray-50 text-xs font-semibold text-slate-700 flex items-center gap-2"
+                                    className="w-full px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-2 min-h-[40px]"
                                   >
                                     <EyeOff className="w-3.5 h-3.5 text-gray-400" />
                                     {p.in_stock !== false ? 'Hide Product' : 'Show Product'}
@@ -909,7 +1025,7 @@ export default function InventoryTable({
                                       }
                                       setActiveMenuId(null);
                                     }}
-                                    className="w-full px-4 py-2 hover:bg-rose-50 text-xs font-semibold text-rose-600 flex items-center gap-2 border-t border-gray-100 mt-1 pt-1"
+                                    className="w-full px-4 py-2.5 hover:bg-rose-50 dark:hover:bg-rose-950/20 text-xs font-semibold text-rose-600 flex items-center gap-2 border-t border-gray-100 dark:border-slate-800 mt-1 pt-1 min-h-[40px]"
                                   >
                                     <Trash2 className="w-3.5 h-3.5 text-rose-500" />
                                     Delete Product
@@ -918,15 +1034,139 @@ export default function InventoryTable({
                               </>
                             )}
                           </div>
-                        )}
-                      </td>
+                        </div>
+                      </div>
 
-                    </tr>
+                      {/* Product Info Block */}
+                      <div className="flex items-center gap-3">
+                        <div className="relative w-12 h-14 rounded-lg overflow-hidden border border-gray-100 dark:border-slate-800 shrink-0 bg-stone-50 shadow-xs">
+                          <img
+                            src={p.image_url}
+                            alt={p.title}
+                            className="object-cover w-full h-full"
+                          />
+                        </div>
+                        <div className="text-left min-w-0 flex-1">
+                          <p className="text-xs font-black text-slate-900 dark:text-white truncate leading-tight">{p.title}</p>
+                          <div className="flex items-center gap-1.5 mt-1">
+                            <span className="text-[9px] bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
+                              {p.category}
+                            </span>
+                            <span className="text-[10px] text-gray-400 dark:text-slate-500 font-semibold">{p.size || 'Standard Size'}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Price & Stock Stepper Row */}
+                      <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-slate-850">
+                        {/* Price cell (Directly Inline Editable) */}
+                        <div 
+                          className="cursor-pointer hover:bg-slate-50/50 dark:hover:bg-slate-800/50 rounded-lg py-1 px-2 -ml-2"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveEditCell({ id, field: 'price' });
+                          }}
+                        >
+                          {activeEditCell?.id === id && activeEditCell.field === 'price' ? (
+                            <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                              <span className="text-gray-405 font-bold">₹</span>
+                              <input
+                                type="number"
+                                autoFocus
+                                value={editData.price}
+                                onChange={(e) => handleCellChange(id, 'price', parseFloat(e.target.value) || 0)}
+                                onBlur={() => setActiveEditCell(null)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') setActiveEditCell(null);
+                                }}
+                                className="w-16 bg-gray-50 dark:bg-slate-950 border border-gray-250 dark:border-slate-850 rounded px-1.5 py-0.5 text-xs font-bold focus:outline-none text-slate-800 dark:text-white"
+                              />
+                            </div>
+                          ) : (
+                            <span className="font-extrabold text-slate-900 dark:text-white text-sm">
+                              ₹{editData.price?.toFixed(2)}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Stock Stepper */}
+                        <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            onClick={() => handleStockClick(id, -1)}
+                            className="text-gray-400 dark:text-slate-500 hover:text-slate-900 dark:hover:text-white p-1 rounded-full transition-colors active:scale-90 min-h-[36px] min-w-[36px] flex items-center justify-center border border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-950"
+                          >
+                            <MinusCircle className="w-4 h-4" />
+                          </button>
+                          
+                          <div 
+                            className="w-8 text-center cursor-pointer font-black text-slate-905 dark:text-slate-205 text-xs"
+                            onClick={() => setActiveEditCell({ id, field: 'stock' })}
+                          >
+                            {activeEditCell?.id === id && activeEditCell.field === 'stock' ? (
+                              <input
+                                type="number"
+                                autoFocus
+                                value={editData.stock}
+                                onChange={(e) => handleCellChange(id, 'stock', parseInt(e.target.value) || 0)}
+                                onBlur={() => {
+                                  setActiveEditCell(null);
+                                  handleStockInputChange(id, editData.stock);
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    setActiveEditCell(null);
+                                    handleStockInputChange(id, editData.stock);
+                                  }
+                                }}
+                                className="w-10 bg-gray-55 dark:bg-slate-950 border border-gray-250 dark:border-slate-850 rounded px-0.5 py-0.5 text-center text-xs font-bold text-slate-800 dark:text-white"
+                              />
+                            ) : (
+                              <span>{editData.stock}</span>
+                            )}
+                          </div>
+
+                          <button
+                            onClick={() => handleStockClick(id, 1)}
+                            className="text-gray-400 dark:text-slate-500 hover:text-slate-900 dark:hover:text-white p-1 rounded-full transition-colors active:scale-90 min-h-[36px] min-w-[36px] flex items-center justify-center border border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-950"
+                          >
+                            <PlusCircle className="w-4 h-4" />
+                          </button>
+                          
+                          {/* Sync indicator */}
+                          {syncState && (
+                            <div className="w-12 text-[9px] font-bold">
+                              {syncState === 'saving' && <span className="text-slate-400">Saving...</span>}
+                              {syncState === 'saved' && <span className="text-emerald-500">Saved</span>}
+                              {syncState === 'error' && <span className="text-rose-500">Err</span>}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {/* Save/Revert row controls if dirty */}
+                      {isDirty && (
+                        <div className="flex items-center justify-end gap-2 pt-2 border-t border-dashed border-gray-100 dark:border-slate-800" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            onClick={() => handleRevertRow(id)}
+                            className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-750 text-slate-650 dark:text-slate-300 rounded-lg"
+                          >
+                            Revert
+                          </button>
+                          <button
+                            disabled={savingRowId === id}
+                            onClick={() => handleSaveRow(id)}
+                            className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg flex items-center gap-1 shadow-xs"
+                          >
+                            {savingRowId === id ? 'Saving...' : 'Save'}
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   );
                 })
               )}
-            </tbody>
-          </table>
+            </div>
+          </>
         )}
       </div>
 

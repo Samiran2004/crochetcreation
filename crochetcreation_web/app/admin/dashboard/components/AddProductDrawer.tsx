@@ -290,16 +290,23 @@ export default function AddProductDrawer({ isOpen, onClose, onSuccess }: AddProd
         onClick={handleClose}
       ></div>
 
-      {/* Drawer Container */}
-      <div className="absolute inset-y-0 right-0 pl-10 max-w-full flex">
-        <div 
-          className={`w-screen max-w-lg bg-white shadow-2xl flex flex-col divide-y divide-gray-150 transform transition-transform duration-300 ease-in-out ${
-            drawerOpen ? 'translate-x-0' : 'translate-x-full'
-          }`}
-        >
-          
-          {/* Header */}
-          <div className="px-6 py-5 bg-slate-50 flex items-center justify-between">
+      {/* Drawer Container / Bottom Sheet */}
+      <div 
+        className={`fixed md:right-0 md:top-0 md:h-full bottom-0 left-0 right-0 h-[85vh] md:h-full w-full md:max-w-lg bg-white md:rounded-none rounded-t-3xl shadow-2xl z-50 flex flex-col divide-y divide-gray-150 transform transition-all duration-300 ease-in-out ${
+          drawerOpen 
+            ? 'translate-y-0 md:translate-y-0 md:translate-x-0' 
+            : 'translate-y-full md:translate-y-0 md:translate-x-full'
+        }`}
+      >
+        
+        {/* Header */}
+        <div className="px-6 py-5 bg-slate-50 flex flex-col justify-between shrink-0 rounded-t-3xl md:rounded-none">
+          {/* Drag handle for mobile */}
+          <div className="md:hidden flex justify-center pb-3">
+            <div className="w-12 h-1 bg-slate-300 rounded-full" />
+          </div>
+
+          <div className="flex items-center justify-between w-full">
             <div className="text-left">
               <h2 className="text-sm font-black text-slate-900 uppercase tracking-tight">Add New Product</h2>
               <p className="text-[10px] text-slate-500 font-bold uppercase mt-0.5 tracking-wider">
@@ -309,11 +316,12 @@ export default function AddProductDrawer({ isOpen, onClose, onSuccess }: AddProd
             <button
               onClick={handleClose}
               disabled={isSubmitting}
-              className="p-1.5 rounded-lg border border-slate-200 text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+              className="p-1.5 rounded-lg border border-slate-200 text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
+        </div>
 
           {/* Form Content */}
           <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-6 py-6 space-y-5 text-left pb-24">
@@ -553,12 +561,12 @@ export default function AddProductDrawer({ isOpen, onClose, onSuccess }: AddProd
           </form>
 
           {/* Sticky Drawer Footer Actions */}
-          <div className="absolute bottom-0 inset-x-0 bg-white border-t border-slate-150 px-6 py-4.5 flex items-center justify-end gap-3 z-10 shadow-lg">
+          <div className="absolute bottom-0 inset-x-0 bg-white border-t border-slate-150 px-6 py-4.5 pb-safe-bottom md:pb-4.5 flex items-center justify-end gap-3 z-10 shadow-lg select-none">
             <button
               type="button"
               disabled={isSubmitting}
               onClick={handleClose}
-              className="px-5 py-2.5 border border-slate-250 text-slate-500 hover:text-slate-800 hover:bg-slate-50 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors active:scale-95 disabled:opacity-50"
+              className="px-5 py-2.5 border border-slate-250 text-slate-500 hover:text-slate-800 hover:bg-slate-50 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-100 active:scale-95 disabled:opacity-50 min-h-[44px] flex items-center justify-center"
             >
               Cancel
             </button>
@@ -566,12 +574,12 @@ export default function AddProductDrawer({ isOpen, onClose, onSuccess }: AddProd
               type="button"
               onClick={handleSubmit}
               disabled={isSubmitting}
-              className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs uppercase tracking-wider py-2.5 px-6 rounded-xl flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all disabled:opacity-50"
+              className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs uppercase tracking-wider py-2.5 px-6 rounded-xl flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all duration-100 disabled:opacity-50 min-h-[44px]"
             >
               {isSubmitting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  {isUploadingImages ? 'Uploading Images...' : 'Saving Product...'}
+                  {isUploadingImages ? 'Uploading...' : 'Saving...'}
                 </>
               ) : (
                 'Save Product'
@@ -579,7 +587,6 @@ export default function AddProductDrawer({ isOpen, onClose, onSuccess }: AddProd
             </button>
           </div>
 
-        </div>
       </div>
     </div>
   );

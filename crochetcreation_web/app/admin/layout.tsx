@@ -499,11 +499,38 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 )}
               </div>
 
+              {/* Mobile Bottom Navigation Bar */}
+              <div className="fixed bottom-0 inset-x-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-gray-250/60 dark:border-slate-800 z-40 flex justify-around items-center py-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] px-4 shadow-lg md:hidden select-none">
+                {[
+                  { name: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
+                  { name: 'Orders', path: '/admin/orders', icon: ShoppingCart },
+                  { name: 'Products', path: '/admin/products', icon: Package },
+                  { name: 'Settings', path: '/admin/settings', icon: Settings },
+                ].map((item) => {
+                  const Icon = item.icon;
+                  const isActive = pathname === item.path;
+                  return (
+                    <button
+                      key={item.name}
+                      onClick={() => router.push(item.path)}
+                      className={`flex flex-col items-center justify-center min-w-[64px] min-h-[44px] rounded-xl transition-all duration-100 active:scale-90 ${
+                        isActive 
+                          ? 'text-slate-900 dark:text-white font-extrabold' 
+                          : 'text-gray-450 dark:text-slate-500'
+                      }`}
+                    >
+                      <Icon className={`w-5.5 h-5.5 ${isActive ? 'stroke-[2.5px]' : 'stroke-[1.8px]'}`} />
+                      <span className="text-[9px] font-black uppercase tracking-widest mt-1 scale-90">{item.name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
             </div>
           </header>
 
           {/* Scrollable Workspace Container */}
-          <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-gray-55/40 dark:bg-slate-950/70 transition-colors duration-250">
+          <main className="flex-1 overflow-y-auto p-4 pb-24 md:p-8 md:pb-8 bg-gray-55/40 dark:bg-slate-950/70 transition-colors duration-250 overscroll-contain">
             <div className="max-w-7xl mx-auto space-y-6">
               {children}
             </div>
