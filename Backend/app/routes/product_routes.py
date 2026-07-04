@@ -1,6 +1,6 @@
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, status, Depends
 from typing import List, Optional
-from app.models.product import ProductModel, ProductUpdate
+from app.models.product import ProductModel, ProductUpdate, ProductCreate
 from app.services.cloudinary_upload import upload_image_to_cloudinary, delete_image_by_url
 from app.core.db import get_database
 from app.api.deps import get_current_admin_user
@@ -11,87 +11,55 @@ router = APIRouter(prefix="/api/products", tags=["products"])
 
 @router.post("/", response_model=ProductModel, status_code=status.HTTP_201_CREATED)
 async def create_product(
-    title: str = Form(...),
-    description: str = Form(...),
-    price: float = Form(...),
-    category: str = Form(...),
-    originalPrice: Optional[float] = Form(None),
-    sellingPrice: Optional[float] = Form(None),
-    size: str = Form(""),
-    materials: str = Form(""),
-    care_instructions: str = Form(""),
-    in_stock: bool = Form(True),
-    delivery_time: Optional[str] = Form("5-7 working days"),
-    has_sizes: bool = Form(False),
-    image: UploadFile = File(None),
-    images: List[UploadFile] = File(None),
+    product_create: ProductCreate,
     current_admin: UserInDB = Depends(get_current_admin_user)
 ):
     try:
-        uploaded_urls = []
-        width = None
-        height = None
-        if images:
-            for img in images:
-                if img.filename:
-                    upload_res = await upload_image_to_cloudinary(img)
-                    uploaded_urls.append(upload_res["url"])
-                    if not width:
-                        width = upload_res["width"]
-                        height = upload_res["height"]
-        
-        if not uploaded_urls and image and image.filename:
-            upload_res = await upload_image_to_cloudinary(image)
-            uploaded_urls.append(upload_res["url"])
-            width = upload_res["width"]
-            height = upload_res["height"]
-            
-        if not uploaded_urls:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="At least one product image is required."
-            )
-            
-        image_url = uploaded_urls[0]
-        
-        # Ensure sellingPrice defaults to originalPrice if not provided
-        orig_price = originalPrice if originalPrice is not None else price
-        sell_price = sellingPrice if sellingPrice is not None else orig_price
-
-        # Prepare product data for insertion
-        product_data = {
-            "title": title,
-            "description": description,
-            "price": sell_price,
-            "originalPrice": orig_price,
-            "sellingPrice": sell_price,
-            "category": category,
-            "image_url": image_url,
-            "image_urls": uploaded_urls,
-            "size": size,
-            "materials": materials,
-            "care_instructions": care_instructions,
-            "in_stock": in_stock,
-            "delivery_time": delivery_time,
-            "has_sizes": has_sizes,
-            "width": width,
-            "height": height
-        }
-        
         db = get_database()
         if db is None:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Database connection is not initialized."
             )
-            
-        # Insert document into the MongoDB collection
+
+        sku = product_create.sku
+        if not sku or sku.strip() == "":
+            import random, string
+            sku = "SKU-CR-" + "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
+
+        orig_price = product_create.originalPrice if product_create.originalPrice is not None else product_create.price
+        sell_price = product_create.sellingPrice if product_create.sellingPrice is not None else orig_price
+
+        # Update in_stock based on stock_quantity
+        stock_q = product_create.stock_quantity if product_create.stock_quantity is not None else 15
+        in_st = product_create.in_stock if product_create.in_stock is not None else (stock_q > 0)
+
+        product_data = {
+            "title": product_create.title,
+            "description": product_create.description,
+            "price": sell_price,
+            "originalPrice": orig_price,
+            "sellingPrice": sell_price,
+            "category": product_create.category,
+            "image_url": product_create.image_url,
+            "image_urls": product_create.image_urls or [product_create.image_url],
+            "size": product_create.size or "",
+            "materials": product_create.materials or "",
+            "care_instructions": product_create.care_instructions or "",
+            "in_stock": in_st,
+            "stock_quantity": stock_q,
+            "stock_count": stock_q,
+            "delivery_time": product_create.delivery_time or "5-7 working days",
+            "has_sizes": product_create.has_sizes or False,
+            "width": product_create.width,
+            "height": product_create.height,
+            "sku": sku
+        }
+
         result = await db["products"].insert_one(product_data)
-        
-        # Retrieve the newly created product using the inserted ID
         inserted_product = await db["products"].find_one({"_id": result.inserted_id})
         return inserted_product
-        
+
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

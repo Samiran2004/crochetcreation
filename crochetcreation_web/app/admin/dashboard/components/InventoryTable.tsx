@@ -17,6 +17,7 @@ import {
   CheckCircle2,
   AlertCircle
 } from 'lucide-react';
+import AddProductDrawer from './AddProductDrawer';
 
 interface Product {
   _id?: string;
@@ -82,6 +83,7 @@ export default function InventoryTable({
   // Drawer state
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
 
   // Base API configuration
   const API_URL = useMemo(() => {
@@ -598,7 +600,7 @@ export default function InventoryTable({
 
         {/* ➕ Add Product Button */}
         <button
-          onClick={onAddProduct}
+          onClick={() => setIsAddDrawerOpen(true)}
           className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs uppercase tracking-wider py-2 px-4 rounded-xl flex items-center justify-center gap-1.5 shadow-sm hover:shadow-md transition-all active:scale-95 shrink-0"
         >
           <Plus className="w-4 h-4" /> Add Product
@@ -1063,6 +1065,13 @@ export default function InventoryTable({
           </div>
         </div>
       )}
+
+      {/* Add Product Drawer */}
+      <AddProductDrawer
+        isOpen={isAddDrawerOpen}
+        onClose={() => setIsAddDrawerOpen(false)}
+        onSuccess={fetchProducts}
+      />
 
     </div>
   );

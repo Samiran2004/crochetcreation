@@ -24,6 +24,7 @@ class ProductModel(BaseModel):
     has_sizes: Optional[bool] = Field(default=False)
     width: Optional[int] = Field(default=None)
     height: Optional[int] = Field(default=None)
+    sku: Optional[str] = Field(default=None)
 
     class Config:
         populate_by_name = True
@@ -36,9 +37,31 @@ class ProductModel(BaseModel):
                 "category": "toys",
                 "image_url": "https://res.cloudinary.com/demo/image/upload/v1234/crochet_rabbit.jpg",
                 "width": 1200,
-                "height": 900
+                "height": 900,
+                "sku": "SKU-CR-A1B2C3"
             }
         }
+
+class ProductCreate(BaseModel):
+    title: str = Field(..., min_length=1)
+    description: str
+    price: float = Field(..., gt=0)
+    originalPrice: Optional[float] = Field(default=None, gt=0)
+    sellingPrice: Optional[float] = Field(default=None, gt=0)
+    category: str
+    image_url: str
+    image_urls: Optional[List[str]] = Field(default_factory=list)
+    size: Optional[str] = Field(default="")
+    materials: Optional[str] = Field(default="")
+    care_instructions: Optional[str] = Field(default="")
+    in_stock: Optional[bool] = Field(default=True)
+    stock_quantity: Optional[int] = Field(default=15)
+    stock_count: Optional[int] = Field(default=15)
+    delivery_time: Optional[str] = Field(default="5-7 working days")
+    has_sizes: Optional[bool] = Field(default=False)
+    width: Optional[int] = Field(default=None)
+    height: Optional[int] = Field(default=None)
+    sku: Optional[str] = Field(default=None)
 
 class ProductUpdate(BaseModel):
     title: Optional[str] = None
@@ -59,3 +82,4 @@ class ProductUpdate(BaseModel):
     has_sizes: Optional[bool] = None
     width: Optional[int] = None
     height: Optional[int] = None
+    sku: Optional[str] = None
