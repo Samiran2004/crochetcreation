@@ -1,6 +1,6 @@
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, status, Depends
 from typing import List, Optional
-from app.models.product import ProductModel
+from app.models.product import ProductModel, ProductUpdate
 from app.services.cloudinary_upload import upload_image_to_cloudinary, delete_image_by_url
 from app.core.db import get_database
 from app.api.deps import get_current_admin_user
@@ -271,6 +271,70 @@ async def update_product(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to update product: {str(e)}"
+        )
+
+@router.patch("/{product_id}", response_model=ProductModel)
+async def patch_product(
+    product_id: str,
+    product_update: ProductUpdate,
+    current_admin: UserInDB = Depends(get_current_admin_user)
+):
+    db = get_database()
+    if db is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database connection is not initialized."
+        )
+    try:
+        # Check if product exists first
+        existing_product = await db["products"].find_one({"_id": ObjectId(product_id)})
+        if not existing_product:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Product not found"
+            )
+
+        # Prepare update data using dict(exclude_unset=True) or model_dump(exclude_unset=True)
+        update_data = product_update.model_dump(exclude_unset=True)
+
+        # Sync original/selling prices if they are being updated
+        if "originalPrice" in update_data or "sellingPrice" in update_data or "price" in update_data:
+            orig_price = update_data.get("originalPrice", existing_product.get("originalPrice"))
+            sell_price = update_data.get("sellingPrice", existing_product.get("sellingPrice"))
+            
+            # If price is explicitly updated but sellingPrice is not, sync it
+            if "price" in update_data and "sellingPrice" not in update_data:
+                update_data["sellingPrice"] = update_data["price"]
+                sell_price = update_data["price"]
+            
+            if orig_price is not None and sell_price is None:
+                update_data["sellingPrice"] = orig_price
+                update_data["price"] = orig_price
+            elif sell_price is not None and orig_price is None:
+                update_data["originalPrice"] = sell_price
+                update_data["price"] = sell_price
+            elif sell_price is not None:
+                update_data["price"] = sell_price
+
+        # Sync in_stock status if stock_quantity or stock_count changes
+        if "stock_quantity" in update_data:
+            update_data["in_stock"] = update_data["stock_quantity"] > 0
+            # Also keep stock_count synced
+            update_data["stock_count"] = update_data["stock_quantity"]
+        elif "stock_count" in update_data:
+            update_data["in_stock"] = update_data["stock_count"] > 0
+            # Also keep stock_quantity synced
+            update_data["stock_quantity"] = update_data["stock_count"]
+
+        if update_data:
+            await db["products"].update_one({"_id": ObjectId(product_id)}, {"$set": update_data})
+
+        updated_product = await db["products"].find_one({"_id": ObjectId(product_id)})
+        return updated_product
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to partially update product: {str(e)}"
         )
 
 @router.delete("/{product_id}", status_code=status.HTTP_204_NO_CONTENT)

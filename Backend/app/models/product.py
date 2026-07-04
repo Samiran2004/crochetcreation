@@ -18,6 +18,8 @@ class ProductModel(BaseModel):
     materials: Optional[str] = Field(default="")
     care_instructions: Optional[str] = Field(default="")
     in_stock: Optional[bool] = Field(default=True)
+    stock_quantity: Optional[int] = Field(default=15)
+    stock_count: Optional[int] = Field(default=15)
     delivery_time: Optional[str] = Field(default="5-7 working days")
     has_sizes: Optional[bool] = Field(default=False)
     width: Optional[int] = Field(default=None)
@@ -25,9 +27,7 @@ class ProductModel(BaseModel):
 
     class Config:
         populate_by_name = True
-        json_encoders = {
-            # Handle encoding for PyObjectId if custom serialization is needed
-        }
+        json_encoders = {}
         json_schema_extra = {
             "example": {
                 "title": "Cute Crochet Rabbit Toy",
@@ -39,3 +39,23 @@ class ProductModel(BaseModel):
                 "height": 900
             }
         }
+
+class ProductUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    price: Optional[float] = None
+    originalPrice: Optional[float] = None
+    sellingPrice: Optional[float] = None
+    category: Optional[str] = None
+    image_url: Optional[str] = None
+    image_urls: Optional[List[str]] = None
+    size: Optional[str] = None
+    materials: Optional[str] = None
+    care_instructions: Optional[str] = None
+    in_stock: Optional[bool] = None
+    stock_quantity: Optional[int] = None
+    stock_count: Optional[int] = None
+    delivery_time: Optional[str] = None
+    has_sizes: Optional[bool] = None
+    width: Optional[int] = None
+    height: Optional[int] = None

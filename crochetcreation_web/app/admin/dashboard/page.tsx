@@ -51,6 +51,7 @@ import {
 } from 'recharts';
 import OrderTable from './components/OrderTable';
 import OrderDrawer from './components/OrderDrawer';
+import InventoryTable from './components/InventoryTable';
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -250,6 +251,55 @@ export default function AdminDashboard() {
       console.error("Stock sync error:", err);
     } finally {
       setUpdatingStockId(null);
+    }
+  };
+
+  const handleUpdateProduct = async (productId: string, updatedFields: Partial<any>) => {
+    try {
+      // If updating fields are empty, redirect to edit page
+      if (Object.keys(updatedFields).length === 0) {
+        window.open(`/admin/products`, '_blank');
+        return;
+      }
+
+      const res = await fetch(`${API_URL}/api/products/${productId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(updatedFields)
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        // Update product state locally
+        setProducts(prev => prev.map(p => (p._id === productId || p.id === productId ? updated : p)));
+        return updated;
+      } else {
+        const err = await res.json();
+        alert(`Failed to update product: ${err.detail || 'Server error'}`);
+      }
+    } catch (err) {
+      console.error("Product update error:", err);
+      alert("Failed to connect to backend product server.");
+    }
+  };
+
+  const handleDeleteProduct = async (productId: string) => {
+    try {
+      const res = await fetch(`${API_URL}/api/products/${productId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (res.ok) {
+        setProducts(prev => prev.filter(p => p._id !== productId && p.id !== productId));
+      } else {
+        alert("Failed to delete product.");
+      }
+    } catch (err) {
+      console.error("Delete product error:", err);
     }
   };
 
@@ -768,146 +818,18 @@ export default function AdminDashboard() {
       {/* ==================================================== */}
       {activeTab === 'inventory' && (
         <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-6 space-y-6">
-          <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
-            
-            <div className="text-left">
-              <h3 className="text-base font-black tracking-tight text-slate-900 uppercase">Inventory Stock Control</h3>
-              <p className="text-[10px] text-gray-450 mt-0.5 font-medium">Bulk update active units, allocate SKU codes, and track restocking metrics.</p>
-            </div>
-
-            {/* Filters */}
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Search SKU or title..."
-                  value={inventorySearch}
-                  onChange={(e) => setInventorySearch(e.target.value)}
-                  className="bg-gray-50 border border-gray-200 rounded-xl pl-9 pr-4 py-2 text-xs focus:ring-1 focus:ring-slate-900 focus:outline-none placeholder-gray-400 font-semibold shadow-xs"
-                />
-                <Search className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-2.5" />
-              </div>
-
-              <select
-                value={stockFilter}
-                onChange={(e) => setStockFilter(e.target.value)}
-                className="bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold uppercase tracking-wider text-slate-700 shadow-xs focus:outline-none cursor-pointer hover:border-gray-300"
-              >
-                <option value="ALL">All Stocks</option>
-                <option value="IN">In Stock</option>
-                <option value="LOW">Low Stock (≤5)</option>
-                <option value="OUT">Out of Stock</option>
-              </select>
-            </div>
-
+          <div className="text-left">
+            <h3 className="text-base font-black tracking-tight text-slate-900 uppercase">Inventory Stock Control</h3>
+            <p className="text-[10px] text-gray-450 mt-0.5 font-medium">Bulk update active units, allocate SKU codes, and track restocking metrics.</p>
           </div>
-
-          {/* Stock Table */}
-          <div className="overflow-x-auto border border-gray-100 rounded-xl">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-gray-100 text-[10px] font-black text-gray-400 uppercase tracking-widest bg-gray-50/75">
-                  <th className="py-3 px-4">Product Info</th>
-                  <th className="py-3 px-4">SKU Code</th>
-                  <th className="py-3 px-4">Category</th>
-                  <th className="py-3 px-4">Price</th>
-                  <th className="py-3 px-4">Status Indicator</th>
-                  <th className="py-3 px-4">Units Stock</th>
-                  <th className="py-3 px-4 text-right">Quick Restock / Sync</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 text-xs font-semibold">
-                {filteredProducts.map((p) => {
-                  const id = p._id || p.id;
-                  const currentStock = stockEditState[id] || 0;
-                  
-                  let stockBadge = "bg-rose-50 text-rose-700 ring-rose-200"; 
-                  let badgeText = "Out of Stock";
-                  if (currentStock > 5) {
-                    stockBadge = "bg-emerald-50 text-emerald-700 ring-emerald-200";
-                    badgeText = "In Stock";
-                  } else if (currentStock > 0) {
-                    stockBadge = "bg-amber-50 text-amber-700 ring-amber-200";
-                    badgeText = "Low Stock";
-                  }
-
-                  return (
-                    <tr key={id} className="hover:bg-gray-50/50 transition-colors">
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-3">
-                          <div className="relative w-10 h-12 rounded-lg overflow-hidden border border-gray-100 shrink-0 bg-stone-50">
-                            <Image
-                              src={p.image_url}
-                              alt={p.title}
-                              fill
-                              sizes="40px"
-                              className="object-cover"
-                            />
-                          </div>
-                          <div className="text-left">
-                            <p className="text-slate-900 font-bold truncate max-w-[150px]">{p.title}</p>
-                            <p className="text-[10px] text-gray-400 font-normal">{p.size || 'Standard Size'}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-3 px-4 text-slate-500 uppercase font-bold text-[10px] tracking-wide">
-                        SKU-CR-{id?.slice(-6).toUpperCase()}
-                      </td>
-                      <td className="py-3 px-4 text-gray-500 uppercase text-[9px] tracking-wider font-bold">
-                        {p.category}
-                      </td>
-                      <td className="py-3 px-4 font-bold text-slate-800">
-                        ₹{p.price?.toFixed(2)}
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className={`px-2.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest ring-1 ${stockBadge}`}>
-                          {badgeText}
-                        </span>
-                      </td>
-                      
-                      {/* Interactive Stock Number Counter */}
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            onClick={() => {
-                              const nextVal = Math.max(0, currentStock - 1);
-                              setStockEditState(prev => ({ ...prev, [id]: nextVal }));
-                            }}
-                            className="w-6 h-6 rounded-md border border-gray-200 flex items-center justify-center hover:bg-gray-100 transition-colors text-slate-700"
-                          >
-                            <Minus className="w-3 h-3" />
-                          </button>
-                          <span className="w-8 text-center font-black text-slate-900">{currentStock}</span>
-                          <button
-                            onClick={() => {
-                              const nextVal = currentStock + 1;
-                              setStockEditState(prev => ({ ...prev, [id]: nextVal }));
-                            }}
-                            className="w-6 h-6 rounded-md border border-gray-200 flex items-center justify-center hover:bg-gray-100 transition-colors text-slate-700"
-                          >
-                            <Plus className="w-3 h-3" />
-                          </button>
-                        </div>
-                      </td>
-
-                      {/* Sync to DB action */}
-                      <td className="py-3 px-4 text-right">
-                        <button
-                          disabled={updatingStockId === id}
-                          onClick={() => handleUpdateStockLevel(id, currentStock)}
-                          className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all disabled:opacity-45 flex items-center gap-1 ml-auto shadow-xs active:scale-95"
-                        >
-                          <Save className="w-3 h-3" />
-                          {updatingStockId === id ? 'Syncing...' : 'Save Sync'}
-                        </button>
-                      </td>
-
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <InventoryTable
+            products={products}
+            onUpdateProduct={handleUpdateProduct}
+            onDeleteProduct={handleDeleteProduct}
+            onAddProduct={() => {
+              window.open('/admin/products', '_blank');
+            }}
+          />
         </div>
       )}
 
