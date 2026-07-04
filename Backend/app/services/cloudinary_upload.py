@@ -93,3 +93,23 @@ async def delete_image_by_url(url: str):
     except Exception as e:
         print(f"Failed to delete Cloudinary image from URL {url}: {e}")
 
+async def upload_pdf_to_cloudinary(pdf_bytes: bytes, order_id: str) -> str:
+    """
+    Uploads generated PDF bytes to Cloudinary.
+    Returns the secure URL of the uploaded PDF document.
+    """
+    import asyncio
+    # Cloudinary upload is blocking, run in an executor
+    loop = asyncio.get_event_loop()
+    result = await loop.run_in_executor(
+        None,
+        lambda: cloudinary.uploader.upload(
+            pdf_bytes,
+            folder="crochetcreation/invoices",
+            public_id=f"invoice_{order_id}",
+            resource_type="raw",
+            format="pdf"
+        )
+    )
+    return result.get("secure_url")
+

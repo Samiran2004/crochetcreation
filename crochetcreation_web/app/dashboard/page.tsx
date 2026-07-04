@@ -18,7 +18,8 @@ import {
   Loader2, 
   Eye,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Download
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 
@@ -53,6 +54,7 @@ interface Order {
   payment_method: string;
   status: string;
   created_at: string;
+  invoice_url?: string;
 }
 
 export default function UserDashboard() {
@@ -93,6 +95,7 @@ export default function UserDashboard() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [downloadingOrderId, setDownloadingOrderId] = useState<string | null>(null);
 
   // UI Notification Toast
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -105,6 +108,38 @@ export default function UserDashboard() {
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
+  };
+
+  // Handle PDF invoice generation and download on-the-fly
+  const handleDownloadInvoice = async (orderId: string) => {
+    if (!orderId || !token) return;
+    setDownloadingOrderId(orderId);
+    try {
+      const response = await fetch(`${API_URL}/api/orders/${orderId}/invoice`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Invoice_CrochetCreation_${orderId.substring(orderId.length - 8).toUpperCase()}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        showToast('Invoice downloaded successfully.');
+      } else {
+        const err = await response.json();
+        showToast(err.detail || 'Failed to download invoice.', 'error');
+      }
+    } catch (err) {
+      showToast('Network error downloading invoice.', 'error');
+    } finally {
+      setDownloadingOrderId(null);
+    }
   };
 
   // Sync session and settings
@@ -680,6 +715,21 @@ export default function UserDashboard() {
                             </div>
                             
                             <div className="flex items-center gap-3">
+                              {order.status === 'Confirmed' && (
+                                <button
+                                  disabled={downloadingOrderId === orderId}
+                                  onClick={() => handleDownloadInvoice(orderId)}
+                                  className="flex items-center gap-2 text-xs font-semibold text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-xl transition-colors disabled:opacity-50"
+                                >
+                                  {downloadingOrderId === orderId ? (
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                  ) : (
+                                    <Download className="w-3.5 h-3.5" />
+                                  )}
+                                  <span>{downloadingOrderId === orderId ? 'Generating...' : 'Download Invoice'}</span>
+                                </button>
+                              )}
+                              
                               <span className={`text-[10px] font-black tracking-widest px-3 py-1 rounded-full uppercase ${badgeClasses}`}>
                                 {order.status}
                               </span>
@@ -968,7 +1018,24 @@ export default function UserDashboard() {
             </div>
 
             {/* Modal Footer */}
-            <div className="bg-stone-50 px-6 py-4 flex justify-end shrink-0 border-t border-stone-100">
+            <div className="bg-stone-50 px-6 py-4 flex justify-between items-center shrink-0 border-t border-stone-100">
+                              <div>
+                                {selectedOrder.status === 'Confirmed' && (
+                                  <button
+                                    disabled={downloadingOrderId === (selectedOrder.id || selectedOrder._id)}
+                                    onClick={() => handleDownloadInvoice(selectedOrder.id || selectedOrder._id || '')}
+                                    className="flex items-center gap-2 text-xs font-semibold text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-4 py-2.5 rounded-xl transition-colors disabled:opacity-50"
+                                  >
+                                    {downloadingOrderId === (selectedOrder.id || selectedOrder._id) ? (
+                                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    ) : (
+                                      <Download className="w-3.5 h-3.5" />
+                                    )}
+                                    <span>{downloadingOrderId === (selectedOrder.id || selectedOrder._id) ? 'Generating...' : 'Download Invoice'}</span>
+                                  </button>
+                                )}
+                              </div>
+              
               <button
                 onClick={() => setSelectedOrder(null)}
                 className="bg-[#6B5656] hover:bg-[#4A3E3E] text-white px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-colors shadow-sm"

@@ -197,6 +197,11 @@ class MockDatabase:
     def __getitem__(self, name):
         return MockCollection(name, self)
 
+    async def command(self, cmd, *args, **kwargs):
+        if cmd == "ping":
+            return {"ok": 1.0}
+        raise NotImplementedError(f"Command {cmd} is not implemented in MockDatabase.")
+
 class Database:
     client = None
     db = None
@@ -204,7 +209,8 @@ class Database:
 db_instance = Database()
 
 # Connect Database...
-def connect_to_mongo():
+async def connect_to_mongo():
+    import os
     try:
         # Compatibility patch for bcrypt 4.1.0+ and passlib
         try:
@@ -219,11 +225,24 @@ def connect_to_mongo():
         # Try standard client initialization
         db_instance.client = AsyncIOMotorClient(settings.MONGO_URI, serverSelectionTimeoutMS=2000)
         db_instance.db = db_instance.client[settings.DATABASE_NAME]
+        
+        # Ping the admin database to verify active connection (AsyncIOMotorClient is lazy)
+        await db_instance.client.admin.command('ping')
         print("Connected to MongoDB Atlas successfully.")
     except Exception as e:
-        print(f"Failed to connect to MongoDB Atlas: {e}. Falling back to in-memory MockDatabase.")
-        db_instance.client = None
-        db_instance.db = MockDatabase()
+        print(f"Failed to connect to MongoDB Atlas: {e}")
+        
+        is_render = "RENDER" in os.environ
+        fallback_enabled = getattr(settings, "DB_FALLBACK_ENABLED", False)
+        
+        if fallback_enabled and not is_render:
+            print("Falling back to in-memory MockDatabase.")
+            db_instance.client = None
+            db_instance.db = MockDatabase()
+        else:
+            print("Database connection failed. Fallback is disabled. Database instance set to None.")
+            db_instance.client = None
+            db_instance.db = None
 
 # Close database connection...
 def close_mongo_connection():

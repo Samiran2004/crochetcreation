@@ -281,7 +281,27 @@ async def send_order_email(
             "name": f"Invoice_CrochetCreation_{order_id}.pdf"
         }
 
-    await send_brevo_email(to_email, customer_name, subject, html_content, attachment)
+    success = await send_brevo_email(to_email, customer_name, subject, html_content, attachment)
+
+    # Update database directly to reflect email delivery status
+    try:
+        from app.core.db import get_database
+        from bson import ObjectId
+        db = get_database()
+        if db is not None:
+            o_id = order_details.get("_id") or order_details.get("id")
+            if o_id:
+                # Ensure we have ObjectId format
+                query_id = ObjectId(o_id) if isinstance(o_id, str) else o_id
+                await db["orders"].update_one(
+                    {"_id": query_id},
+                    {"$set": {"email_sent": success}}
+                )
+                logger.info(f"Updated order {o_id} email_sent status to {success}")
+    except Exception as db_err:
+        logger.error(f"Error updating order email_sent status in DB: {db_err}")
+
+    return success
 
 async def generate_and_send_invoice_task(to_email: str, name: str, order_data: dict):
     """
@@ -293,6 +313,19 @@ async def generate_and_send_invoice_task(to_email: str, name: str, order_data: d
         await send_order_email(to_email, name, order_data, pdf_bytes)
     except Exception as e:
         logger.error(f"Error generating/sending invoice: {str(e)}")
+        try:
+            from app.core.db import get_database
+            from bson import ObjectId
+            db = get_database()
+            o_id = order_data.get("_id") or order_data.get("id")
+            if db is not None and o_id:
+                query_id = ObjectId(o_id) if isinstance(o_id, str) else o_id
+                await db["orders"].update_one(
+                    {"_id": query_id},
+                    {"$set": {"email_sent": False}}
+                )
+        except Exception as db_err:
+            logger.error(f"Error updating failed invoice email status in DB: {db_err}")
 
 async def send_welcome_email(to_email: str, first_name: str, last_name: str, mobile: str):
     """

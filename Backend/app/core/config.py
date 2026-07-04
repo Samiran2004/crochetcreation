@@ -27,4 +27,7 @@ class Settings:
     # Cron-job.org configuration
     CRONJOB_API_KEY: str = os.getenv("CRONJOB_API_KEY", "")
 
+    # Database Fallback Configuration
+    DB_FALLBACK_ENABLED: bool = os.getenv("DB_FALLBACK_ENABLED", "false").lower() == "true"
+
 settings = Settings()

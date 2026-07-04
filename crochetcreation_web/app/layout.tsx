@@ -3,8 +3,34 @@ import type { Metadata } from 'next';
 import CartDrawer from './components/CartDrawer';
 
 export const metadata: Metadata = {
-  title: 'Crochet Creation | Handcrafted Knitwear & Crochet Studio',
-  description: 'A modern, feminine, artisanal e-commerce shop featuring bespoke crochet plushies, cozy apparel, and DIY masterclasses.',
+  metadataBase: new URL('https://crochetcreation.vercel.app'),
+  title: {
+    default: 'Crochet Creation | Premium Handcrafted Items',
+    template: '%s | Crochet Creation',
+  },
+  description: 'Discover aesthetic, handmade crochet plushies, cozy apparel, and DIY masterclasses crafted with love.',
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    url: 'https://crochetcreation.vercel.app',
+    siteName: 'Crochet Creation',
+    title: 'Crochet Creation | Premium Handcrafted Items',
+    description: 'Discover aesthetic, handmade crochet plushies, cozy apparel, and DIY masterclasses crafted with love.',
+    images: [
+      {
+        url: '/og-image.jpg',
+        width: 1200,
+        height: 630,
+        alt: 'Crochet Creation - Premium Handcrafted Items & Crochet Studio',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Crochet Creation | Premium Handcrafted Items',
+    description: 'Discover aesthetic, handmade crochet plushies, cozy apparel, and DIY masterclasses crafted with love.',
+    images: ['/og-image.jpg'],
+  },
 };
 
 export default function RootLayout({

@@ -13,7 +13,7 @@ from app.routes.user_routes import router as user_router
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup: Connect to MongoDB Atlas
-    connect_to_mongo()
+    await connect_to_mongo()
     yield
     # Shutdown: Close database connection
     close_mongo_connection()

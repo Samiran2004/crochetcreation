@@ -59,6 +59,8 @@ class OrderResponse(BaseModel):
     shipping_address: Optional[str] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
+    email_sent: bool = False
+    invoice_url: Optional[str] = None
 
     class Config:
         populate_by_name = True
