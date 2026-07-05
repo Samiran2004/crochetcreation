@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useOrderWebSocket } from '../hooks/useOrderWebSocket';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { 
@@ -243,6 +244,37 @@ export default function UserDashboard() {
       fetchUserProfile(token);
     }
   }, [activeTab]);
+
+  // WebSocket live updates connection
+  useOrderWebSocket(
+    useCallback((message: any) => {
+      const { action, data } = message;
+      // Guard: only process if the order belongs to this user
+      const currentUserId = userProfile?.id || userProfile?._id;
+      const belongsToUser = 
+        (data.user_id && currentUserId && String(data.user_id) === String(currentUserId)) ||
+        (data.customer_email && userProfile?.email && String(data.customer_email).toLowerCase() === String(userProfile.email).toLowerCase());
+
+      if (!belongsToUser) return;
+
+      if (action === 'order_created') {
+        setOrders(prev => {
+          if (prev.some(o => (o.id || o._id) === (data.id || data._id))) return prev;
+          return [data, ...prev];
+        });
+        showToast('A new order has been placed! 🧶');
+      } else if (action === 'order_updated') {
+        setOrders(prev => prev.map(o => (o.id || o._id) === (data.id || data._id) ? data : o));
+        setSelectedOrder(prev => {
+          if (prev && (prev.id || prev._id) === (data.id || data._id)) {
+            return data;
+          }
+          return prev;
+        });
+        showToast(`Order status updated to: ${data.status}! 📦`);
+      }
+    }, [userProfile])
+  );
 
   // Handle profile update
   const handleUpdateProfile = async (e: React.FormEvent) => {

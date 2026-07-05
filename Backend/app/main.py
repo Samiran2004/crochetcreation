@@ -56,3 +56,18 @@ async def keep_alive_ping():
     """Endpoint for cron jobs to keep the Render server awake."""
     return {"status": "Alive", "message": "Server is awake and running!"}
 
+from fastapi import WebSocket, WebSocketDisconnect
+from app.utils.websocket import manager
+
+@app.websocket("/api/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await manager.connect(websocket)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+    except Exception:
+        manager.disconnect(websocket)
+
+

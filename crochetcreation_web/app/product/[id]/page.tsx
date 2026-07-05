@@ -395,50 +395,55 @@ export default function ProductDetailPage() {
         url: `${API_URL}/api/orders/`,
         tokenPresent: !!savedToken
       });
+
+      const orderData = {
+        customer_name: checkoutFormData.name,
+        customer_email: checkoutFormData.email,
+        customer_mobile: checkoutFormData.mobile,
+        items: [
+          {
+            product_id: product?._id || productId || '',
+            title: productName,
+            price: productPrice,
+            quantity: quantity,
+            size: hasSize ? selectedSize : undefined
+          }
+        ],
+        total_amount: totalPrice,
+        payment_method: checkoutFormData.paymentMethod,
+        shipping_address: checkoutFormData.address,
+        latitude: checkoutFormData.latitude,
+        longitude: checkoutFormData.longitude
+      };
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
       if (savedToken) {
-        const orderData = {
-          customer_name: checkoutFormData.name,
-          customer_email: checkoutFormData.email,
-          customer_mobile: checkoutFormData.mobile,
-          items: [
-            {
-              product_id: product?._id || productId || '',
-              title: productName,
-              price: productPrice,
-              quantity: quantity,
-              size: hasSize ? selectedSize : undefined
-            }
-          ],
-          total_amount: totalPrice,
-          payment_method: checkoutFormData.paymentMethod,
-          shipping_address: checkoutFormData.address,
-          latitude: checkoutFormData.latitude,
-          longitude: checkoutFormData.longitude
-        };
-
-        const orderResponse = await fetch(`${API_URL}/api/orders/`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${savedToken}`
-          },
-          body: JSON.stringify(orderData)
-        });
-
-        console.log('[Checkout] Backend response received:', {
-          status: orderResponse.status,
-          ok: orderResponse.ok
-        });
-
-        if (!orderResponse.ok) {
-          const errData = await orderResponse.json().catch(() => ({}));
-          console.error('[Checkout API Error]', orderResponse.status, errData);
-          throw new Error(errData.detail || 'Failed to record the order on the server.');
-        }
-        console.log('[Checkout] Order recorded successfully on server.');
-      } else {
-        console.warn('[Checkout] No token found in localStorage or state. Skipping DB save.');
+        headers['Authorization'] = `Bearer ${savedToken}`;
       }
+
+      const orderResponse = await fetch(`${API_URL}/api/orders/`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(orderData)
+      });
+
+      console.log('[Checkout] Backend response received:', {
+        status: orderResponse.status,
+        ok: orderResponse.ok
+      });
+
+      if (!orderResponse.ok) {
+        const errData = await orderResponse.json().catch(() => ({}));
+        console.error('[Checkout API Error]', orderResponse.status, errData);
+        throw new Error(errData.detail || 'Failed to record the order on the server.');
+      }
+
+      const orderResult = await orderResponse.json();
+      const orderId = orderResult.id || orderResult._id || '';
+      const displayOrderId = orderId ? `ORD-${orderId.slice(-6).toUpperCase()}` : 'PENDING';
+      console.log('[Checkout] Order recorded successfully on server. ID:', orderId);
 
       const message = `🧶 *New Order Request - Crochet Creation* 🧶\n\n` +
         `Hello! I would like to place a custom order with the following details:\n\n` +
@@ -457,6 +462,7 @@ export default function ProductDetailPage() {
         `- *Mobile:* ${checkoutFormData.mobile}\n` +
         `- *Delivery Address:* ${checkoutFormData.address}\n\n` +
         `💳 *Payment Method:* ${paymentMethodText}\n\n` +
+        `🆔 *Order Reference ID:* ${displayOrderId}\n\n` +
         `Please confirm this order. Thank you!`;
 
       const formattedPhone = '917551041853';

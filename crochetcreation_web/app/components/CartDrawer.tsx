@@ -134,7 +134,7 @@ export default function CartDrawer() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleCheckoutSubmit = (e: React.FormEvent) => {
+  const handleCheckoutSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.email || !formData.mobile || !formData.address) {
       alert('Please fill in all details.');
@@ -146,6 +146,47 @@ export default function CartDrawer() {
       const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
       const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
       const paymentMethodText = formData.paymentMethod === 'COD' ? 'Cash on Delivery (COD)' : 'Prepaid (Online Payment)';
+
+      // Post the order to the backend first
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const token = localStorage.getItem('token');
+
+      const payload = {
+        customer_name: formData.name,
+        customer_email: formData.email,
+        customer_mobile: formData.mobile,
+        items: items.map(item => ({
+          product_id: item.id,
+          title: item.name,
+          price: item.price,
+          quantity: item.quantity
+        })),
+        total_amount: subtotal,
+        payment_method: formData.paymentMethod,
+        shipping_address: formData.address
+      };
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const res = await fetch(`${API_URL}/api/orders/`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.detail || 'Failed to save order to the database. Please try again.');
+      }
+
+      const orderData = await res.json();
+      const orderId = orderData.id || orderData._id || '';
+      const displayOrderId = orderId ? `ORD-${orderId.slice(-6).toUpperCase()}` : 'PENDING';
 
       let itemsSummary = '';
       items.forEach((item, index) => {
@@ -172,6 +213,7 @@ export default function CartDrawer() {
         `- *Mobile:* ${formData.mobile}\n` +
         `- *Delivery Address:* ${formData.address}\n\n` +
         `💳 *Payment Method:* ${paymentMethodText}\n\n` +
+        `🆔 *Order Reference ID:* ${displayOrderId}\n\n` +
         `Please confirm this order. Thank you!`;
 
       const formattedPhone = '917551041853';
@@ -188,9 +230,9 @@ export default function CartDrawer() {
       localStorage.setItem('crochet_cart_count', '0');
       setItems([]);
       window.dispatchEvent(new Event('cart-change'));
-    } catch (err) {
+    } catch (err: any) {
       console.error('Checkout error:', err);
-      alert('Failed to generate WhatsApp order details. Please try again.');
+      alert(err.message || 'Failed to generate WhatsApp order details. Please try again.');
     } finally {
       setCheckoutLoading(false);
     }

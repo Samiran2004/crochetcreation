@@ -2,7 +2,8 @@
 
 export const dynamic = 'force-dynamic';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useOrderWebSocket } from '../../hooks/useOrderWebSocket';
 import { 
   ShoppingBag, 
   Clock, 
@@ -131,6 +132,41 @@ export default function AdminOrders() {
   useEffect(() => {
     fetchOrders();
   }, [API_URL, router]);
+
+  useOrderWebSocket(
+    useCallback((message: any) => {
+      const { action, data } = message;
+      const formatSingleOrder = (o: any): Order => ({
+        id: o._id || o.id,
+        customer: o.customer_name,
+        email: o.customer_email || '',
+        mobile: o.customer_mobile || '',
+        items: o.items.map((item: any) => `${item.title} (${item.quantity})`).join(', '),
+        amount: o.total_amount,
+        date: o.created_at ? new Date(o.created_at).toLocaleString() : 'Just now',
+        status: o.status,
+        payment: o.payment_method || 'COD',
+        rawItems: o.items || [],
+        is_manual: o.is_manual || false,
+        notes: o.notes || null,
+        latitude: o.latitude || null,
+        longitude: o.longitude || null,
+        shipping_address: o.shipping_address || o.address || null
+      });
+
+      if (action === 'order_created') {
+        const newOrder = formatSingleOrder(data);
+        setOrders(prev => {
+          if (prev.some(o => o.id === newOrder.id)) return prev;
+          return [newOrder, ...prev];
+        });
+      } else if (action === 'order_updated') {
+        const updated = formatSingleOrder(data);
+        setOrders(prev => prev.map(o => o.id === updated.id ? updated : o));
+        setSelectedOrder(prev => (prev && prev.id === updated.id) ? updated : prev);
+      }
+    }, [selectedOrder])
+  );
 
   const handleUpdateStatus = async (orderId: string, newStatus: 'Delivered' | 'Pending' | 'Processing' | 'Cancelled') => {
     setActionLoading(true);
