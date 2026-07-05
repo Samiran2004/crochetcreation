@@ -186,7 +186,36 @@ export default function ProductDetailPage() {
   const [token, setToken] = useState<string | null>(null);
   const [userProfile, setUserProfile] = useState<any | null>(null);
 
+  // Reviews state
+  const [reviewsData, setReviewsData] = useState<{
+    reviews: any[];
+    average_rating: number;
+    total_reviews: number;
+  }>({
+    reviews: [],
+    average_rating: 0,
+    total_reviews: 0
+  });
+  const [reviewsLoading, setReviewsLoading] = useState(true);
+
   const activeTheme = THEME_STYLES[themeColor] || THEME_STYLES.rose;
+
+  const ratingStats = useMemo(() => {
+    const total = reviewsData.total_reviews;
+    const counts: Record<number, number> = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+    reviewsData.reviews.forEach((r: any) => {
+      const rating = Math.min(5, Math.max(1, r.rating));
+      counts[rating] = (counts[rating] || 0) + 1;
+    });
+    
+    return [
+      { stars: 5, pct: total > 0 ? Math.round((counts[5] / total) * 100) : 0, count: counts[5] },
+      { stars: 4, pct: total > 0 ? Math.round((counts[4] / total) * 100) : 0, count: counts[4] },
+      { stars: 3, pct: total > 0 ? Math.round((counts[3] / total) * 100) : 0, count: counts[3] },
+      { stars: 2, pct: total > 0 ? Math.round((counts[2] / total) * 100) : 0, count: counts[2] },
+      { stars: 1, pct: total > 0 ? Math.round((counts[1] / total) * 100) : 0, count: counts[1] }
+    ];
+  }, [reviewsData]);
 
   // Load configuration & cart from localStorage on mount
   useEffect(() => {
@@ -301,6 +330,19 @@ export default function ProductDetailPage() {
             }
           }
           setCustomImages(resolved);
+        }
+
+        // 4. Fetch product reviews
+        try {
+          const revRes = await fetch(`${API_URL}/api/reviews/product/${productId}`);
+          if (revRes.ok) {
+            const revData = await revRes.json();
+            setReviewsData(revData);
+          }
+        } catch (revErr) {
+          console.error("Error fetching reviews:", revErr);
+        } finally {
+          setReviewsLoading(false);
         }
 
       } catch (err) {
@@ -825,6 +867,37 @@ export default function ProductDetailPage() {
               <h1 className="font-serif text-3xl md:text-4xl font-semibold text-gray-900 tracking-wide mt-3 leading-tight">
                 {product.name}
               </h1>
+
+              {/* Dynamic Star Summary */}
+              <div className="flex items-center gap-1.5 mt-2 select-none">
+                {reviewsData.total_reviews > 0 ? (
+                  <>
+                    <div className="flex items-center text-amber-400 gap-0.5">
+                      {[1, 2, 3, 4, 5].map((starIndex) => {
+                        const isHalf = reviewsData.average_rating - starIndex + 1 > 0 && reviewsData.average_rating - starIndex + 1 < 1;
+                        const isFilled = starIndex <= reviewsData.average_rating;
+                        return (
+                          <Star
+                            key={starIndex}
+                            className={`w-3.5 h-3.5 ${
+                              isFilled 
+                                ? 'fill-current text-amber-400' 
+                                : isHalf 
+                                  ? 'fill-amber-400/50 text-amber-400' 
+                                  : 'text-stone-200'
+                            }`}
+                          />
+                        );
+                      })}
+                    </div>
+                    <span className="text-xs font-semibold text-stone-600">
+                      {reviewsData.average_rating.toFixed(1)} ({reviewsData.total_reviews} {reviewsData.total_reviews === 1 ? 'Review' : 'Reviews'})
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-xs text-stone-400 italic">⭐ No reviews yet</span>
+                )}
+              </div>
               
               {(() => {
                 const originalPrice = product.originalPrice ?? null;
@@ -1077,32 +1150,43 @@ export default function ProductDetailPage() {
             {/* Rating Summary Left Side (4 cols) */}
             <div className="lg:col-span-4 bg-white border border-[#EADBDB]/70 rounded-3xl p-8 shadow-xs space-y-6">
               <div className="flex items-center gap-4">
-                <span className="font-serif text-5xl font-black text-gray-900">4.8</span>
+                <span className="font-serif text-5xl font-black text-gray-900">
+                  {reviewsData.average_rating.toFixed(1)}
+                </span>
                 <div>
                   <div className="flex items-center text-amber-400 gap-0.5">
-                    {[1, 2, 3, 4, 5].map((s) => (
-                      <Star key={s} className="w-5 h-5 fill-current" />
-                    ))}
+                    {[1, 2, 3, 4, 5].map((s) => {
+                      const isHalf = reviewsData.average_rating - s + 1 > 0 && reviewsData.average_rating - s + 1 < 1;
+                      const isFilled = s <= reviewsData.average_rating;
+                      return (
+                        <Star 
+                          key={s} 
+                          className={`w-5 h-5 ${
+                            isFilled 
+                              ? 'fill-current text-amber-400' 
+                              : isHalf 
+                                ? 'fill-amber-400/50 text-amber-400' 
+                                : 'text-stone-200'
+                          }`} 
+                        />
+                      );
+                    })}
                   </div>
-                  <p className="text-[10px] text-stone-450 mt-1 uppercase tracking-wider font-bold">Based on 28 ratings</p>
+                  <p className="text-[10px] text-stone-450 mt-1 uppercase tracking-wider font-bold">
+                    Based on {reviewsData.total_reviews} {reviewsData.total_reviews === 1 ? 'review' : 'reviews'}
+                  </p>
                 </div>
               </div>
 
               {/* Star breakdown bar chart */}
               <div className="space-y-2.5">
-                {[
-                  { stars: 5, pct: 85, count: 24 },
-                  { stars: 4, pct: 10, count: 3 },
-                  { stars: 3, pct: 3, count: 1 },
-                  { stars: 2, pct: 1, count: 0 },
-                  { stars: 1, pct: 1, count: 0 }
-                ].map((row) => (
+                {ratingStats.map((row) => (
                   <div key={row.stars} className="flex items-center gap-3 text-xs">
-                    <span className="w-10 text-stone-500 font-bold flex items-center gap-1">
-                      {row.stars} <Star className="w-3.5 h-3.5 fill-amber-450 text-amber-400" />
+                    <span className="w-10 text-stone-500 font-bold flex items-center gap-1 select-none">
+                      {row.stars} <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
                     </span>
                     <div className="flex-1 bg-stone-100 h-2 rounded-full overflow-hidden">
-                      <div className="bg-amber-400 h-full rounded-full" style={{ width: `${row.pct}%` }} />
+                      <div className="bg-amber-400 h-full rounded-full transition-all duration-500" style={{ width: `${row.pct}%` }} />
                     </div>
                     <span className="w-8 text-right text-stone-450 font-black">{row.pct}%</span>
                   </div>
@@ -1110,42 +1194,85 @@ export default function ProductDetailPage() {
               </div>
             </div>
 
-            {/* Scrolling Carousel Right Side (8 cols) */}
-            <div className="lg:col-span-8 w-full overflow-hidden relative">
-              <div className="flex gap-6 overflow-x-auto snap-x scrollbar-none pb-4 scroll-smooth">
-                {REVIEWS.map((rev) => (
-                  <div 
-                    key={rev.id} 
-                    className="min-w-[280px] sm:min-w-[340px] max-w-[340px] bg-white border border-[#EADBDB]/60 rounded-2xl p-6 shadow-xs snap-start flex flex-col justify-between"
-                  >
-                    <div>
-                      <div className="flex items-center justify-between mb-4">
+            {/* Detailed Reviews List Right Side (8 cols) */}
+            <div className="lg:col-span-8 w-full">
+              {reviewsLoading ? (
+                <div className="space-y-4">
+                  {[1, 2].map((i) => (
+                    <div key={i} className="bg-white border border-[#EADBDB]/50 rounded-2xl p-6 shadow-xs space-y-4 animate-pulse">
+                      <div className="flex justify-between items-center">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-[#D9B4B4]/20 border border-[#D9B4B4]/40 flex items-center justify-center font-bold text-xs text-[#6B5656]">
-                            {rev.avatar}
-                          </div>
-                          <div>
-                            <h4 className="text-xs font-bold text-gray-900">{rev.name}</h4>
-                            <span className="text-[9px] text-stone-400">{rev.date}</span>
+                          <div className="w-10 h-10 rounded-full bg-stone-200" />
+                          <div className="space-y-2">
+                            <div className="h-3.5 bg-stone-200 rounded w-28" />
+                            <div className="h-2 bg-stone-200 rounded w-16" />
                           </div>
                         </div>
-                        <div className="flex items-center text-amber-400 gap-0.5">
+                        <div className="flex gap-1">
+                          {[1, 2, 3, 4, 5].map((s) => (
+                            <div key={s} className="w-3.5 h-3.5 bg-stone-200 rounded-full" />
+                          ))}
+                        </div>
+                      </div>
+                      <div className="h-4 bg-stone-150 rounded w-full" />
+                      <div className="h-4 bg-stone-150 rounded w-3/4" />
+                    </div>
+                  ))}
+                </div>
+              ) : reviewsData.total_reviews === 0 ? (
+                <div className="flex flex-col items-center justify-center text-center p-12 bg-white border border-[#EADBDB]/50 rounded-3xl space-y-3">
+                  <div className="w-12 h-12 rounded-full bg-[#FEF9F6] flex items-center justify-center text-xl shadow-inner select-none">
+                    🧶
+                  </div>
+                  <p className="text-sm font-semibold text-stone-700">No reviews yet</p>
+                  <p className="text-xs text-stone-500 max-w-sm leading-relaxed">
+                    Be the first to review this handcrafted item after purchase!
+                  </p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-4">
+                  {reviewsData.reviews.map((rev: any) => (
+                    <div 
+                      key={rev._id || rev.id} 
+                      className="bg-white border border-[#EADBDB]/50 rounded-2xl p-6 shadow-xs flex flex-col gap-4 transition-all hover:shadow-sm"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-[#D9B4B4]/20 border border-[#D9B4B4]/40 flex items-center justify-center font-bold text-xs text-[#6B5656] select-none">
+                            {rev.user_name ? rev.user_name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) : 'U'}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h4 className="text-sm font-bold text-gray-900">{rev.user_name}</h4>
+                              <span className="inline-flex items-center gap-1 text-[10px] text-emerald-600 font-medium bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full select-none">
+                                <svg className="w-2.5 h-2.5 fill-current" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                </svg>
+                                Verified Buyer
+                              </span>
+                            </div>
+                            <span className="text-[10px] text-stone-450 font-medium">
+                              {new Date(rev.created_at).toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric'
+                              })}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center text-amber-400 gap-0.5 select-none">
                           {[1, 2, 3, 4, 5].map((s) => (
                             <Star key={s} className={`w-3.5 h-3.5 ${s <= rev.rating ? 'fill-current' : 'text-stone-200'}`} />
                           ))}
                         </div>
                       </div>
-                      <p className="text-stone-600 text-xs leading-relaxed italic">
-                        "{rev.text}"
+                      <p className="text-gray-700 leading-relaxed text-sm md:text-base font-sans">
+                        {rev.comment}
                       </p>
                     </div>
-                  </div>
-                ))}
-              </div>
-              
-              <div className="flex items-center justify-end gap-1.5 mt-2 px-1">
-                <span className="text-[10px] text-stone-400 font-bold uppercase tracking-widest">Swipe for more ➔</span>
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </section>

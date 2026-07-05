@@ -446,3 +446,37 @@ async def send_otp_email(to_email: str, otp: str):
     
     html_content = BASE_HTML_TEMPLATE.format(title="Reset Your Password", body_content=body)
     await send_brevo_email(to_email, "Valued Customer", subject, html_content)
+
+
+async def send_review_thank_you_email(to_email: str, name: str, product_title: str):
+    """
+    Sends a warm thank you email to a user who has reviewed a product.
+    """
+    subject = "Thank You for Your Review! 💖"
+    body = f"""
+    <div style="text-align: center;">
+        <span style="font-size: 11px; background-color: #EADCC9; color: #5D4037; padding: 4px 12px; border-radius: 20px; text-transform: uppercase; font-weight: bold; letter-spacing: 1px;">Review Submitted</span>
+        <h2 style="color: #4E342E; margin-top: 15px; margin-bottom: 5px; font-size: 24px;">Thank You, {name}!</h2>
+        <p style="color: #6D4C41; margin-top: 0; font-size: 15px; font-style: italic;">Your feedback means the world to us.</p>
+    </div>
+    
+    <div class="welcome-text">Hi {name},</div>
+    <p>Thank you so much for sharing your experience and reviewing <strong>{product_title}</strong>! Your review helps other crochet lovers in our community discover beautiful, high-quality handmade art.</p>
+    <p>As a small business, every single review and word of encouragement helps us keep creating and custom-stitching these designs with love.</p>
+    
+    <div class="card" style="margin-top: 25px; margin-bottom: 25px;">
+        <p style="margin: 0; font-style: italic; color: #5D4037;">
+            "We are incredibly grateful for your support of Crochet Creation. We hope your handmade piece brings warmth and joy to your space!"
+        </p>
+    </div>
+
+    <p style="border-top: 1px dashed #EFEAE2; padding-top: 20px; font-size: 14px; color: #6D4C41;">
+        If you ever need any custom designs, customizations, or just want to say hi, feel free to reply to this email or reach out to us at <a href="mailto:support@samiransamanta.in" style="color: #8D6E63; font-weight: bold; text-decoration: none;">support@samiransamanta.in</a>.
+    </p>
+    
+    <p style="margin-bottom: 0;">Warmest stitches,</p>
+    <p style="margin-top: 5px; font-weight: bold; color: #4E342E; font-size: 16px;">The Crochet Creation Team 🧶</p>
+    """
+    html_content = BASE_HTML_TEMPLATE.format(title="Thank You for Your Review!", body_content=body)
+    await send_brevo_email(to_email, name, subject, html_content)
+

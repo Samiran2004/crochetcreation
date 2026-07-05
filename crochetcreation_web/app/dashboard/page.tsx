@@ -20,9 +20,11 @@ import {
   Eye,
   CheckCircle,
   AlertCircle,
-  Download
+  Download,
+  Star
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
+import ReviewDrawer from '../components/ReviewDrawer';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -97,6 +99,12 @@ export default function UserDashboard() {
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [downloadingOrderId, setDownloadingOrderId] = useState<string | null>(null);
+
+  // Review System States
+  const [reviewEligibility, setReviewEligibility] = useState<Record<string, boolean>>({});
+  const [reviewDrawerOpen, setReviewDrawerOpen] = useState(false);
+  const [reviewProductId, setReviewProductId] = useState<string | null>(null);
+  const [reviewProductTitle, setReviewProductTitle] = useState<string>('');
 
   // UI Notification Toast
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -212,6 +220,32 @@ export default function UserDashboard() {
     }
   };
 
+  const checkReviewsEligibility = async (productIds: string[]) => {
+    if (!token) return;
+    const eligibilityMap: Record<string, boolean> = {};
+    await Promise.all(
+      productIds.map(async (productId) => {
+        try {
+          const res = await fetch(`${API_URL}/api/reviews/product/${productId}/eligible`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          if (res.ok) {
+            const check = await res.json();
+            eligibilityMap[productId] = check.eligible;
+          } else {
+            eligibilityMap[productId] = false;
+          }
+        } catch (err) {
+          console.error(`Failed to check review eligibility for ${productId}`, err);
+          eligibilityMap[productId] = false;
+        }
+      })
+    );
+    setReviewEligibility(prev => ({ ...prev, ...eligibilityMap }));
+  };
+
   // Fetch my orders
   const fetchMyOrders = async () => {
     if (!token) return;
@@ -225,6 +259,17 @@ export default function UserDashboard() {
       if (response.ok) {
         const data = await response.json();
         setOrders(data);
+
+        // Fetch review eligibility for all items in delivered orders
+        const deliveredProductIds = Array.from(new Set(
+          data.filter((o: any) => o.status === 'Delivered')
+              .flatMap((o: any) => o.items)
+              .map((item: any) => item.product_id)
+              .filter((id: any) => !!id)
+        )) as string[];
+        if (deliveredProductIds.length > 0) {
+          checkReviewsEligibility(deliveredProductIds);
+        }
       } else {
         showToast('Failed to fetch order history.', 'error');
       }
@@ -776,24 +821,79 @@ export default function UserDashboard() {
                             </div>
                           </div>
 
-                          {/* Order Quick Details */}
-                          <div className="p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
-                            <div className="space-y-1">
-                              <span className="text-[10px] font-black tracking-widest text-stone-400 uppercase">
+                          {/* Order Quick Details & Items */}
+                          <div className="p-6 divide-y divide-stone-100/50 space-y-4">
+                            <div className="space-y-3">
+                              <span className="block text-[10px] font-black tracking-widest text-stone-400 uppercase">
                                 Items Ordered
                               </span>
-                              <p className="text-xs text-stone-600 font-medium">
-                                {order.items.map((item) => `${item.title} (x${item.quantity})`).join(', ')}
-                              </p>
+                              <div className="space-y-3.5">
+                                {order.items.map((item) => {
+                                  const isDelivered = order.status === 'Delivered';
+                                  const hasProduct = !!item.product_id;
+                                  const eligibility = hasProduct ? reviewEligibility[item.product_id] : null;
+
+                                  return (
+                                    <div 
+                                      key={item.product_id || item.title} 
+                                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-stone-50/30 border border-stone-100/40 rounded-xl p-3.5"
+                                    >
+                                      <div>
+                                        <p className="text-xs font-bold text-[#6B5656]">
+                                          {item.title}
+                                        </p>
+                                        <p className="text-[10px] font-semibold text-stone-500 mt-0.5">
+                                          Quantity: {item.quantity} • Price: ₹{item.price.toLocaleString('en-IN')}
+                                        </p>
+                                      </div>
+                                      
+                                      {isDelivered && hasProduct && (
+                                        <div className="flex-shrink-0 mt-1 sm:mt-0">
+                                          {eligibility === true ? (
+                                            <button
+                                              onClick={() => {
+                                                setReviewProductId(item.product_id);
+                                                setReviewProductTitle(item.title);
+                                                setReviewDrawerOpen(true);
+                                              }}
+                                              className="flex items-center justify-center gap-1.5 border border-[#6B5656]/20 hover:border-[#6B5656] text-[#6B5656] hover:bg-[#6B5656]/5 rounded-xl px-4 py-2 text-[10px] font-bold uppercase tracking-widest transition-all select-none active:scale-95 duration-100 shadow-sm w-full sm:w-auto"
+                                            >
+                                              <Star className="w-3.5 h-3.5 fill-[#6B5656]/5 text-[#6B5656]" />
+                                              <span>Write a Review</span>
+                                            </button>
+                                          ) : eligibility === false ? (
+                                            <button
+                                              disabled
+                                              className="flex items-center justify-center gap-1.5 bg-stone-100 text-stone-400 border border-stone-200/50 rounded-xl px-4 py-2 text-[10px] font-bold uppercase tracking-widest select-none cursor-not-allowed w-full sm:w-auto"
+                                            >
+                                              <span>✅ Reviewed</span>
+                                            </button>
+                                          ) : (
+                                            <button
+                                              disabled
+                                              className="flex items-center justify-center gap-1.5 bg-stone-50 text-stone-400 border border-stone-100 rounded-xl px-4 py-2 text-[10px] font-bold uppercase tracking-widest select-none cursor-not-allowed opacity-60 w-full sm:w-auto"
+                                            >
+                                              <Loader2 className="w-3 h-3 animate-spin text-stone-400" />
+                                              <span>Checking...</span>
+                                            </button>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
                             </div>
 
-                            <div className="text-right sm:text-right shrink-0">
-                              <span className="block text-[10px] font-black tracking-widest text-stone-400 uppercase mb-1">
-                                Total Paid
-                              </span>
-                              <p className="text-base font-bold text-[#6B5656]">
-                                ₹{order.total_amount.toLocaleString('en-IN')}
-                              </p>
+                            <div className="pt-4 flex justify-between items-center">
+                              <div>
+                                <span className="block text-[9px] font-black tracking-widest text-stone-400 uppercase">
+                                  Total Paid
+                                </span>
+                                <p className="text-base font-bold text-[#6B5656] mt-0.5">
+                                  ₹{order.total_amount.toLocaleString('en-IN')}
+                                </p>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -1078,6 +1178,22 @@ export default function UserDashboard() {
           </div>
         </div>
       )}
+
+      {/* Review Submission Drawer */}
+      <ReviewDrawer
+        isOpen={reviewDrawerOpen}
+        onClose={() => setReviewDrawerOpen(false)}
+        productId={reviewProductId}
+        productTitle={reviewProductTitle}
+        token={token}
+        onSuccess={(prodId) => {
+          showToast('Thank you! Your review is live.');
+          setReviewEligibility(prev => ({
+            ...prev,
+            [prodId]: false
+          }));
+        }}
+      />
     </div>
   );
 }
