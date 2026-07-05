@@ -435,10 +435,10 @@ export default function UserDashboard() {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-14">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-10 md:pt-12 md:pb-14">
         {/* Welcome Section */}
         <div className="mb-10 text-center md:text-left">
-          <h1 className="font-serif text-3xl md:text-4xl font-light tracking-wide text-[#4A3E3E] mb-2">
+          <h1 className="font-serif text-3xl md:text-5xl font-light tracking-wide text-[#4A3E3E] mb-2 text-center md:text-left leading-tight">
             Welcome, {userProfile?.first_name} {userProfile?.last_name}
           </h1>
           <p className="text-xs md:text-sm font-semibold tracking-widest uppercase text-stone-500">

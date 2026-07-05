@@ -680,7 +680,59 @@ export default function ProductDetailPage() {
           
           {/* Left Column: Main Image Gallery (Framer Motion Transitions + thumbnails overlay) */}
           <div className="lg:col-span-7 flex flex-col w-full pb-8">
-            <div className="relative w-full mb-10 overflow-visible group/gallery flex justify-center">
+            
+            {/* Mobile edge-to-edge swipeable carousel (< md) */}
+            <div className="md:hidden w-full relative mb-6">
+              <div 
+                className="w-full relative flex overflow-x-auto snap-x snap-mandatory scroll-smooth h-[380px] rounded-2xl border border-[#EADBDB]/65 bg-[#FBF9F6] shadow-[0_4px_15px_rgba(0,0,0,0.05)] scrollbar-none"
+                onScroll={(e) => {
+                  const container = e.currentTarget;
+                  const index = Math.round(container.scrollLeft / container.clientWidth);
+                  if (product.image_urls && product.image_urls[index]) {
+                    setActiveImageUrl(product.image_urls[index]);
+                  }
+                }}
+              >
+                {product.image_urls?.map((url: string, index: number) => (
+                  <div id={`mobile-slide-${index}`} key={index} className="relative w-full h-full shrink-0 snap-center">
+                    <Image 
+                      src={url} 
+                      alt={`${product.name} slide ${index + 1}`} 
+                      fill
+                      priority={index === 0}
+                      sizes="(max-width: 768px) 100vw, 50vw"
+                      className="object-cover"
+                    />
+                  </div>
+                ))}
+              </div>
+              
+              {/* Mobile pagination dots */}
+              {product.image_urls && product.image_urls.length > 1 && (
+                <div className="flex justify-center gap-1.5 mt-4">
+                  {product.image_urls.map((url: string, index: number) => {
+                    const isActive = (activeImageUrl || product.image_url) === url;
+                    return (
+                      <button
+                        key={index}
+                        onClick={() => {
+                          setActiveImageUrl(url);
+                          const el = document.getElementById(`mobile-slide-${index}`);
+                          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                        }}
+                        className={`w-2 h-2 rounded-full transition-all duration-200 ${
+                          isActive ? 'bg-[#6B5656] w-4' : 'bg-stone-300'
+                        }`}
+                        aria-label={`Go to slide ${index + 1}`}
+                      />
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Desktop Image Gallery (md: and above) */}
+            <div className="hidden md:block relative w-full mb-10 overflow-visible group/gallery flex justify-center">
               
               {/* Main Image container with interactive zoom, rounded-2xl, and box shadow */}
               <div 
