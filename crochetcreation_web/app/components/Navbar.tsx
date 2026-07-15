@@ -138,6 +138,18 @@ export default function Navbar({
     }
   };
 
+  useEffect(() => {
+    const handleOpenAuth = () => {
+      if (onOpenAuth) {
+        onOpenAuth();
+      } else {
+        window.location.href = '/?login=true&redirect=' + encodeURIComponent(window.location.pathname);
+      }
+    };
+    window.addEventListener('open-auth-modal', handleOpenAuth);
+    return () => window.removeEventListener('open-auth-modal', handleOpenAuth);
+  }, [onOpenAuth]);
+
   const handleLogout = () => {
     if (onLogout) onLogout();
     setIsMenuOpen(false);

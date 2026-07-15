@@ -33,6 +33,10 @@ export default function AdminSettings() {
     upiId: 'samiran.samanta@upi',
     maxCustomRequestsPerDay: '5',
     enableEmailNotifications: true,
+    footerAboutText: 'We design and craft premium, customized wool and cotton products, bringing warm smiles and authentic handmade joy to your homes.',
+    footerEmail: 'contact@crochetcreation.in',
+    footerHours: 'Mon - Sat, 9:00 AM - 6:00 PM',
+    footerCopyrightText: 'Crochet Creation. All rights reserved.',
   });
 
   const API_URL = useMemo(() => {
@@ -61,6 +65,10 @@ export default function AdminSettings() {
             upiId: data.upi_id,
             maxCustomRequestsPerDay: data.max_custom_requests_per_day.toString(),
             enableEmailNotifications: data.enable_email_notifications ?? true,
+            footerAboutText: data.footer_about_text ?? 'We design and craft premium, customized wool and cotton products, bringing warm smiles and authentic handmade joy to your homes.',
+            footerEmail: data.footer_email ?? 'contact@crochetcreation.in',
+            footerHours: data.footer_hours ?? 'Mon - Sat, 9:00 AM - 6:00 PM',
+            footerCopyrightText: data.footer_copyright_text ?? 'Crochet Creation. All rights reserved.',
           });
         } else {
           setError("Failed to fetch settings from server.");
@@ -106,6 +114,10 @@ export default function AdminSettings() {
         upi_id: formData.upiId,
         max_custom_requests_per_day: parseInt(formData.maxCustomRequestsPerDay) || 5,
         enable_email_notifications: formData.enableEmailNotifications,
+        footer_about_text: formData.footerAboutText,
+        footer_email: formData.footerEmail,
+        footer_hours: formData.footerHours,
+        footer_copyright_text: formData.footerCopyrightText,
       };
 
       const res = await apiFetch(`${API_URL}/api/settings/`, {
@@ -315,6 +327,63 @@ export default function AdminSettings() {
             </div>
 
           </div>
+
+            {/* Footer Settings */}
+            <div className="bg-white border border-stone-200 rounded-2xl shadow-sm p-6 space-y-4 mt-6">
+              <div className="flex items-center gap-2.5 pb-3.5 border-b border-stone-100">
+                <FileText className="w-5 h-5 text-[#6B5656]" />
+                <h3 className="font-serif text-sm font-bold text-stone-850 uppercase tracking-wider">Footer Settings</h3>
+              </div>
+
+              <div className="space-y-4 text-xs">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Footer About Text</label>
+                  <textarea
+                    name="footerAboutText"
+                    value={formData.footerAboutText}
+                    onChange={handleInputChange as any}
+                    className="w-full bg-stone-50 border border-stone-250 px-4 py-2.5 rounded-xl text-xs focus:outline-none focus:border-[#D9B4B4] text-stone-850"
+                    rows={3}
+                  />
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Footer Email</label>
+                    <input
+                      type="text"
+                      name="footerEmail"
+                      value={formData.footerEmail}
+                      onChange={handleInputChange}
+                      className="w-full bg-stone-50 border border-stone-250 px-4 py-2.5 rounded-xl text-xs focus:outline-none focus:border-[#D9B4B4] text-stone-850"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Footer Hours</label>
+                    <input
+                      type="text"
+                      name="footerHours"
+                      value={formData.footerHours}
+                      onChange={handleInputChange}
+                      className="w-full bg-stone-50 border border-stone-250 px-4 py-2.5 rounded-xl text-xs focus:outline-none focus:border-[#D9B4B4] text-stone-850"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Footer Copyright Text</label>
+                  <input
+                    type="text"
+                    name="footerCopyrightText"
+                    value={formData.footerCopyrightText}
+                    onChange={handleInputChange}
+                    className="w-full bg-stone-50 border border-stone-250 px-4 py-2.5 rounded-xl text-xs focus:outline-none focus:border-[#D9B4B4] text-stone-850"
+                  />
+                </div>
+              </div>
+            </div>
+
+
 
           {/* Side panel: Tips & Save Action */}
           <div className="space-y-6">

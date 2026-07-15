@@ -1147,69 +1147,74 @@ export default function CrochetCreationPage() {
                         </div>
                       </div>
                     </div>
-                    <div className="p-3 md:p-5 flex-1 flex flex-col">
-                      <div className="flex-1">
-                        <span className="text-[8px] md:text-[10px] font-bold text-[#D9B4B4] uppercase tracking-widest block">{product.category}</span>
-                        <h4 
-                          onClick={() => router.push(`/product/${product._id || product.id}`)}
-                          className="text-sm md:text-lg font-bold text-gray-900 leading-tight mt-1 cursor-pointer hover:text-[#6B5656] transition-colors line-clamp-2"
-                        >
-                          {product.title || product.name}
-                        </h4>
-                        <p className="text-[10px] md:text-xs text-gray-500 mt-1 md:mt-2 leading-relaxed line-clamp-2">{product.description}</p>
-                        <div className="flex items-center gap-1.5 text-[9px] font-semibold text-stone-500 mt-2 bg-stone-50/80 px-2 py-1 rounded-md self-start border border-stone-100/50">
-                          <span className="text-xs">🚚</span>
-                          <span>{product.delivery_time || '5-7 working days'}</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between mt-auto pt-3 md:pt-4 gap-2">
-                        {(() => {
-                          const originalPrice = product.originalPrice ?? null;
-                          const sellingPrice = product.sellingPrice ?? product.price ?? null;
-                          
-                          if (sellingPrice === null) return null;
-                          
-                          const hasDiscount = originalPrice !== null && originalPrice > sellingPrice;
-                          const discountPercent = hasDiscount ? Math.round(((originalPrice - sellingPrice) / originalPrice) * 100) : 0;
-                          
-                          return (
-                            <div className="flex flex-col min-w-0">
-                              <div className="flex items-baseline gap-1 md:gap-1.5 flex-wrap">
-                                <span className="text-sm md:text-lg lg:text-xl font-extrabold text-gray-900 whitespace-nowrap">
-                                  ₹{typeof sellingPrice === 'number' ? sellingPrice.toFixed(2) : parseFloat(sellingPrice).toFixed(2)}
-                                </span>
-                                {hasDiscount && (
-                                  <span className="text-[10px] md:text-xs text-gray-400 line-through whitespace-nowrap">
-                                    ₹{typeof originalPrice === 'number' ? originalPrice.toFixed(2) : parseFloat(originalPrice).toFixed(2)}
-                                  </span>
-                                )}
-                              </div>
-                              {hasDiscount && discountPercent > 0 && (
-                                <span className="text-[9px] font-bold text-[#16a34a] bg-[#16a34a]/10 px-1.5 py-0.5 rounded-md mt-1 self-start whitespace-nowrap">
-                                  {discountPercent}% OFF
-                                </span>
-                              )}
-                            </div>
-                          );
-                        })()}
-                        <div className="flex items-center gap-1 md:gap-2 shrink-0">
-                          <button
-                            onClick={(e) => handleAddToCart(product, e)}
-                            title="Add to Basket"
-                            className="w-9 h-9 md:w-10 md:h-10 min-w-[36px] min-h-[36px] flex items-center justify-center border border-gray-200 rounded-full text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors active:scale-95 shadow-xs"
-                          >
-                            <ShoppingBag className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={(e) => handleBuyNow(product, e)}
-                            className="px-3 md:px-4 py-2 bg-[#6B5656] hover:bg-[#5C4949] text-white text-[10px] md:text-xs font-semibold rounded-full transition-all active:scale-95 shadow-xs whitespace-nowrap flex-shrink-0 min-h-[36px] flex items-center justify-center"
-                          >
-                            Buy Now
-                          </button>
-                        </div>
-                      </div>
+                <div className="p-4 md:p-5 flex-1 flex flex-col">
+                  <div className="flex-1">
+                    <div className="mb-2.5">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[8px] md:text-[10px] font-extrabold bg-[#FDF8F6] text-[#D9B4B4] border border-[#F5E6E6] uppercase tracking-widest shadow-sm">
+                        {product.category}
+                      </span>
+                    </div>
+                    <h4 
+                      onClick={() => router.push(`/product/${product._id || product.id}`)}
+                      className="text-base md:text-lg font-bold text-stone-800 leading-tight group-hover:text-[#6B5656] transition-colors line-clamp-2 cursor-pointer"
+                    >
+                      {product.title || product.name}
+                    </h4>
+                    <p className="text-[11px] md:text-[13px] text-stone-500 mt-1.5 md:mt-2 leading-relaxed line-clamp-2 font-medium">
+                      {product.description}
+                    </p>
+                    <div className="flex items-center gap-1.5 text-[10px] md:text-xs font-semibold text-stone-600 mt-3 bg-[#F9F7F7] px-2.5 py-1.5 rounded-lg self-start border border-[#EADBDB]/50 shadow-sm">
+                      <span className="text-sm">🚚</span>
+                      <span>{product.delivery_time || '5-7 working days'}</span>
                     </div>
                   </div>
+                  <div className="flex flex-wrap items-end justify-between mt-auto pt-4 md:pt-5 gap-3">
+                    {(() => {
+                      const originalPrice = product.originalPrice ?? null;
+                      const sellingPrice = product.sellingPrice ?? product.price ?? null;
+                      
+                      if (sellingPrice === null) return null;
+                      
+                      const hasDiscount = originalPrice !== null && originalPrice > sellingPrice;
+                      const discountPercent = hasDiscount ? Math.round(((originalPrice - sellingPrice) / originalPrice) * 100) : 0;
+                      
+                      return (
+                        <div className="flex flex-col">
+                          <div className="flex items-baseline gap-1.5 flex-wrap">
+                            <span className="text-lg md:text-xl font-extrabold text-stone-800 whitespace-nowrap tracking-tight">
+                              ₹{typeof sellingPrice === 'number' ? sellingPrice.toFixed(2) : parseFloat(sellingPrice).toFixed(2)}
+                            </span>
+                            {hasDiscount && (
+                              <span className="text-[11px] font-medium text-stone-400 line-through whitespace-nowrap decoration-stone-300">
+                                ₹{typeof originalPrice === 'number' ? originalPrice.toFixed(2) : parseFloat(originalPrice).toFixed(2)}
+                              </span>
+                            )}
+                          </div>
+                          {hasDiscount && discountPercent > 0 && (
+                            <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100/50 px-2 py-0.5 rounded-full mt-1 self-start whitespace-nowrap tracking-wide shadow-sm">
+                              {discountPercent}% OFF
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()}
+                    <div className="flex items-center gap-2 shrink-0 ml-auto">
+                      <button
+                        onClick={(e) => handleAddToCart(product, e)}
+                        title="Add to Basket"
+                        className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center border-2 border-stone-100 bg-white rounded-full text-stone-600 hover:text-[#6B5656] hover:border-[#6B5656] hover:bg-stone-50 transition-all active:scale-95 shadow-sm"
+                      >
+                        <ShoppingBag className="w-4 h-4 md:w-5 md:h-5" />
+                      </button>
+                      <button
+                        onClick={(e) => handleBuyNow(product, e)}
+                        className="px-4 py-2 md:px-5 md:py-2.5 bg-[#6B5656] hover:bg-[#5C4949] text-white text-[10px] md:text-xs font-bold rounded-full transition-all active:scale-95 shadow-md shadow-[#6B5656]/20 whitespace-nowrap flex-shrink-0 tracking-wide"
+                      >
+                        Buy Now
+                      </button>
+                    </div>
+                  </div>
+                </div>      </div>
                 </StaggerItem>
               ))
             ) : (

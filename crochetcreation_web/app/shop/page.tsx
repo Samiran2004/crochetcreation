@@ -17,6 +17,7 @@ import {
   X
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -517,25 +518,27 @@ export default function ShopPage() {
                 </div>
 
                 {/* Product Info */}
-                <div className="p-3 md:p-5 flex-1 flex flex-col">
+                <div className="p-4 md:p-5 flex-1 flex flex-col">
                   <div className="flex-1">
-                    <span className="text-[8px] md:text-[10px] font-bold text-[#D9B4B4] uppercase tracking-widest block">
-                      {p.category}
-                    </span>
-                    <h3 className="text-sm md:text-lg font-bold text-gray-900 leading-tight mt-1 group-hover:text-[#6B5656] transition-colors line-clamp-2">
+                    <div className="mb-2.5">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[8px] md:text-[10px] font-extrabold bg-[#FDF8F6] text-[#D9B4B4] border border-[#F5E6E6] uppercase tracking-widest shadow-sm">
+                        {p.category}
+                      </span>
+                    </div>
+                    <h3 className="text-base md:text-lg font-bold text-stone-800 leading-tight group-hover:text-[#6B5656] transition-colors line-clamp-2">
                       {p.title || p.name}
                     </h3>
-                    <p className="text-[10px] md:text-xs text-gray-500 mt-1 md:mt-2 leading-relaxed line-clamp-2">
+                    <p className="text-[11px] md:text-[13px] text-stone-500 mt-1.5 md:mt-2 leading-relaxed line-clamp-2 font-medium">
                       {p.description}
                     </p>
-                    <div className="flex items-center gap-1.5 text-[9px] font-semibold text-stone-500 mt-2 bg-stone-50/80 px-2 py-1 rounded-md self-start border border-stone-100/50">
-                      <span className="text-xs">🚚</span>
+                    <div className="flex items-center gap-1.5 text-[10px] md:text-xs font-semibold text-stone-600 mt-3 bg-[#F9F7F7] px-2.5 py-1.5 rounded-lg self-start border border-[#EADBDB]/50 shadow-sm">
+                      <span className="text-sm">🚚</span>
                       <span>{p.delivery_time || '5-7 working days'}</span>
                     </div>
                   </div>
 
                   {/* Actions & Price */}
-                  <div className="flex items-center justify-between mt-auto pt-3 md:pt-4 gap-2">
+                  <div className="flex flex-wrap items-end justify-between mt-auto pt-4 md:pt-5 gap-3">
                     {(() => {
                       const originalPrice = p.originalPrice ?? null;
                       const sellingPrice = p.sellingPrice ?? p.price ?? null;
@@ -546,36 +549,36 @@ export default function ShopPage() {
                       const discountPercent = hasDiscount ? Math.round(((originalPrice - sellingPrice) / originalPrice) * 100) : 0;
                       
                       return (
-                        <div className="flex flex-col min-w-0">
-                          <div className="flex items-baseline gap-1 md:gap-1.5 flex-wrap">
-                            <span className="text-sm md:text-lg lg:text-xl font-extrabold text-gray-900 whitespace-nowrap">
+                        <div className="flex flex-col">
+                          <div className="flex items-baseline gap-1.5 flex-wrap">
+                            <span className="text-lg md:text-xl font-extrabold text-stone-800 whitespace-nowrap tracking-tight">
                               ₹{typeof sellingPrice === 'number' ? sellingPrice.toFixed(2) : parseFloat(sellingPrice).toFixed(2)}
                             </span>
                             {hasDiscount && (
-                              <span className="text-[10px] md:text-xs text-gray-400 line-through whitespace-nowrap">
+                              <span className="text-[11px] font-medium text-stone-400 line-through whitespace-nowrap decoration-stone-300">
                                 ₹{typeof originalPrice === 'number' ? originalPrice.toFixed(2) : parseFloat(originalPrice).toFixed(2)}
                               </span>
                             )}
                           </div>
                           {hasDiscount && discountPercent > 0 && (
-                            <span className="text-[9px] font-bold text-[#16a34a] bg-[#16a34a]/10 px-1.5 py-0.5 rounded-md mt-1 self-start whitespace-nowrap">
+                            <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100/50 px-2 py-0.5 rounded-full mt-1 self-start whitespace-nowrap tracking-wide shadow-sm">
                               {discountPercent}% OFF
                             </span>
                           )}
                         </div>
                       );
                     })()}
-                    <div className="flex items-center gap-1 md:gap-2 shrink-0">
+                    <div className="flex items-center gap-2 shrink-0 ml-auto">
                       <button
                         onClick={(e) => handleAddToCart(p, e)}
                         title="Add to Basket"
-                        className="w-9 h-9 md:w-10 md:h-10 min-w-[36px] min-h-[36px] flex items-center justify-center border border-gray-200 rounded-full text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors active:scale-95 shadow-xs"
+                        className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center border-2 border-stone-100 bg-white rounded-full text-stone-600 hover:text-[#6B5656] hover:border-[#6B5656] hover:bg-stone-50 transition-all active:scale-95 shadow-sm"
                       >
-                        <CartIcon className="w-4 h-4" />
+                        <CartIcon className="w-4 h-4 md:w-5 md:h-5" />
                       </button>
                       <button
                         onClick={(e) => handleBuyNow(p, e)}
-                        className="px-3 md:px-4 py-2 bg-[#6B5656] hover:bg-[#5C4949] text-white text-[10px] md:text-xs font-semibold rounded-full transition-all active:scale-95 shadow-xs whitespace-nowrap flex-shrink-0 min-h-[36px] flex items-center justify-center"
+                        className="px-4 py-2 md:px-5 md:py-2.5 bg-[#6B5656] hover:bg-[#5C4949] text-white text-[10px] md:text-xs font-bold rounded-full transition-all active:scale-95 shadow-md shadow-[#6B5656]/20 whitespace-nowrap flex-shrink-0 tracking-wide"
                       >
                         Buy Now
                       </button>
@@ -811,44 +814,7 @@ export default function ShopPage() {
       )}
 
       {/* Footer */}
-      <footer className="bg-stone-900 text-stone-400 py-16 border-t border-stone-800">
-        <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-4 gap-8">
-          <div className="space-y-4">
-            <h4 className="text-white font-bold text-sm tracking-wider uppercase">Crochet Creation</h4>
-            <p className="text-xs leading-relaxed">
-              We design and craft premium, customized wool and cotton products, bringing warm smiles and authentic handmade joy to your homes.
-            </p>
-          </div>
-          <div>
-            <h4 className="text-white font-bold text-sm tracking-wider uppercase mb-4">Quick Links</h4>
-            <ul className="space-y-2 text-xs">
-              <li><Link href="/#home" className="hover:text-white">Home Catalog</Link></li>
-              <li><Link href="/shop" className="hover:text-white">Finished Products</Link></li>
-              <li><Link href="/#about" className="hover:text-white">About Us</Link></li>
-              <li><Link href="/#contact" className="hover:text-white">Contact</Link></li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="text-white font-bold text-sm tracking-wider uppercase mb-4">Contact</h4>
-            <p className="text-xs leading-relaxed">
-              Email: contact@crochetcreation.in<br />
-              Hours: Mon - Sat, 9:00 AM - 6:00 PM
-            </p>
-          </div>
-          <div>
-            <h4 className="text-white font-bold text-sm tracking-wider uppercase mb-4">Trust Links</h4>
-            <ul className="space-y-2 text-xs">
-              <li><Link href="/#privacy" className="hover:text-white">Privacy Policy</Link></li>
-              <li><Link href="/#terms" className="hover:text-white">Terms of Service</Link></li>
-              <li><Link href="/#refund" className="hover:text-white">Refund Policy</Link></li>
-              <li><Link href="/#contact" className="hover:text-white">Customer Support</Link></li>
-            </ul>
-          </div>
-        </div>
-        <div className="max-w-7xl mx-auto px-6 mt-12 pt-8 border-t border-stone-800/80 text-center text-xs">
-          <p>&copy; {new Date().getFullYear()} Crochet Creation. All rights reserved.</p>
-        </div>
-      </footer>
+      <Footer />
 
     </div>
   );

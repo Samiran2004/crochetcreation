@@ -31,6 +31,12 @@ export const addToCart = (product: {
   size?: string;
 }, quantity = 1) => {
   if (typeof window === 'undefined') return;
+  const token = localStorage.getItem('crochet_token');
+  if (!token) {
+    window.dispatchEvent(new Event('open-auth-modal'));
+    return;
+  }
+
   const items = getCartItems();
   const existingIndex = items.findIndex((item) => item.id === product.id && item.size === product.size);
 
@@ -90,6 +96,11 @@ export default function CartDrawer() {
     syncCart();
 
     const handleOpen = () => {
+      const token = localStorage.getItem('crochet_token');
+      if (!token) {
+        window.dispatchEvent(new Event('open-auth-modal'));
+        return;
+      }
       syncCart();
       setIsOpen(true);
       setIsCheckoutView(false);
