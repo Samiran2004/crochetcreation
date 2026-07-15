@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from fastapi.security import OAuth2PasswordRequestForm
 from app.models.user import (
     UserCreate, UserResponse, UserInDB,
-    ForgotPasswordRequest, VerifyOTPRequest, ResetPasswordRequest
+    ForgotPasswordRequest, VerifyOTPRequest, ResetPasswordRequest,
+    GoogleAuthRequest
 )
 from app.core.security import get_password_hash, verify_password, create_access_token
 from app.core.db import get_database
@@ -12,6 +13,9 @@ from datetime import datetime, timedelta, timezone
 from fastapi import Request
 from slowapi import Limiter
 from slowapi.util import get_remote_address
+
+import app.core.firebase  # Ensures initialization
+from firebase_admin import auth
 
 limiter = Limiter(key_func=get_remote_address)
 
@@ -108,6 +112,104 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
         }
     }
 
+@router.post("/google")
+async def google_auth(req: GoogleAuthRequest, background_tasks: BackgroundTasks):
+    db = get_database()
+    if db is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database connection is not initialized."
+        )
+
+    try:
+        # Verify the Firebase ID token
+        decoded_token = auth.verify_id_token(req.firebase_id_token)
+        email = decoded_token.get("email")
+        name = decoded_token.get("name", "")
+        uid = decoded_token.get("uid")
+        picture = decoded_token.get("picture", "")
+
+        if not email:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No email found in Google token."
+            )
+
+        # Split name into first and last
+        name_parts = name.split(" ")
+        first_name = name_parts[0] if name_parts else "User"
+        last_name = " ".join(name_parts[1:]) if len(name_parts) > 1 else ""
+
+        # Check if user exists
+        user_dict = await db["users"].find_one({"email": email})
+        
+        if user_dict:
+            # Update user if necessary (e.g., set auth_provider to google, update picture)
+            update_data = {}
+            if user_dict.get("auth_provider") != "google":
+                update_data["auth_provider"] = "google"
+            if picture and user_dict.get("picture") != picture:
+                update_data["picture"] = picture
+                
+            if update_data:
+                await db["users"].update_one(
+                    {"email": email},
+                    {"$set": update_data}
+                )
+        else:
+            # Create new user
+            user_dict = {
+                "email": email,
+                "first_name": first_name,
+                "last_name": last_name,
+                "mobile": "", # Can't get mobile from Google reliably
+                "hashed_password": "", # No password for Google auth users
+                "is_admin": False,
+                "auth_provider": "google",
+                "firebase_uid": uid,
+                "picture": picture,
+                "is_verified": True
+            }
+            result = await db["users"].insert_one(user_dict)
+            user_dict["_id"] = result.inserted_id
+
+            # Send welcome email using Brevo REST API for new Google users
+            try:
+                background_tasks.add_task(
+                    send_welcome_email,
+                    user_dict.get("email"),
+                    user_dict.get("first_name", "Valued Customer"),
+                    user_dict.get("last_name", ""),
+                    ""
+                )
+            except Exception as e:
+                print(f"Error queueing welcome email for Google auth: {e}")
+
+        # Create our standard application access token
+        access_token = create_access_token(subject=user_dict["email"])
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user": {
+                "email": user_dict["email"],
+                "first_name": user_dict.get("first_name", ""),
+                "last_name": user_dict.get("last_name", ""),
+                "is_admin": user_dict.get("is_admin", False),
+                "picture": user_dict.get("picture", "")
+            }
+        }
+
+    except auth.InvalidIdTokenError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid Google ID token."
+        )
+    except Exception as e:
+        print(f"Error in Google auth: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error during Google authentication."
+        )
 
 @router.post("/forgot-password")
 @limiter.limit("3/10minutes")

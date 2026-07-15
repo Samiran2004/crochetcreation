@@ -4,6 +4,8 @@ import re
 
 PyObjectId = Annotated[str, BeforeValidator(str)]
 
+class GoogleAuthRequest(BaseModel):
+    firebase_id_token: str
 class UserBase(BaseModel):
     first_name: str = Field(..., min_length=1)
     last_name: str = Field(..., min_length=1)
