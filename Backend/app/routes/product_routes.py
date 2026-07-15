@@ -168,6 +168,7 @@ async def update_product(
     has_sizes: Optional[bool] = Form(None),
     image: UploadFile = File(None),
     images: List[UploadFile] = File(None),
+    deleted_images: Optional[str] = Form(None),
     current_admin: UserInDB = Depends(get_current_admin_user)
 ):
     db = get_database()
@@ -248,20 +249,36 @@ async def update_product(
             height = upload_res["height"]
             
         if uploaded_urls:
-            # Delete old images from Cloudinary if they exist
-            old_image_urls = existing_product.get("image_urls") or []
-            old_image_url = existing_product.get("image_url")
-            all_old_urls = set(old_image_urls)
-            if old_image_url:
-                all_old_urls.add(old_image_url)
+            # If new images are uploaded, add them to the remaining ones
+            pass # we will handle this after deletion logic
+            
+        old_image_urls = existing_product.get("image_urls") or []
+        old_image_url = existing_product.get("image_url")
+        if old_image_url and old_image_url not in old_image_urls:
+            old_image_urls.insert(0, old_image_url)
+            
+        remaining_urls = list(old_image_urls)
+        
+        if deleted_images:
+            import json
+            try:
+                urls_to_delete = json.loads(deleted_images)
+                for url in urls_to_delete:
+                    if url in remaining_urls:
+                        remaining_urls.remove(url)
+                        await delete_image_by_url(url)
+            except Exception as e:
+                pass
                 
-            for old_url in all_old_urls:
-                await delete_image_by_url(old_url)
-                
-            update_data["image_url"] = uploaded_urls[0]
-            update_data["image_urls"] = uploaded_urls
+        if uploaded_urls:
+            remaining_urls.extend(uploaded_urls)
             update_data["width"] = width
             update_data["height"] = height
+            
+        # Update image urls if there were deletions or new uploads
+        if deleted_images or uploaded_urls:
+            update_data["image_urls"] = remaining_urls
+            update_data["image_url"] = remaining_urls[0] if remaining_urls else ""
             
         if update_data:
             await db["products"].update_one({"_id": ObjectId(product_id)}, {"$set": update_data})

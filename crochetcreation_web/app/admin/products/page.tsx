@@ -71,6 +71,7 @@ export default function AdminProducts() {
   });
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+  const [deletedImages, setDeletedImages] = useState<string[]>([]);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -122,6 +123,7 @@ export default function AdminProducts() {
     });
     setSelectedFiles([]);
     setPreviewUrls([]);
+    setDeletedImages([]);
     setSubmitError(null);
     setModalOpen(true);
   };
@@ -144,6 +146,7 @@ export default function AdminProducts() {
     });
     setSelectedFiles([]);
     setPreviewUrls([]);
+    setDeletedImages([]);
     setSubmitError(null);
     setModalOpen(true);
   };
@@ -202,6 +205,10 @@ export default function AdminProducts() {
         });
       }
 
+      if (deletedImages.length > 0) {
+        submissionData.append('deleted_images', JSON.stringify(deletedImages));
+      }
+
       let url = `${API_URL}/api/products/`;
       let method = 'POST';
 
@@ -212,6 +219,17 @@ export default function AdminProducts() {
         // For creations, image file is required
         if (selectedFiles.length === 0) {
           throw new Error("Please upload at least one product image.");
+        }
+      }
+
+      // Check for empty image list on edit
+      if (editingProduct && editingProduct._id) {
+        const remainingImages = (editingProduct.image_urls && editingProduct.image_urls.length > 0 
+          ? editingProduct.image_urls 
+          : [editingProduct.image_url]).filter(url => url && !deletedImages.includes(url));
+        
+        if (remainingImages.length === 0 && selectedFiles.length === 0) {
+          throw new Error("Product must have at least one image. Upload a new image before deleting the last one.");
         }
       }
 
@@ -742,11 +760,29 @@ export default function AdminProducts() {
                           {(editingProduct.image_urls && editingProduct.image_urls.length > 0
                             ? editingProduct.image_urls
                             : [editingProduct.image_url]
-                          ).map((url, idx) => (
-                            <div key={idx} className="w-10 h-10 rounded-lg border border-stone-200 overflow-hidden relative shadow-inner">
+                          ).filter(url => url && !deletedImages.includes(url)).map((url, idx) => (
+                            <div key={idx} className="w-12 h-12 rounded-lg border border-stone-200 overflow-hidden relative shadow-inner group/current">
                               <img src={url} alt={`Current ${idx}`} className="w-full h-full object-cover" />
+                              <button
+                                type="button"
+                                onClick={() => setDeletedImages(prev => [...prev, url])}
+                                className="absolute top-0.5 right-0.5 bg-black/60 hover:bg-red-650 text-white rounded-full p-1 transition-all shadow opacity-0 group-hover/current:opacity-100"
+                                title="Remove image"
+                              >
+                                <X className="w-2 h-2" />
+                              </button>
                             </div>
                           ))}
+                          
+                          {/* If all images are deleted */}
+                          {(editingProduct.image_urls && editingProduct.image_urls.length > 0
+                            ? editingProduct.image_urls
+                            : [editingProduct.image_url]
+                          ).filter(url => url && !deletedImages.includes(url)).length === 0 && (
+                            <div className="text-[10px] text-red-500 font-semibold py-1">
+                              All current images marked for deletion. Please select a new image below.
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
