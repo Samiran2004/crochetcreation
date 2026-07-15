@@ -891,7 +891,7 @@ export default function CrochetCreationPage() {
             <StaggerItem yOffset={20}>
               <button
                 onClick={() => document.getElementById('shop')?.scrollIntoView({ behavior: 'smooth' })}
-                className="border-2 border-[#D9B4B4] hover:bg-[#D9B4B4] hover:text-gray-900 text-[#D9B4B4] text-xs font-sans font-semibold uppercase tracking-widest px-6 md:px-8 py-3 md:py-3.5 rounded-full transition-all duration-300 ease-in-out active:scale-95 shadow-lg min-h-[44px]"
+                className="border-2 border-[#D9B4B4] hover:bg-[#D9B4B4] hover:text-[#FEF9F6] text-[#D9B4B4] text-xs font-sans font-semibold uppercase tracking-widest px-6 md:px-8 py-3 md:py-3.5 rounded-full transition-all duration-300 ease-in-out active:scale-95 shadow-lg min-h-[44px]"
               >
                 View all products
               </button>
