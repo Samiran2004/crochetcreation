@@ -207,7 +207,7 @@ export default function AdminProducts() {
 
       if (editingProduct && editingProduct._id) {
         url = `${API_URL}/api/products/${editingProduct._id}`;
-        method = 'PUT';
+        method = 'PUT'; // Using PUT because backend update_product accepts Form
       } else {
         // For creations, image file is required
         if (selectedFiles.length === 0) {
@@ -225,6 +225,14 @@ export default function AdminProducts() {
 
       if (!res.ok) {
         const errData = await res.json();
+        // Parse validation error properly
+        if (errData.detail && Array.isArray(errData.detail)) {
+          const messages = errData.detail.map((err: any) => {
+            const loc = err.loc ? err.loc.join('.') : '';
+            return `${loc}: ${err.msg}`;
+          });
+          throw new Error(messages.join(', '));
+        }
         throw new Error(errData.detail || "Request failed. Please check inputs.");
       }
 

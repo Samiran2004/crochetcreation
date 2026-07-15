@@ -512,16 +512,7 @@ export default function UserDashboard() {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-10 md:pt-32 md:pb-14">
-        {/* Welcome Section */}
-        <div className="mb-10 text-center md:text-left">
-          <h1 className="font-serif text-3xl md:text-5xl font-light tracking-wide text-[#4A3E3E] mb-2 leading-tight">
-            Welcome, {userProfile?.first_name} {userProfile?.last_name}
-          </h1>
-          <p className="text-xs md:text-sm font-semibold tracking-widest uppercase text-stone-500">
-            Manage your personal profile, delivery addresses and order history
-          </p>
-        </div>
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-10 md:pt-40 md:pb-14">
 
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
           {/* Sidebar */}
@@ -580,36 +571,49 @@ export default function UserDashboard() {
             {/* PROFILE TAB */}
             {activeTab === 'profile' && (
               <div>
-                <div className="flex items-center justify-between border-b border-stone-100 pb-4 mb-8">
-                  <h2 className="font-serif text-2xl font-light text-[#4A3E3E]">
-                    Personal Details
-                  </h2>
-                </div>
-                
-                {/* Profile Picture / Avatar */}
-                <div className="flex flex-col sm:flex-row items-center gap-6 mb-10 bg-gradient-to-r from-[#FEF9F6] to-white p-6 rounded-3xl border border-[#F0E4E4] shadow-sm">
-                  <div className="relative shrink-0">
-                    {userProfile?.picture ? (
-                      <img 
-                        src={userProfile.picture} 
-                        alt="Profile" 
-                        className="w-20 h-20 rounded-full object-cover border-4 border-white shadow-md"
-                      />
-                    ) : (
-                      <div className="w-20 h-20 rounded-full bg-[#EADBDB] text-[#6B5656] flex items-center justify-center text-3xl font-serif border-4 border-white shadow-md">
-                        {userProfile?.first_name?.[0] || 'U'}
-                      </div>
-                    )}
-                    <div className="absolute bottom-1 right-1 w-4 h-4 bg-green-500 border-2 border-white rounded-full"></div>
+                {/* Premium Profile Header */}
+                <div className="relative mb-12 rounded-3xl overflow-hidden border border-stone-100 shadow-sm bg-white">
+                  {/* Cover Banner */}
+                  <div className="h-32 md:h-48 w-full bg-gradient-to-r from-[#D9B4B4] via-[#EADBDB] to-[#F0E4E4] relative overflow-hidden">
+                    <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(#4A3E3E 1px, transparent 1px)', backgroundSize: '16px 16px' }}></div>
                   </div>
-                  <div className="text-center sm:text-left">
-                    <h3 className="font-serif text-2xl font-medium text-[#4A3E3E]">
-                      {userProfile?.first_name} {userProfile?.last_name}
-                    </h3>
-                    <p className="text-sm font-medium text-stone-500 mt-1">{userProfile?.email}</p>
-                    {userProfile?.mobile && (
-                      <p className="text-sm font-medium text-stone-500 mt-0.5">{userProfile?.mobile}</p>
-                    )}
+                  
+                  {/* Profile Info Container */}
+                  <div className="px-6 pb-6 md:px-10 md:pb-10 relative">
+                    {/* Floating Avatar */}
+                    <div className="flex flex-col sm:flex-row gap-4 sm:gap-8 items-center sm:items-end -mt-16 md:-mt-20 relative z-10 mb-4 sm:mb-0">
+                      <div className="relative group shrink-0">
+                        {userProfile?.picture ? (
+                          <img 
+                            src={userProfile.picture} 
+                            alt="Profile" 
+                            className="w-32 h-32 md:w-40 md:h-40 rounded-full object-cover border-4 md:border-8 border-white shadow-xl bg-white transition-transform duration-500 group-hover:scale-105"
+                          />
+                        ) : (
+                          <div className="w-32 h-32 md:w-40 md:h-40 rounded-full bg-gradient-to-br from-[#FEF9F6] to-[#EADBDB] text-[#6B5656] flex items-center justify-center text-4xl md:text-5xl font-serif border-4 md:border-8 border-white shadow-xl bg-white transition-transform duration-500 group-hover:scale-105">
+                            {userProfile?.first_name?.[0] || 'U'}
+                          </div>
+                        )}
+                        <div className="absolute bottom-2 right-2 md:bottom-4 md:right-4 w-6 h-6 bg-emerald-500 border-4 border-white rounded-full shadow-sm"></div>
+                      </div>
+                      
+                      <div className="text-center sm:text-left pt-2 sm:pt-0 pb-2">
+                        <div className="flex items-center justify-center sm:justify-start gap-2">
+                          <h2 className="font-serif text-2xl md:text-3xl font-bold text-[#4A3E3E]">
+                            {userProfile?.first_name} {userProfile?.last_name}
+                          </h2>
+                          <CheckCircle className="w-5 h-5 text-[#D9B4B4]" />
+                        </div>
+                        <p className="text-sm font-medium text-stone-500 mt-1">
+                          {userProfile?.email}
+                        </p>
+                        {userProfile?.mobile && (
+                          <p className="text-xs font-semibold uppercase tracking-widest text-stone-400 mt-2 bg-stone-50 inline-block px-3 py-1 rounded-md border border-stone-100">
+                            {userProfile?.mobile}
+                          </p>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
                 

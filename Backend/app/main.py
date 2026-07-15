@@ -73,6 +73,7 @@ async def validation_exception_handler(request, exc):
         if "input" in error_copy and isinstance(error_copy["input"], bytes):
             error_copy["input"] = "<bytes>"
         sanitized_errors.append(error_copy)
+    print("Validation Error:", sanitized_errors)
     return JSONResponse(
         status_code=422,
         content={"detail": jsonable_encoder(sanitized_errors)},

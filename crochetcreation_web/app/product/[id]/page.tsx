@@ -74,8 +74,7 @@ export default function ProductDetailPage() {
   const [quantity, setQuantity] = useState(1);
 
   // Selector variants
-  const [selectedSize, setSelectedSize] = useState('M');
-  const [selectedColorVal, setSelectedColorVal] = useState('Cream');
+  const [selectedSize, setSelectedSize] = useState<string>('');
   const [isWishlisted, setIsWishlisted] = useState(false);
 
   // Accordion states
@@ -930,43 +929,6 @@ export default function ProductDetailPage() {
                   </div>
                 </div>
               )}
-
-              {/* Color Selection */}
-              <div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-[9px] font-bold uppercase tracking-widest text-stone-400">Select Color</span>
-                  <span className="text-xs font-semibold text-[#6B5656]">{selectedColorVal}</span>
-                </div>
-                <div className="flex gap-3">
-                  {[
-                    { name: 'Cream', color: '#FDFBF7', border: 'border-stone-300' },
-                    { name: 'Rose', color: '#D9B4B4', border: 'border-[#D9B4B4]' },
-                    { name: 'Mustard', color: '#E6C17A', border: 'border-[#E6C17A]' },
-                    { name: 'Sage', color: '#A8BC98', border: 'border-[#A8BC98]' }
-                  ].map((clr) => (
-                    <button
-                      key={clr.name}
-                      type="button"
-                      onClick={() => setSelectedColorVal(clr.name)}
-                      className={`w-7 h-7 rounded-full border-2 transition-all relative ${
-                        selectedColorVal === clr.name
-                          ? 'ring-2 ring-offset-2 ring-[#6B5656]'
-                          : 'hover:scale-105'
-                      }`}
-                      style={{ backgroundColor: clr.color }}
-                      title={clr.name}
-                    >
-                      {selectedColorVal === clr.name && (
-                        <span className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-[#6B5656]">
-                          ✓
-                        </span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
             {/* Quantity Selector & Action Buttons */}
             <div className="pt-4 border-t border-[#EADBDB]/50 space-y-4">
               <div className="flex items-center justify-between">

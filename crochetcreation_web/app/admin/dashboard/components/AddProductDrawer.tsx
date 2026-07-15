@@ -176,24 +176,6 @@ export default function AddProductDrawer({ isOpen, onClose, onSuccess }: AddProd
     setGalleryPreviews(prev => prev.filter((_, i) => i !== index));
   };
 
-  // Upload to Cloudinary using Unsigned Preset
-  const uploadToCloudinary = async (file: File): Promise<string> => {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('upload_preset', 'ml_default'); // Cloudinary's default unsigned preset
-
-    const res = await fetch(`https://api.cloudinary.com/v1_1/dkd4extjx/image/upload`, {
-      method: 'POST',
-      body: formData
-    });
-
-    if (!res.ok) {
-      throw new Error(`Cloudinary upload failed for ${file.name}`);
-    }
-
-    const data = await res.json();
-    return data.secure_url;
-  };
 
   // Form Submission
   const handleSubmit = async (e: React.FormEvent) => {
@@ -209,62 +191,60 @@ export default function AddProductDrawer({ isOpen, onClose, onSuccess }: AddProd
     setIsUploadingImages(true);
 
     try {
-      // 1. Upload Images to Cloudinary
-      let mainImageUrl = '';
-      const galleryUrls: string[] = [];
-
-      try {
-        mainImageUrl = await uploadToCloudinary(mainImageFile);
-        
-        for (const file of galleryFiles) {
-          const url = await uploadToCloudinary(file);
-          galleryUrls.push(url);
-        }
-      } catch (uploadErr: any) {
-        console.error("Cloudinary upload failed:", uploadErr);
-        throw new Error("Failed to upload images to Cloudinary. Please try again.");
-      } finally {
-        setIsUploadingImages(false);
-      }
-
-      // 2. Prepare payload
+      const formData = new FormData();
+      formData.append('title', title);
+      formData.append('description', description);
+      
       const priceVal = parseFloat(sellingPrice || originalPrice || '0');
-      const origPriceVal = originalPrice ? parseFloat(originalPrice) : undefined;
-      const sellPriceVal = sellingPrice ? parseFloat(sellingPrice) : undefined;
+      formData.append('price', priceVal.toString());
+      if (originalPrice) {
+        formData.append('originalPrice', originalPrice);
+      }
+      if (sellingPrice) {
+        formData.append('sellingPrice', sellingPrice);
+      }
+      
+      formData.append('category', category);
+      formData.append('in_stock', 'true');
+      
       const stockVal = parseInt(stockQuantity) || 0;
-      const widthVal = width ? parseInt(width) : undefined;
-      const heightVal = height ? parseInt(height) : undefined;
+      formData.append('stock_quantity', stockVal.toString());
+      
+      if (width) formData.append('width', width);
+      if (height) formData.append('height', height);
+      if (sku) formData.append('sku', sku);
+      
+      // Append files
+      if (mainImageFile) {
+        formData.append('images', mainImageFile);
+      }
+      galleryFiles.forEach(file => {
+        formData.append('images', file);
+      });
 
-      const payload: ProductCreatePayload = {
-        title,
-        description,
-        price: priceVal,
-        originalPrice: origPriceVal,
-        sellingPrice: sellPriceVal,
-        category,
-        image_url: mainImageUrl,
-        image_urls: [mainImageUrl, ...galleryUrls],
-        stock_quantity: stockVal,
-        stock_count: stockVal,
-        in_stock: stockVal > 0,
-        width: widthVal,
-        height: heightVal,
-        sku: sku || undefined
-      };
-
-      // 3. Send Request to FastAPI
+      // Send Request to FastAPI
       const res = await fetch(`${API_URL}/api/products`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(payload)
+        body: formData
       });
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.detail || "Failed to create catalog product.");
+        let errorMessage = "Failed to create catalog product.";
+        if (data.detail) {
+          if (typeof data.detail === 'string') {
+            errorMessage = data.detail;
+          } else if (Array.isArray(data.detail)) {
+            errorMessage = data.detail.map((err: any) => {
+              const field = err.loc[err.loc.length - 1];
+              return `${field}: ${err.msg}`;
+            }).join(' | ');
+          }
+        }
+        throw new Error(errorMessage);
       }
 
       // Success cleanup & refresh

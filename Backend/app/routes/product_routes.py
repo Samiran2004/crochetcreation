@@ -11,7 +11,24 @@ router = APIRouter(prefix="/api/products", tags=["products"])
 
 @router.post("/", response_model=ProductModel, status_code=status.HTTP_201_CREATED)
 async def create_product(
-    product_create: ProductCreate,
+    title: str = Form(...),
+    description: str = Form(...),
+    price: float = Form(...),
+    originalPrice: Optional[float] = Form(None),
+    sellingPrice: Optional[float] = Form(None),
+    category: str = Form(...),
+    size: str = Form(""),
+    materials: str = Form(""),
+    care_instructions: str = Form(""),
+    in_stock: bool = Form(True),
+    stock_quantity: int = Form(15),
+    delivery_time: str = Form("5-7 working days"),
+    has_sizes: bool = Form(False),
+    width: Optional[int] = Form(None),
+    height: Optional[int] = Form(None),
+    sku: Optional[str] = Form(None),
+    images: List[UploadFile] = File(None),
+    image: UploadFile = File(None),
     current_admin: UserInDB = Depends(get_current_admin_user)
 ):
     try:
@@ -22,37 +39,54 @@ async def create_product(
                 detail="Database connection is not initialized."
             )
 
-        sku = product_create.sku
         if not sku or sku.strip() == "":
             import random, string
             sku = "SKU-CR-" + "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
 
-        orig_price = product_create.originalPrice if product_create.originalPrice is not None else product_create.price
-        sell_price = product_create.sellingPrice if product_create.sellingPrice is not None else orig_price
+        orig_price = originalPrice if originalPrice is not None else price
+        sell_price = sellingPrice if sellingPrice is not None else orig_price
 
-        # Update in_stock based on stock_quantity
-        stock_q = product_create.stock_quantity if product_create.stock_quantity is not None else 15
-        in_st = product_create.in_stock if product_create.in_stock is not None else (stock_q > 0)
+        # Upload images to cloudinary
+        uploaded_urls = []
+        upload_width = width
+        upload_height = height
+        if images:
+            for img in images:
+                if img.filename:
+                    upload_res = await upload_image_to_cloudinary(img)
+                    uploaded_urls.append(upload_res["url"])
+                    if not upload_width:
+                        upload_width = upload_res["width"]
+                        upload_height = upload_res["height"]
+                    
+        if not uploaded_urls and image and image.filename:
+            upload_res = await upload_image_to_cloudinary(image)
+            uploaded_urls.append(upload_res["url"])
+            upload_width = upload_res.get("width")
+            upload_height = upload_res.get("height")
+            
+        if not uploaded_urls:
+            raise HTTPException(status_code=400, detail="At least one image is required.")
 
         product_data = {
-            "title": product_create.title,
-            "description": product_create.description,
+            "title": title,
+            "description": description,
             "price": sell_price,
             "originalPrice": orig_price,
             "sellingPrice": sell_price,
-            "category": product_create.category,
-            "image_url": product_create.image_url,
-            "image_urls": product_create.image_urls or [product_create.image_url],
-            "size": product_create.size or "",
-            "materials": product_create.materials or "",
-            "care_instructions": product_create.care_instructions or "",
-            "in_stock": in_st,
-            "stock_quantity": stock_q,
-            "stock_count": stock_q,
-            "delivery_time": product_create.delivery_time or "5-7 working days",
-            "has_sizes": product_create.has_sizes or False,
-            "width": product_create.width,
-            "height": product_create.height,
+            "category": category,
+            "image_url": uploaded_urls[0],
+            "image_urls": uploaded_urls,
+            "size": size,
+            "materials": materials,
+            "care_instructions": care_instructions,
+            "in_stock": in_stock,
+            "stock_quantity": stock_quantity,
+            "stock_count": stock_quantity,
+            "delivery_time": delivery_time,
+            "has_sizes": has_sizes,
+            "width": upload_width,
+            "height": upload_height,
             "sku": sku
         }
 
