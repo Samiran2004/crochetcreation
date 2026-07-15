@@ -1057,7 +1057,7 @@ export default function CrochetCreationPage() {
 
         {/* 2. Value Proposition (Cream Background) */}
         <section id="elements" className="py-12 md:py-28 px-4 md:px-12 bg-[#FEF9F6] border-b border-[#EADBDB]/50 scroll-mt-28">
-          <StaggerContainer className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-3 gap-y-8 md:gap-y-16 gap-x-4 md:gap-x-12">
+          <StaggerContainer className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-y-8 md:gap-y-16 gap-x-4 md:gap-x-12">
 
             {/* Card 1 */}
             <StaggerItem className="flex flex-col items-center text-center space-y-4">
@@ -1093,24 +1093,6 @@ export default function CrochetCreationPage() {
               </div>
               <h4 className="text-sm font-bold uppercase tracking-wider text-[#6B5656]">Create any idea</h4>
               <p className="text-xs text-stone-500 max-w-xs leading-relaxed">Models of any complexity in a short time, stitched according to your details.</p>
-            </StaggerItem>
-
-            {/* Card 5 */}
-            <StaggerItem className="flex flex-col items-center text-center space-y-4">
-              <div className="w-14 h-14 rounded-full border border-[#D9B4B4] flex items-center justify-center text-[#D9B4B4] hover:bg-[#D9B4B4] group transition-all duration-300">
-                <Send className="w-6 h-6 text-[#D9B4B4] group-hover:text-[#6B5656] transition-colors duration-300" />
-              </div>
-              <h4 className="text-sm font-bold uppercase tracking-wider text-[#6B5656]">Worldwide shipping</h4>
-              <p className="text-xs text-stone-500 max-w-xs leading-relaxed">Express delivery of parcels around the world with full tracking details.</p>
-            </StaggerItem>
-
-            {/* Card 6 */}
-            <StaggerItem className="flex flex-col items-center text-center space-y-4">
-              <div className="w-14 h-14 rounded-full border border-[#D9B4B4] flex items-center justify-center text-[#D9B4B4] hover:bg-[#D9B4B4] group transition-all duration-300">
-                <Scissors className="w-6 h-6 text-[#D9B4B4] group-hover:text-[#6B5656] transition-colors duration-300" />
-              </div>
-              <h4 className="text-sm font-bold uppercase tracking-wider text-[#6B5656]">Knitwear restoration</h4>
-              <p className="text-xs text-stone-500 max-w-xs leading-relaxed">Restoration of holes, elimination of puffs and care services for knits.</p>
             </StaggerItem>
 
           </StaggerContainer>
@@ -1265,18 +1247,18 @@ export default function CrochetCreationPage() {
               </div>
               {/* Middle: Dark Textured Sub-block */}
               <div className="bg-crochet-charcoal text-[#FEF9F6] p-8 flex-grow flex flex-col justify-center items-center text-center space-y-4">
-                <span className="text-[10px] font-black tracking-widest text-[#D9B4B4] uppercase">DO IT YOURSELF</span>
+                <span className="text-[10px] font-black tracking-widest text-[#D9B4B4] uppercase">HANDMADE WITH LOVE</span>
                 <h3 className="text-lg font-serif font-medium tracking-wide leading-snug">
-                  STEP-BY-STEP MASTER CLASSES WITH PHOTO AND VIDEO LESSONS
+                  CUSTOM ORDERS MADE SPECIFICALLY FOR YOU
                 </h3>
                 <p className="text-xs text-stone-300 italic">
-                  “LITTLE CROCHET HEART, MASTER CLASS!”
+                  “UNIQUE CREATIONS, CRAFTED TO PERFECTION”
                 </p>
                 <button
                   onClick={() => setCustomRequestModal(true)}
                   className="bg-[#D9B4B4] hover:bg-[#FEF9F6] text-[#6B5656] hover:text-gray-900 text-[10px] uppercase font-black tracking-widest px-6 py-3.5 rounded-full transition-all duration-300 ease-in-out shadow mt-2"
                 >
-                  enroll in courses
+                  REQUEST CUSTOM ORDER
                 </button>
               </div>
               {/* Bottom: Wood textured decorative bar */}
@@ -1298,8 +1280,8 @@ export default function CrochetCreationPage() {
               {/* Hover Dark Text Overlay at Bottom */}
               <div className="absolute bottom-0 left-0 w-full bg-crochet-charcoal/95 text-[#FEF9F6] p-6 border-t border-[#D9B4B4]/20 flex items-center justify-between">
                 <div className="space-y-1">
-                  <span className="text-[8px] font-black tracking-wider uppercase text-[#D9B4B4]">LEARN FROM Crochet Creation</span>
-                  <p className="text-xs text-stone-300">Discover masterclasses for all experience levels.</p>
+                  <span className="text-[8px] font-black tracking-wider uppercase text-[#D9B4B4]">DISCOVER CROCHET CREATION</span>
+                  <p className="text-xs text-stone-300">Explore our catalog of ready-made products.</p>
                 </div>
                 <a href="#about" className="text-xs font-black uppercase tracking-widest text-[#D9B4B4] hover:text-[#FEF9F6] flex items-center gap-1 transition-colors">
                   SEE MORE <ChevronRight className="w-4 h-4" />
@@ -1462,7 +1444,7 @@ export default function CrochetCreationPage() {
                 </span>
               </div>
               <p className="text-sm font-light text-stone-300 max-w-xl leading-relaxed">
-                IF YOU HAVE QUESTIONS OR WANT TO ARRANGE A PERSONAL MEETING AND A MASTER CLASS?
+                HAVE QUESTIONS OR WANT TO DISCUSS A CUSTOM ORDER? FEEL FREE TO REACH OUT TO US!
               </p>
 
               {/* Scattered pink/purple buttons visual representation */}
