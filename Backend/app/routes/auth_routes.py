@@ -160,6 +160,7 @@ async def google_auth(req: GoogleAuthRequest, background_tasks: BackgroundTasks)
                     {"email": email},
                     {"$set": update_data}
                 )
+                user_dict.update(update_data)
         else:
             # Create new user
             user_dict = {

@@ -223,7 +223,7 @@ async def connect_to_mongo():
             pass
 
         # Try standard client initialization
-        db_instance.client = AsyncIOMotorClient(settings.MONGO_URI, serverSelectionTimeoutMS=2000)
+        db_instance.client = AsyncIOMotorClient(settings.MONGO_URI, serverSelectionTimeoutMS=30000)
         db_instance.db = db_instance.client[settings.DATABASE_NAME]
         
         # Ping the admin database to verify active connection (AsyncIOMotorClient is lazy)

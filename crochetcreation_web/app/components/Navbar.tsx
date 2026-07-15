@@ -30,7 +30,7 @@ interface NavbarProps {
   currentPage?: string;
   // Auth state - null means logged out
   token?: string | null;
-  userProfile?: { first_name?: string; last_name?: string; email?: string; is_admin?: boolean } | null;
+  userProfile?: { first_name?: string; last_name?: string; email?: string; is_admin?: boolean; picture?: string } | null;
   onLogout?: () => void;
   onOpenAuth?: () => void;
   // Cart
@@ -259,9 +259,14 @@ export default function Navbar({
                 )}
                 <Link
                   href="/dashboard"
-                  className="text-[11px] font-semibold text-[#FEF9F6]/80 hover:text-[#FEF9F6] transition-colors"
+                  className="flex items-center gap-1.5 bg-white/5 hover:bg-white/10 px-2.5 py-1 rounded-full border border-white/5 transition-all text-[11px] font-semibold text-[#FEF9F6]/90 shadow-sm"
                 >
-                  👋 {userProfile.first_name || 'User'}
+                  {userProfile.picture ? (
+                    <img src={userProfile.picture} alt="Profile" className="w-5 h-5 rounded-full border border-white/20 object-cover shadow-sm" />
+                  ) : (
+                    <span className="text-[12px]">👋</span>
+                  )}
+                  <span className="tracking-wide">{userProfile.first_name || 'User'}</span>
                 </Link>
                 <button
                   onClick={handleLogout}
@@ -293,8 +298,13 @@ export default function Navbar({
           {/* Mobile Right Action Bar (visible on mobile only, < md) */}
           <div className="flex md:hidden items-center gap-2">
             {token && userProfile ? (
-              <span className="text-[10px] font-bold text-[#FEF9F6]/95 bg-white/10 px-3 py-1.5 rounded-xl border border-white/5 select-none">
-                👋 {userProfile.first_name || 'Me'}
+              <span className="flex items-center gap-1.5 text-[10px] font-bold text-[#FEF9F6]/95 bg-white/10 pl-1.5 pr-3 py-1 rounded-full border border-white/10 select-none shadow-sm">
+                {userProfile.picture ? (
+                  <img src={userProfile.picture} alt="Profile" className="w-5 h-5 rounded-full border border-white/20 object-cover" />
+                ) : (
+                  <span className="text-[12px]">👋</span>
+                )}
+                <span className="tracking-wide">{userProfile.first_name || 'Me'}</span>
               </span>
             ) : (
               <button

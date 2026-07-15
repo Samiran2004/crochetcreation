@@ -213,7 +213,8 @@ export default function UserDashboard() {
           first_name: data.first_name,
           last_name: data.last_name,
           mobile: data.mobile,
-          is_admin: data.is_admin
+          is_admin: data.is_admin,
+          picture: data.picture
         }));
       }
     } catch (err) {
@@ -346,7 +347,8 @@ export default function UserDashboard() {
           first_name: data.first_name,
           last_name: data.last_name,
           mobile: data.mobile,
-          is_admin: data.is_admin
+          is_admin: data.is_admin,
+          picture: data.picture
         }));
         showToast('Profile details updated successfully!');
       } else {

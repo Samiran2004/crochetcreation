@@ -170,7 +170,8 @@ export default function CrochetCreationPage() {
         first_name: data.first_name,
         last_name: data.last_name,
         mobile: data.mobile,
-        is_admin: data.is_admin
+        is_admin: data.is_admin,
+        picture: data.picture
       }));
       setShowMobilePrompt(false);
       showToast("Mobile number added successfully!");
@@ -243,10 +244,12 @@ export default function CrochetCreationPage() {
         localStorage.setItem('refresh_token', data.refresh_token);
       }
 
-      const userObj = data.user || {
-        email: result.user.email,
-        first_name: result.user.displayName?.split(' ')[0] || 'User',
-        is_admin: false
+      const userObj = {
+        ...data.user,
+        picture: data.user?.picture || result.user.photoURL,
+        email: data.user?.email || result.user.email,
+        first_name: data.user?.first_name || result.user.displayName?.split(' ')[0] || 'User',
+        is_admin: data.user?.is_admin || false
       };
       setUserProfile(userObj);
       localStorage.setItem('user', JSON.stringify(userObj));
@@ -761,7 +764,7 @@ export default function CrochetCreationPage() {
             <StaggerItem yOffset={20}>
               <button
                 onClick={() => document.getElementById('shop')?.scrollIntoView({ behavior: 'smooth' })}
-                className="border-2 border-[#D9B4B4] hover:bg-[#D9B4B4] hover:text-[#FEF9F6] text-[#D9B4B4] text-xs font-sans font-semibold uppercase tracking-widest px-6 md:px-8 py-3 md:py-3.5 rounded-full transition-all duration-300 ease-in-out active:scale-95 shadow-lg min-h-[44px]"
+                className="border-2 border-[#D9B4B4] hover:bg-[#D9B4B4] hover:!text-stone-900 text-[#D9B4B4] text-xs font-sans font-semibold uppercase tracking-widest px-6 md:px-8 py-3 md:py-3.5 rounded-full transition-all duration-300 ease-in-out active:scale-95 shadow-lg min-h-[44px]"
               >
                 View all products
               </button>
@@ -1059,7 +1062,7 @@ export default function CrochetCreationPage() {
             {/* Card 1 */}
             <StaggerItem className="flex flex-col items-center text-center space-y-4">
               <div className="w-14 h-14 rounded-full border border-[#D9B4B4] flex items-center justify-center text-[#D9B4B4] hover:bg-[#D9B4B4] group transition-all duration-300">
-                <Heart className="w-6 h-6 text-[#D9B4B4] group-hover:text-white transition-colors duration-300" />
+                <Heart className="w-6 h-6 text-[#D9B4B4] group-hover:text-[#6B5656] transition-colors duration-300" />
               </div>
               <h4 className="text-sm font-bold uppercase tracking-wider text-[#6B5656]">Find something you love</h4>
               <p className="text-xs text-stone-500 max-w-xs leading-relaxed">Our store is a world of vintage and beautiful items designed to inspire warmth.</p>
@@ -1068,7 +1071,7 @@ export default function CrochetCreationPage() {
             {/* Card 2 */}
             <StaggerItem className="flex flex-col items-center text-center space-y-4">
               <div className="w-14 h-14 rounded-full border border-[#D9B4B4] flex items-center justify-center text-[#D9B4B4] hover:bg-[#D9B4B4] group transition-all duration-300">
-                <Gift className="w-6 h-6 text-[#D9B4B4] group-hover:text-white transition-colors duration-300" />
+                <Gift className="w-6 h-6 text-[#D9B4B4] group-hover:text-[#6B5656] transition-colors duration-300" />
               </div>
               <h4 className="text-sm font-bold uppercase tracking-wider text-[#6B5656]">If you are looking for a gift</h4>
               <p className="text-xs text-stone-500 max-w-xs leading-relaxed">The best present is a handmade one that tells a story and lasts a lifetime.</p>
@@ -1077,7 +1080,7 @@ export default function CrochetCreationPage() {
             {/* Card 3 */}
             <StaggerItem className="flex flex-col items-center text-center space-y-4">
               <div className="w-14 h-14 rounded-full border border-[#D9B4B4] flex items-center justify-center text-[#D9B4B4] hover:bg-[#D9B4B4] group transition-all duration-300">
-                <ShoppingBag className="w-6 h-6 text-[#D9B4B4] group-hover:text-white transition-colors duration-300" />
+                <ShoppingBag className="w-6 h-6 text-[#D9B4B4] group-hover:text-[#6B5656] transition-colors duration-300" />
               </div>
               <h4 className="text-sm font-bold uppercase tracking-wider text-[#6B5656]">Buy and sell with confidence</h4>
               <p className="text-xs text-stone-500 max-w-xs leading-relaxed">It would be easier, faster and safer to buy items from verified organic knits.</p>
@@ -1086,7 +1089,7 @@ export default function CrochetCreationPage() {
             {/* Card 4 */}
             <StaggerItem className="flex flex-col items-center text-center space-y-4">
               <div className="w-14 h-14 rounded-full border border-[#D9B4B4] flex items-center justify-center text-[#D9B4B4] hover:bg-[#D9B4B4] group transition-all duration-300">
-                <Lightbulb className="w-6 h-6 text-[#D9B4B4] group-hover:text-white transition-colors duration-300" />
+                <Lightbulb className="w-6 h-6 text-[#D9B4B4] group-hover:text-[#6B5656] transition-colors duration-300" />
               </div>
               <h4 className="text-sm font-bold uppercase tracking-wider text-[#6B5656]">Create any idea</h4>
               <p className="text-xs text-stone-500 max-w-xs leading-relaxed">Models of any complexity in a short time, stitched according to your details.</p>
@@ -1095,7 +1098,7 @@ export default function CrochetCreationPage() {
             {/* Card 5 */}
             <StaggerItem className="flex flex-col items-center text-center space-y-4">
               <div className="w-14 h-14 rounded-full border border-[#D9B4B4] flex items-center justify-center text-[#D9B4B4] hover:bg-[#D9B4B4] group transition-all duration-300">
-                <Send className="w-6 h-6 text-[#D9B4B4] group-hover:text-white transition-colors duration-300" />
+                <Send className="w-6 h-6 text-[#D9B4B4] group-hover:text-[#6B5656] transition-colors duration-300" />
               </div>
               <h4 className="text-sm font-bold uppercase tracking-wider text-[#6B5656]">Worldwide shipping</h4>
               <p className="text-xs text-stone-500 max-w-xs leading-relaxed">Express delivery of parcels around the world with full tracking details.</p>
@@ -1104,7 +1107,7 @@ export default function CrochetCreationPage() {
             {/* Card 6 */}
             <StaggerItem className="flex flex-col items-center text-center space-y-4">
               <div className="w-14 h-14 rounded-full border border-[#D9B4B4] flex items-center justify-center text-[#D9B4B4] hover:bg-[#D9B4B4] group transition-all duration-300">
-                <Scissors className="w-6 h-6 text-[#D9B4B4] group-hover:text-white transition-colors duration-300" />
+                <Scissors className="w-6 h-6 text-[#D9B4B4] group-hover:text-[#6B5656] transition-colors duration-300" />
               </div>
               <h4 className="text-sm font-bold uppercase tracking-wider text-[#6B5656]">Knitwear restoration</h4>
               <p className="text-xs text-stone-500 max-w-xs leading-relaxed">Restoration of holes, elimination of puffs and care services for knits.</p>
