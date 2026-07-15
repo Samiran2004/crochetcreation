@@ -4,7 +4,7 @@
 
 @layer base {
   @font-face {
-    font-family: 'HughIsLife';
+    font-family: "HughIsLife";
     src: url('/fonts/hugh-is-life.ttf') format('truetype');
     font-weight: normal;
     font-style: normal;
@@ -12,7 +12,7 @@
   }
 
   @font-face {
-    font-family: 'OrangeAvenue';
+    font-family: "OrangeAvenue";
     src: url('/fonts/orange-avenue.otf') format('opentype');
     font-weight: normal;
     font-style: normal;

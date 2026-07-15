@@ -40,8 +40,8 @@ const config: Config = {
       fontFamily: {
         serif: ['"Playfair Display"', 'serif'],
         sans: ['"Quicksand"', 'sans-serif'],
-        hugh: ['HughIsLife', 'cursive'],
-        orange: ['OrangeAvenue', 'serif'],
+        hugh: ['"HughIsLife"', 'cursive'],
+        avenue: ['"OrangeAvenue"', 'serif'],
       },
     },
   },
