@@ -19,15 +19,7 @@ import Navbar from '../components/Navbar';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
-const CATEGORIES = [
-  { id: 'ALL', label: 'All Creations' },
-  { id: 'TOYS', label: 'Toys & Amigurumi' },
-  { id: 'SCARVES AND HATS', label: 'Scarves & Hats' },
-  { id: 'ACCESSORIES', label: 'Accessories' },
-  { id: 'PULLOVERS', label: 'Pullovers & Sweaters' },
-  { id: 'DRESSES', label: 'Dresses' },
-  { id: 'FOR KIDS', label: 'For Kids' }
-];
+// Dynamic categories will be generated based on products
 
 export default function ShopPage() {
   const router = useRouter();
@@ -38,6 +30,11 @@ export default function ShopPage() {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('ALL');
+
+  const dynamicCategories = useMemo(() => {
+    const cats = Array.from(new Set(products.map((p) => p.category).filter(Boolean)));
+    return ['ALL', ...cats];
+  }, [products]);
 
   // Navigation, Theme & Cart states
   const [cartItemsCount, setCartItemsCount] = useState(0);
@@ -360,12 +357,9 @@ export default function ShopPage() {
       const desc = (p.description || '').toLowerCase();
       const matchesSearch = title.includes(searchQuery.toLowerCase()) || desc.includes(searchQuery.toLowerCase());
 
-      const productCat = (p.category || '').toUpperCase();
-      const filterCat = activeFilter.toUpperCase();
-      const matchesCategory = filterCat === 'ALL' || productCat === filterCat || 
-        (filterCat === 'TOYS' && productCat.includes('TOY')) || 
-        (filterCat === 'ACCESSORIES' && productCat.includes('ACCESSORY')) ||
-        (filterCat === 'SCARVES AND HATS' && (productCat.includes('SCARF') || productCat.includes('HAT')));
+      const productCat = p.category || '';
+      const filterCat = activeFilter;
+      const matchesCategory = filterCat === 'ALL' || productCat === filterCat;
 
       return matchesSearch && matchesCategory;
     });
@@ -448,18 +442,18 @@ export default function ShopPage() {
           </div>
 
           {/* Category Tabs */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-2 lg:pb-0 scrollbar-thin">
-            {CATEGORIES.map((cat) => (
+          <div className="flex items-center overflow-x-auto scrollbar-hide whitespace-nowrap gap-2 pb-2 lg:pb-0">
+            {dynamicCategories.map((cat) => (
               <button
-                key={cat.id}
-                onClick={() => setActiveFilter(cat.id)}
+                key={cat}
+                onClick={() => setActiveFilter(cat)}
                 className={`text-[10px] font-bold uppercase tracking-widest px-4 py-2.5 rounded-xl transition-all whitespace-nowrap border ${
-                  activeFilter === cat.id
+                  activeFilter === cat
                     ? 'bg-[#6B5656] border-[#6B5656] text-[#FEF9F6] shadow-sm'
                     : 'bg-white border-[#EADBDB] hover:border-[#6B5656] text-[#6B5656]'
                 }`}
               >
-                {cat.label}
+                {cat === 'ALL' ? 'All Creations' : cat}
               </button>
             ))}
           </div>
