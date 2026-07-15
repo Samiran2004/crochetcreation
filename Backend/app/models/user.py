@@ -12,6 +12,7 @@ class UserBase(BaseModel):
     email: EmailStr
     mobile: str = Field(..., min_length=1)
     is_admin: bool = False
+    picture: Optional[str] = None
 
     @field_validator("mobile")
     @classmethod

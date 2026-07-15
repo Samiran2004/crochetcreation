@@ -514,13 +514,29 @@ export default function UserDashboard() {
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-10 md:pt-12 md:pb-14">
         {/* Welcome Section */}
-        <div className="mb-10 text-center md:text-left">
-          <h1 className="font-serif text-3xl md:text-5xl font-light tracking-wide text-[#4A3E3E] mb-2 text-center md:text-left leading-tight">
-            Welcome, {userProfile?.first_name} {userProfile?.last_name}
-          </h1>
-          <p className="text-xs md:text-sm font-semibold tracking-widest uppercase text-stone-500">
-            Manage your personal profile, delivery addresses and order history
-          </p>
+        <div className="mb-12 flex flex-col md:flex-row items-center gap-6 bg-gradient-to-r from-[#FEF9F6] to-white p-8 rounded-3xl border border-[#F0E4E4] shadow-sm">
+          <div className="relative">
+            {userProfile?.picture ? (
+              <img 
+                src={userProfile.picture} 
+                alt="Profile" 
+                className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-md"
+              />
+            ) : (
+              <div className="w-24 h-24 rounded-full bg-[#EADBDB] text-[#6B5656] flex items-center justify-center text-3xl font-serif border-4 border-white shadow-md">
+                {userProfile?.first_name?.[0] || 'U'}
+              </div>
+            )}
+            <div className="absolute bottom-1 right-1 w-5 h-5 bg-green-500 border-2 border-white rounded-full"></div>
+          </div>
+          <div className="text-center md:text-left">
+            <h1 className="font-serif text-3xl md:text-4xl font-light tracking-wide text-[#4A3E3E] mb-2 leading-tight">
+              Welcome, <span className="font-medium">{userProfile?.first_name} {userProfile?.last_name}</span>
+            </h1>
+            <p className="text-[11px] font-bold tracking-[0.2em] uppercase text-[#8B7373]">
+              Manage your personal profile, delivery addresses and order history
+            </p>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
@@ -580,77 +596,86 @@ export default function UserDashboard() {
             {/* PROFILE TAB */}
             {activeTab === 'profile' && (
               <div>
-                <h2 className="font-serif text-2xl font-light text-[#4A3E3E] border-b border-stone-100 pb-4 mb-6">
-                  Personal Details
-                </h2>
+                <div className="flex items-center justify-between border-b border-stone-100 pb-4 mb-8">
+                  <h2 className="font-serif text-2xl font-light text-[#4A3E3E]">
+                    Personal Details
+                  </h2>
+                </div>
                 
-                <form onSubmit={handleUpdateProfile} className="max-w-2xl space-y-6">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">
-                        First Name
+                <form onSubmit={handleUpdateProfile} className="max-w-2xl">
+                  <div className="space-y-7 bg-[#FAFAFA] p-6 rounded-2xl border border-stone-100 mb-8 shadow-sm">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      <div className="relative group">
+                        <label className="absolute -top-2.5 left-3 bg-[#FAFAFA] px-1 text-[9px] font-black uppercase tracking-widest text-stone-400 z-10 transition-colors group-focus-within:text-[#D9B4B4]">
+                          First Name
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={profileForm.first_name}
+                          onChange={(e) => setProfileForm({ ...profileForm, first_name: e.target.value })}
+                          className="w-full bg-transparent border-2 border-stone-200 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:border-[#D9B4B4] transition-all text-[#4A3E3E] font-medium"
+                        />
+                      </div>
+
+                      <div className="relative group">
+                        <label className="absolute -top-2.5 left-3 bg-[#FAFAFA] px-1 text-[9px] font-black uppercase tracking-widest text-stone-400 z-10 transition-colors group-focus-within:text-[#D9B4B4]">
+                          Last Name
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={profileForm.last_name}
+                          onChange={(e) => setProfileForm({ ...profileForm, last_name: e.target.value })}
+                          className="w-full bg-transparent border-2 border-stone-200 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:border-[#D9B4B4] transition-all text-[#4A3E3E] font-medium"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="relative group opacity-75">
+                      <label className="absolute -top-2.5 left-3 bg-[#FAFAFA] px-1 text-[9px] font-black uppercase tracking-widest text-stone-400 z-10">
+                        Email Address (Cannot be changed)
                       </label>
                       <input
-                        type="text"
-                        required
-                        value={profileForm.first_name}
-                        onChange={(e) => setProfileForm({ ...profileForm, first_name: e.target.value })}
-                        className="w-full bg-[#FEF9F6]/50 border border-stone-100 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#D9B4B4] transition-colors"
+                        type="email"
+                        disabled
+                        value={userProfile?.email || ''}
+                        className="w-full bg-stone-50 border-2 border-stone-100 text-stone-400 rounded-xl px-4 py-3.5 text-sm cursor-not-allowed font-medium"
                       />
                     </div>
 
-                    <div>
-                      <label className="block text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">
-                        Last Name
+                    <div className="relative group">
+                      <label className="absolute -top-2.5 left-3 bg-[#FAFAFA] px-1 text-[9px] font-black uppercase tracking-widest text-stone-400 z-10 transition-colors group-focus-within:text-[#D9B4B4]">
+                        Phone Number
                       </label>
                       <input
-                        type="text"
+                        type="tel"
                         required
-                        value={profileForm.last_name}
-                        onChange={(e) => setProfileForm({ ...profileForm, last_name: e.target.value })}
-                        className="w-full bg-[#FEF9F6]/50 border border-stone-100 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#D9B4B4] transition-colors"
+                        value={profileForm.mobile}
+                        onChange={(e) => setProfileForm({ ...profileForm, mobile: e.target.value })}
+                        placeholder="+919876543210"
+                        className="w-full bg-transparent border-2 border-stone-200 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:border-[#D9B4B4] transition-all text-[#4A3E3E] font-medium"
                       />
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">
-                      Email Address (Cannot be changed)
-                    </label>
-                    <input
-                      type="email"
-                      disabled
-                      value={userProfile?.email || ''}
-                      className="w-full bg-stone-50 border border-stone-100 text-stone-400 rounded-xl px-4 py-3 text-sm cursor-not-allowed"
-                    />
+                  <div className="flex justify-end">
+                    <button
+                      type="submit"
+                      disabled={profileLoading}
+                      className="group relative flex items-center gap-3 bg-[#4A3E3E] text-white px-8 py-3.5 rounded-xl text-xs font-bold uppercase tracking-widest overflow-hidden transition-all hover:shadow-lg disabled:opacity-50"
+                    >
+                      <div className="absolute inset-0 bg-[#D9B4B4] translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out z-0"></div>
+                      <span className="relative z-10 flex items-center gap-2">
+                        {profileLoading ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Save className="w-4 h-4" />
+                        )}
+                        Save Changes
+                      </span>
+                    </button>
                   </div>
-
-                  <div>
-                    <label className="block text-[10px] font-black uppercase tracking-widest text-stone-400 mb-2">
-                      Phone Number
-                    </label>
-                    <input
-                      type="tel"
-                      required
-                      value={profileForm.mobile}
-                      onChange={(e) => setProfileForm({ ...profileForm, mobile: e.target.value })}
-                      placeholder="e.g. +919876543210"
-                      className="w-full bg-[#FEF9F6]/50 border border-stone-100 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#D9B4B4] transition-colors"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={profileLoading}
-                    className="flex items-center gap-2 bg-[#6B5656] text-white px-6 py-3 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-[#4A3E3E] transition-colors disabled:opacity-50"
-                  >
-                    {profileLoading ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Save className="w-4 h-4" />
-                    )}
-                    <span>Save Changes</span>
-                  </button>
                 </form>
               </div>
             )}
