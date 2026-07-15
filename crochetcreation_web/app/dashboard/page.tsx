@@ -514,29 +514,13 @@ export default function UserDashboard() {
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-10 md:pt-12 md:pb-14">
         {/* Welcome Section */}
-        <div className="mb-12 flex flex-col md:flex-row items-center gap-6 bg-gradient-to-r from-[#FEF9F6] to-white p-8 rounded-3xl border border-[#F0E4E4] shadow-sm">
-          <div className="relative">
-            {userProfile?.picture ? (
-              <img 
-                src={userProfile.picture} 
-                alt="Profile" 
-                className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-md"
-              />
-            ) : (
-              <div className="w-24 h-24 rounded-full bg-[#EADBDB] text-[#6B5656] flex items-center justify-center text-3xl font-serif border-4 border-white shadow-md">
-                {userProfile?.first_name?.[0] || 'U'}
-              </div>
-            )}
-            <div className="absolute bottom-1 right-1 w-5 h-5 bg-green-500 border-2 border-white rounded-full"></div>
-          </div>
-          <div className="text-center md:text-left">
-            <h1 className="font-serif text-3xl md:text-4xl font-light tracking-wide text-[#4A3E3E] mb-2 leading-tight">
-              Welcome, <span className="font-medium">{userProfile?.first_name} {userProfile?.last_name}</span>
-            </h1>
-            <p className="text-[11px] font-bold tracking-[0.2em] uppercase text-[#8B7373]">
-              Manage your personal profile, delivery addresses and order history
-            </p>
-          </div>
+        <div className="mb-10 text-center md:text-left">
+          <h1 className="font-serif text-3xl md:text-5xl font-light tracking-wide text-[#4A3E3E] mb-2 leading-tight">
+            Welcome, {userProfile?.first_name} {userProfile?.last_name}
+          </h1>
+          <p className="text-xs md:text-sm font-semibold tracking-widest uppercase text-stone-500">
+            Manage your personal profile, delivery addresses and order history
+          </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
@@ -600,6 +584,33 @@ export default function UserDashboard() {
                   <h2 className="font-serif text-2xl font-light text-[#4A3E3E]">
                     Personal Details
                   </h2>
+                </div>
+                
+                {/* Profile Picture / Avatar */}
+                <div className="flex flex-col sm:flex-row items-center gap-6 mb-10 bg-gradient-to-r from-[#FEF9F6] to-white p-6 rounded-3xl border border-[#F0E4E4] shadow-sm">
+                  <div className="relative shrink-0">
+                    {userProfile?.picture ? (
+                      <img 
+                        src={userProfile.picture} 
+                        alt="Profile" 
+                        className="w-20 h-20 rounded-full object-cover border-4 border-white shadow-md"
+                      />
+                    ) : (
+                      <div className="w-20 h-20 rounded-full bg-[#EADBDB] text-[#6B5656] flex items-center justify-center text-3xl font-serif border-4 border-white shadow-md">
+                        {userProfile?.first_name?.[0] || 'U'}
+                      </div>
+                    )}
+                    <div className="absolute bottom-1 right-1 w-4 h-4 bg-green-500 border-2 border-white rounded-full"></div>
+                  </div>
+                  <div className="text-center sm:text-left">
+                    <h3 className="font-serif text-2xl font-medium text-[#4A3E3E]">
+                      {userProfile?.first_name} {userProfile?.last_name}
+                    </h3>
+                    <p className="text-sm font-medium text-stone-500 mt-1">{userProfile?.email}</p>
+                    {userProfile?.mobile && (
+                      <p className="text-sm font-medium text-stone-500 mt-0.5">{userProfile?.mobile}</p>
+                    )}
+                  </div>
                 </div>
                 
                 <form onSubmit={handleUpdateProfile} className="max-w-2xl">
