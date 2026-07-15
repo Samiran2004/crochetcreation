@@ -1156,7 +1156,7 @@ export default function CrochetCreationPage() {
                         >
                           {product.title || product.name}
                         </h4>
-                        <p className="text-[10px] md:text-xs text-gray-500 mt-1 md:mt-2 leading-relaxed hidden sm:line-clamp-3">{product.description}</p>
+                        <p className="text-[10px] md:text-xs text-gray-500 mt-1 md:mt-2 leading-relaxed line-clamp-2">{product.description}</p>
                         <div className="flex items-center gap-1.5 text-[9px] font-semibold text-stone-500 mt-2 bg-stone-50/80 px-2 py-1 rounded-md self-start border border-stone-100/50">
                           <span className="text-xs">🚚</span>
                           <span>{product.delivery_time || '5-7 working days'}</span>

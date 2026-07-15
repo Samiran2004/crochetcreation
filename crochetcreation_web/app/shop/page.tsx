@@ -525,7 +525,7 @@ export default function ShopPage() {
                     <h3 className="text-sm md:text-lg font-bold text-gray-900 leading-tight mt-1 group-hover:text-[#6B5656] transition-colors line-clamp-2">
                       {p.title || p.name}
                     </h3>
-                    <p className="text-[10px] md:text-xs text-gray-500 mt-1 md:mt-2 line-clamp-2 leading-relaxed hidden sm:block">
+                    <p className="text-[10px] md:text-xs text-gray-500 mt-1 md:mt-2 leading-relaxed line-clamp-2">
                       {p.description}
                     </p>
                     <div className="flex items-center gap-1.5 text-[9px] font-semibold text-stone-500 mt-2 bg-stone-50/80 px-2 py-1 rounded-md self-start border border-stone-100/50">
