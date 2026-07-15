@@ -61,6 +61,23 @@ async def root():
         "docs_url": "/docs"
     }
 
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from fastapi.encoders import jsonable_encoder
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request, exc):
+    sanitized_errors = []
+    for error in exc.errors():
+        error_copy = error.copy()
+        if "input" in error_copy and isinstance(error_copy["input"], bytes):
+            error_copy["input"] = "<bytes>"
+        sanitized_errors.append(error_copy)
+    return JSONResponse(
+        status_code=422,
+        content={"detail": jsonable_encoder(sanitized_errors)},
+    )
+
 @app.get("/ping")
 async def keep_alive_ping():
     """Endpoint for cron jobs to keep the Render server awake."""
