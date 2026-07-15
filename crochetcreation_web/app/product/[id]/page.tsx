@@ -929,6 +929,8 @@ export default function ProductDetailPage() {
                   </div>
                 </div>
               )}
+            </div>
+
             {/* Quantity Selector & Action Buttons */}
             <div className="pt-4 border-t border-[#EADBDB]/50 space-y-4">
               <div className="flex items-center justify-between">
