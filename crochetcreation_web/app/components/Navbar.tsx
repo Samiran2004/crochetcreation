@@ -186,14 +186,14 @@ export default function Navbar({
               />
             </div>
             <span className="hidden sm:block">
-              <span className="text-base md:text-xl font-serif font-bold tracking-tight text-[#FEF9F6] block leading-tight">
+              <span className="text-2xl md:text-4xl font-orange text-[#FEF9F6] block leading-none pt-1">
                 Crochet Creation
               </span>
               <span className="text-[7px] md:text-[8px] font-medium tracking-[0.25em] text-[#D9B4B4]/80 uppercase block -mt-0.5">
                 Handcrafted with Love
               </span>
             </span>
-            <span className="sm:hidden text-base md:text-lg font-serif font-bold text-[#FEF9F6]">Crochet Creation</span>
+            <span className="sm:hidden text-2xl md:text-3xl font-orange text-[#FEF9F6] pt-1">Crochet Creation</span>
           </Link>
 
           {/* Desktop Nav Links */}

@@ -11,6 +11,14 @@
     font-display: swap;
   }
 
+  @font-face {
+    font-family: 'OrangeAvenue';
+    src: url('/fonts/orange-avenue.otf') format('opentype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+  }
+
   :root {
     --background: #FEF9F6;
     --foreground: #2D2525;
