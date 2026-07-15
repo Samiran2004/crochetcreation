@@ -3,6 +3,14 @@
 @tailwind utilities;
 
 @layer base {
+  @font-face {
+    font-family: 'HughIsLife';
+    src: url('/fonts/hugh-is-life.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+  }
+
   :root {
     --background: #FEF9F6;
     --foreground: #2D2525;
