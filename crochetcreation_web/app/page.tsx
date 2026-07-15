@@ -706,30 +706,23 @@ export default function CrochetCreationPage() {
             </div>
           </ScaleInWrapper>
 
-          {/* Right Decorative Column (Thread spools, needles) */}
+          {/* Right Decorative Column (Yarn Ball & Needles) */}
           <ScaleInWrapper delay={0.3} className="hidden md:flex absolute right-8 top-24 w-36 flex-col items-center gap-6 select-none pointer-events-none z-10">
-            {/* Spools stack */}
-            <div className="flex flex-col gap-3">
-              {/* Spool 1: Pink */}
-              <div className="relative w-12 h-6 bg-[#D9B4B4] rounded-sm flex items-center justify-center border-y border-stone-300">
-                <div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-200"></div>
-                <div className="absolute right-0 top-0 bottom-0 w-1 bg-amber-200"></div>
-                <span className="text-[7px] text-[#6B5656] font-bold">PINK</span>
-              </div>
-              {/* Spool 2: White */}
-              <div className="relative w-12 h-6 bg-[#FEF9F6] rounded-sm flex items-center justify-center border-y border-stone-300">
-                <div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-200"></div>
-                <div className="absolute right-0 top-0 bottom-0 w-1 bg-amber-200"></div>
-                <span className="text-[7px] text-[#6B5656] font-bold">COTTON</span>
-              </div>
-              {/* Spool 3: Lavender */}
-              <div className="relative w-12 h-6 bg-[#C0B4D9] rounded-sm flex items-center justify-center border-y border-stone-300">
-                <div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-200"></div>
-                <div className="absolute right-0 top-0 bottom-0 w-1 bg-amber-200"></div>
-                <span className="text-[7px] text-[#6B5656] font-bold">WOOL</span>
-              </div>
-            </div>
-
+            {/* Yarn Ball */}
+            <div 
+              className="w-16 h-16 mt-4 bg-stone-300"
+              style={{
+                maskImage: 'url(/assets/ball-of-wool.png)',
+                maskSize: 'contain',
+                maskRepeat: 'no-repeat',
+                maskPosition: 'center',
+                WebkitMaskImage: 'url(/assets/ball-of-wool.png)',
+                WebkitMaskSize: 'contain',
+                WebkitMaskRepeat: 'no-repeat',
+                WebkitMaskPosition: 'center'
+              }}
+            />
+            
             {/* Diagonal Knitting Needles */}
             <svg className="w-12 h-24 text-stone-300 -mt-2" viewBox="0 0 50 100" fill="none" stroke="currentColor" strokeWidth="2">
               <line x1="10" y1="90" x2="40" y2="10" strokeLinecap="round" />

@@ -205,8 +205,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   );
 
   return (
-    <div className={`min-h-screen flex ${theme === 'dark' ? 'dark' : ''}`}>
-      <div className="w-full min-h-screen bg-gray-50 dark:bg-slate-950 flex text-slate-800 dark:text-slate-100 font-sans selection:bg-slate-900/10 dark:selection:bg-white/10 transition-colors duration-250">
+    <div className={`h-screen h-[100dvh] flex overflow-hidden ${theme === 'dark' ? 'dark' : ''}`}>
+      <div className="w-full h-full bg-gray-50 dark:bg-slate-950 flex text-slate-800 dark:text-slate-100 font-sans selection:bg-slate-900/10 dark:selection:bg-white/10 transition-colors duration-250 overflow-hidden">
         
         {/* ========================================== */}
         {/* 1. DESKTOP SIDEBAR */}
