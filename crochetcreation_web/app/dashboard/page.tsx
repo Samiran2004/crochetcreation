@@ -1,4 +1,5 @@
 'use client';
+import { apiFetch } from '../utils/apiFetch';
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useOrderWebSocket } from '../hooks/useOrderWebSocket';
@@ -124,7 +125,7 @@ export default function UserDashboard() {
     if (!orderId || !token) return;
     setDownloadingOrderId(orderId);
     try {
-      const response = await fetch(`${API_URL}/api/orders/${orderId}/invoice`, {
+      const response = await apiFetch(`${API_URL}/api/orders/${orderId}/invoice`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -197,7 +198,7 @@ export default function UserDashboard() {
   // Fetch updated profile (with addresses)
   const fetchUserProfile = async (authToken: string) => {
     try {
-      const response = await fetch(`${API_URL}/api/users/me`, {
+      const response = await apiFetch(`${API_URL}/api/users/me`, {
         headers: {
           'Authorization': `Bearer ${authToken}`
         }
@@ -226,7 +227,7 @@ export default function UserDashboard() {
     await Promise.all(
       productIds.map(async (productId) => {
         try {
-          const res = await fetch(`${API_URL}/api/reviews/product/${productId}/eligible`, {
+          const res = await apiFetch(`${API_URL}/api/reviews/product/${productId}/eligible`, {
             headers: {
               'Authorization': `Bearer ${token}`
             }
@@ -251,7 +252,7 @@ export default function UserDashboard() {
     if (!token) return;
     setOrdersLoading(true);
     try {
-      const response = await fetch(`${API_URL}/api/orders/my-orders`, {
+      const response = await apiFetch(`${API_URL}/api/orders/my-orders`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -327,7 +328,7 @@ export default function UserDashboard() {
     if (!token) return;
     setProfileLoading(true);
     try {
-      const response = await fetch(`${API_URL}/api/users/me`, {
+      const response = await apiFetch(`${API_URL}/api/users/me`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -400,7 +401,7 @@ export default function UserDashboard() {
     const method = editingAddress ? 'PUT' : 'POST';
 
     try {
-      const response = await fetch(url, {
+      const response = await apiFetch(url, {
         method: method,
         headers: {
           'Content-Type': 'application/json',
@@ -431,7 +432,7 @@ export default function UserDashboard() {
     if (!confirm('Are you sure you want to delete this address?')) return;
 
     try {
-      const response = await fetch(`${API_URL}/api/users/me/addresses/${addressId}`, {
+      const response = await apiFetch(`${API_URL}/api/users/me/addresses/${addressId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`

@@ -1,4 +1,5 @@
 'use client';
+import { apiFetch } from '../../utils/apiFetch';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,7 +48,7 @@ export default function AdminSettings() {
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const res = await fetch(`${API_URL}/api/settings/`);
+        const res = await apiFetch(`${API_URL}/api/settings/`);
         if (res.ok) {
           const data = await res.json();
           setFormData({
@@ -107,7 +108,7 @@ export default function AdminSettings() {
         enable_email_notifications: formData.enableEmailNotifications,
       };
 
-      const res = await fetch(`${API_URL}/api/settings/`, {
+      const res = await apiFetch(`${API_URL}/api/settings/`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

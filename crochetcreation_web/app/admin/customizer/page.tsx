@@ -1,4 +1,5 @@
 'use client';
+import { apiFetch } from '../../utils/apiFetch';
 
 export const dynamic = 'force-dynamic';
 
@@ -97,7 +98,7 @@ export default function AdminCustomizer() {
 
   const fetchImages = async () => {
     try {
-      const res = await fetch(`${API_URL}/api/settings/homepage-images`);
+      const res = await apiFetch(`${API_URL}/api/settings/homepage-images`);
       if (res.ok) {
         const data = await res.json();
         setImages(data);
@@ -138,7 +139,7 @@ export default function AdminCustomizer() {
       formData.append('section', key);
       formData.append('file', file);
 
-      const res = await fetch(`${API_URL}/api/settings/homepage-images/upload`, {
+      const res = await apiFetch(`${API_URL}/api/settings/homepage-images/upload`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -184,7 +185,7 @@ export default function AdminCustomizer() {
       const formData = new FormData();
       formData.append('section', key);
 
-      const res = await fetch(`${API_URL}/api/settings/homepage-images/reset`, {
+      const res = await apiFetch(`${API_URL}/api/settings/homepage-images/reset`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`

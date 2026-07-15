@@ -1,4 +1,5 @@
 'use client';
+import { apiFetch } from '../../utils/apiFetch';
 
 export const dynamic = 'force-dynamic';
 
@@ -79,7 +80,7 @@ export default function AdminDiagnostics() {
     setHealthError(null);
 
     try {
-      const response = await fetch(`${API_URL}/api/admin/system-health`, {
+      const response = await apiFetch(`${API_URL}/api/admin/system-health`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

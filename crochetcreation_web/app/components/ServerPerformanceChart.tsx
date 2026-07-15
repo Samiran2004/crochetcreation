@@ -1,4 +1,5 @@
 'use client';
+import { apiFetch } from '../utils/apiFetch';
 
 import React, { useEffect, useState } from 'react';
 import { 
@@ -58,7 +59,7 @@ export default function ServerPerformanceChart({ API_URL, token }: ServerPerform
     setError(null);
 
     try {
-      const response = await fetch(`${API_URL}/api/admin/server-stats`, {
+      const response = await apiFetch(`${API_URL}/api/admin/server-stats`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

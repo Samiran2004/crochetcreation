@@ -1,4 +1,5 @@
 'use client';
+import { apiFetch } from '../../../utils/apiFetch';
 
 import React, { useState, useEffect } from 'react';
 import { 
@@ -223,7 +224,7 @@ export default function AddProductDrawer({ isOpen, onClose, onSuccess }: AddProd
       });
 
       // Send Request to FastAPI
-      const res = await fetch(`${API_URL}/api/products`, {
+      const res = await apiFetch(`${API_URL}/api/products`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`

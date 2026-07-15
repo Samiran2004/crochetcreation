@@ -1,4 +1,5 @@
 'use client';
+import { apiFetch } from '../../utils/apiFetch';
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
@@ -220,7 +221,7 @@ export default function ProductDetailPage() {
     if (!token) return;
     const fetchProfile = async () => {
       try {
-        const response = await fetch(`${API_URL}/api/users/me`, {
+        const response = await apiFetch(`${API_URL}/api/users/me`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -256,7 +257,7 @@ export default function ProductDetailPage() {
       setLoading(true);
       try {
         // 1. Fetch main product details
-        const res = await fetch(`${API_URL}/api/products/${productId}`);
+        const res = await apiFetch(`${API_URL}/api/products/${productId}`);
         if (res.ok) {
           const data = await res.json();
           setProduct({
@@ -274,7 +275,7 @@ export default function ProductDetailPage() {
         }
 
         // 2. Fetch all products to get related items
-        const allRes = await fetch(`${API_URL}/api/products`);
+        const allRes = await apiFetch(`${API_URL}/api/products`);
         if (allRes.ok) {
           const allData = await allRes.json();
           if (Array.isArray(allData)) {
@@ -285,7 +286,7 @@ export default function ProductDetailPage() {
         }
 
         // 3. Fetch custom homepage images/logo
-        const settingsRes = await fetch(`${API_URL}/api/settings/homepage-images`);
+        const settingsRes = await apiFetch(`${API_URL}/api/settings/homepage-images`);
         if (settingsRes.ok) {
           const settingsData = await settingsRes.json();
           const resolved: Record<string, string> = {};
@@ -299,7 +300,7 @@ export default function ProductDetailPage() {
 
         // 4. Fetch product reviews
         try {
-          const revRes = await fetch(`${API_URL}/api/reviews/product/${productId}`);
+          const revRes = await apiFetch(`${API_URL}/api/reviews/product/${productId}`);
           if (revRes.ok) {
             const revData = await revRes.json();
             setReviewsData(revData);
@@ -430,7 +431,7 @@ export default function ProductDetailPage() {
         headers['Authorization'] = `Bearer ${savedToken}`;
       }
 
-      const orderResponse = await fetch(`${API_URL}/api/orders/`, {
+      const orderResponse = await apiFetch(`${API_URL}/api/orders/`, {
         method: 'POST',
         headers,
         body: JSON.stringify(orderData)

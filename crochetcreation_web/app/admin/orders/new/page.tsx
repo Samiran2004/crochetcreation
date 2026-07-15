@@ -1,4 +1,5 @@
 'use client';
+import { apiFetch } from '../../../utils/apiFetch';
 
 export const dynamic = 'force-dynamic';
 
@@ -123,7 +124,7 @@ export default function CreateManualOrder() {
         notes: notes.trim() || null
       };
 
-      const res = await fetch(`${API_URL}/api/orders/manual`, {
+      const res = await apiFetch(`${API_URL}/api/orders/manual`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

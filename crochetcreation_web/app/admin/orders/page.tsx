@@ -1,4 +1,5 @@
 'use client';
+import { apiFetch } from '../../utils/apiFetch';
 
 export const dynamic = 'force-dynamic';
 
@@ -78,7 +79,7 @@ export default function AdminOrders() {
         return;
       }
 
-      const res = await fetch(`${API_URL}/api/orders`, {
+      const res = await apiFetch(`${API_URL}/api/orders`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -174,7 +175,7 @@ export default function AdminOrders() {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const res = await fetch(`${API_URL}/api/orders/${orderId}?status_update=${newStatus}`, {
+      const res = await apiFetch(`${API_URL}/api/orders/${orderId}?status_update=${newStatus}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -211,7 +212,7 @@ export default function AdminOrders() {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const res = await fetch(`${API_URL}/api/orders/${orderToDelete.id}`, {
+      const res = await apiFetch(`${API_URL}/api/orders/${orderToDelete.id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`

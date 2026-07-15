@@ -1,4 +1,5 @@
 'use client';
+import { apiFetch } from '../utils/apiFetch';
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
@@ -118,7 +119,7 @@ export default function ShopPage() {
     if (!token) return;
     const fetchProfile = async () => {
       try {
-        const response = await fetch(`${API_URL}/api/users/me`, {
+        const response = await apiFetch(`${API_URL}/api/users/me`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -140,7 +141,7 @@ export default function ShopPage() {
     setError(null);
     try {
       // 1. Fetch catalog
-      const res = await fetch(`${API_URL}/api/products`);
+      const res = await apiFetch(`${API_URL}/api/products`);
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data)) {
@@ -153,7 +154,7 @@ export default function ShopPage() {
       }
 
       // 2. Fetch custom homepage images/logo
-      const settingsRes = await fetch(`${API_URL}/api/settings/homepage-images`);
+      const settingsRes = await apiFetch(`${API_URL}/api/settings/homepage-images`);
       if (settingsRes.ok) {
         const settingsData = await settingsRes.json();
         const resolved: Record<string, string> = {};
@@ -289,7 +290,7 @@ export default function ShopPage() {
           longitude: checkoutFormData.longitude
         };
 
-        const orderResponse = await fetch(`${API_URL}/api/orders/`, {
+        const orderResponse = await apiFetch(`${API_URL}/api/orders/`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

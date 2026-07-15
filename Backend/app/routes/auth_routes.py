@@ -5,7 +5,9 @@ from app.models.user import (
     ForgotPasswordRequest, VerifyOTPRequest, ResetPasswordRequest,
     GoogleAuthRequest
 )
-from app.core.security import get_password_hash, verify_password, create_access_token
+from app.core.security import get_password_hash, verify_password, create_access_token, create_refresh_token
+from app.core.config import settings
+import jwt
 from app.core.db import get_database
 from app.utils.email_sender import send_welcome_email, send_otp_email
 import random
@@ -99,10 +101,12 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
 
     is_admin_user = user_dict.get("is_admin", False)
 
-    # Create access token
+    # Create tokens
     access_token = create_access_token(subject=user_dict["email"])
+    refresh_token = create_refresh_token(subject=user_dict["email"])
     return {
         "access_token": access_token,
+        "refresh_token": refresh_token,
         "token_type": "bearer",
         "user": {
             "email": user_dict["email"],
@@ -185,10 +189,12 @@ async def google_auth(req: GoogleAuthRequest, background_tasks: BackgroundTasks)
             except Exception as e:
                 print(f"Error queueing welcome email for Google auth: {e}")
 
-        # Create our standard application access token
+        # Create our standard application tokens
         access_token = create_access_token(subject=user_dict["email"])
+        refresh_token = create_refresh_token(subject=user_dict["email"])
         return {
             "access_token": access_token,
+            "refresh_token": refresh_token,
             "token_type": "bearer",
             "user": {
                 "email": user_dict["email"],
@@ -338,3 +344,37 @@ async def reset_password(req: ResetPasswordRequest):
     await db["otps"].delete_one({"email": req.email})
 
     return {"message": "Password has been reset successfully."}
+
+from pydantic import BaseModel
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
+
+@router.post("/refresh")
+async def refresh_access_token(req: RefreshTokenRequest):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(req.refresh_token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        email: str = payload.get("sub")
+        token_type: str = payload.get("type")
+        if email is None or token_type != "refresh":
+            raise credentials_exception
+    except jwt.PyJWTError:
+        raise credentials_exception
+
+    db = get_database()
+    user = await db["users"].find_one({"email": email})
+    if user is None:
+        raise credentials_exception
+
+    new_access_token = create_access_token(subject=email)
+    new_refresh_token = create_refresh_token(subject=email)
+    
+    return {
+        "access_token": new_access_token,
+        "refresh_token": new_refresh_token,
+        "token_type": "bearer"
+    }

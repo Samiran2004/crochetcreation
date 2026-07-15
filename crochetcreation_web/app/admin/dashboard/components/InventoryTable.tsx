@@ -1,4 +1,5 @@
 'use client';
+import { apiFetch } from '../../../utils/apiFetch';
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { 
@@ -107,7 +108,7 @@ export default function InventoryTable({
   const fetchProducts = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/api/products`);
+      const res = await apiFetch(`${API_URL}/api/products`);
       if (res.ok) {
         const data = await res.json();
         setProducts(data);
@@ -270,7 +271,7 @@ export default function InventoryTable({
     setStockSyncStatus(prev => ({ ...prev, [productId]: 'saving' }));
 
     try {
-      const res = await fetch(`${API_URL}/api/products/${productId}`, {
+      const res = await apiFetch(`${API_URL}/api/products/${productId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -353,7 +354,7 @@ export default function InventoryTable({
     setStockSyncStatus(prev => ({ ...prev, [productId]: 'saving' }));
 
     try {
-      const res = await fetch(`${API_URL}/api/products/${productId}`, {
+      const res = await apiFetch(`${API_URL}/api/products/${productId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -414,7 +415,7 @@ export default function InventoryTable({
     
     setSavingRowId(productId);
     try {
-      const res = await fetch(`${API_URL}/api/products/${productId}`, {
+      const res = await apiFetch(`${API_URL}/api/products/${productId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -465,7 +466,7 @@ export default function InventoryTable({
     if (window.confirm(`Are you sure you want to ${currentInStock ? 'hide/out-of-stock' : 'show/in-stock'} this product?`)) {
       const nextStock = currentInStock ? 0 : 15;
       try {
-        const res = await fetch(`${API_URL}/api/products/${productId}`, {
+        const res = await apiFetch(`${API_URL}/api/products/${productId}`, {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
@@ -512,7 +513,7 @@ export default function InventoryTable({
   const handleBulkMarkOutOfStock = async () => {
     if (window.confirm(`Mark all ${selectedIds.size} selected products as Out of Stock?`)) {
       try {
-        const promises = Array.from(selectedIds).map(id => fetch(`${API_URL}/api/products/${id}`, {
+        const promises = Array.from(selectedIds).map(id => apiFetch(`${API_URL}/api/products/${id}`, {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
@@ -540,7 +541,7 @@ export default function InventoryTable({
           if (onDeleteProduct) {
             return onDeleteProduct(id);
           }
-          return fetch(`${API_URL}/api/products/${id}`, {
+          return apiFetch(`${API_URL}/api/products/${id}`, {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
           });
@@ -904,7 +905,7 @@ export default function InventoryTable({
                                             if (onDeleteProduct) {
                                               onDeleteProduct(id);
                                             } else {
-                                              fetch(`${API_URL}/api/products/${id}`, {
+                                              apiFetch(`${API_URL}/api/products/${id}`, {
                                                 method: 'DELETE',
                                                 headers: { 'Authorization': `Bearer ${token}` }
                                               }).then(() => fetchProducts());
@@ -1017,7 +1018,7 @@ export default function InventoryTable({
                                         if (onDeleteProduct) {
                                           onDeleteProduct(id);
                                         } else {
-                                          fetch(`${API_URL}/api/products/${id}`, {
+                                          apiFetch(`${API_URL}/api/products/${id}`, {
                                             method: 'DELETE',
                                             headers: { 'Authorization': `Bearer ${token}` }
                                           }).then(() => fetchProducts());

@@ -1,4 +1,5 @@
 'use client';
+import { apiFetch } from '../utils/apiFetch';
 
 import React, { useState, useEffect } from 'react';
 import { X, Plus, Minus, Trash2, ShoppingBag, ArrowRight, Lock } from 'lucide-react';
@@ -179,7 +180,7 @@ export default function CartDrawer() {
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-      const res = await fetch(`${API_URL}/api/orders/`, {
+      const res = await apiFetch(`${API_URL}/api/orders/`, {
         method: 'POST',
         headers,
         body: JSON.stringify(payload)

@@ -1,4 +1,5 @@
 'use client';
+import { apiFetch } from '../../utils/apiFetch';
 
 export const dynamic = 'force-dynamic';
 
@@ -88,7 +89,7 @@ export default function AdminProducts() {
   const fetchProducts = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/api/products`);
+      const res = await apiFetch(`${API_URL}/api/products`);
       if (!res.ok) throw new Error("Could not fetch product catalog.");
       const data = await res.json();
       if (Array.isArray(data)) {
@@ -233,7 +234,7 @@ export default function AdminProducts() {
         }
       }
 
-      const res = await fetch(url, {
+      const res = await apiFetch(url, {
         method: method,
         headers: {
           'Authorization': `Bearer ${token}`
@@ -280,7 +281,7 @@ export default function AdminProducts() {
     }
 
     try {
-      const res = await fetch(`${API_URL}/api/products/${productToDelete._id}`, {
+      const res = await apiFetch(`${API_URL}/api/products/${productToDelete._id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`

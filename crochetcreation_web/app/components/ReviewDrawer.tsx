@@ -1,4 +1,5 @@
 'use client';
+import { apiFetch } from '../utils/apiFetch';
 
 import React, { useState, useEffect } from 'react';
 import { X, Star, Loader2 } from 'lucide-react';
@@ -55,7 +56,7 @@ export default function ReviewDrawer({
     const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
     try {
-      const response = await fetch(`${API_URL}/api/reviews/`, {
+      const response = await apiFetch(`${API_URL}/api/reviews/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

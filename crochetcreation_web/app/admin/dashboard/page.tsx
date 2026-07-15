@@ -1,4 +1,5 @@
 'use client';
+import { apiFetch } from '../../utils/apiFetch';
 
 export const dynamic = 'force-dynamic';
 
@@ -127,7 +128,7 @@ export default function AdminDashboard() {
     setError(null);
     try {
       // 1. Fetch Admin Stats
-      const statsRes = await fetch(`${API_URL}/api/admin/stats`, {
+      const statsRes = await apiFetch(`${API_URL}/api/admin/stats`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (statsRes.ok) {
@@ -136,7 +137,7 @@ export default function AdminDashboard() {
       }
 
       // 2. Fetch Orders
-      const ordersRes = await fetch(`${API_URL}/api/orders/`, {
+      const ordersRes = await apiFetch(`${API_URL}/api/orders/`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (ordersRes.ok) {
@@ -145,7 +146,7 @@ export default function AdminDashboard() {
       }
 
       // 3. Fetch Products
-      const productsRes = await fetch(`${API_URL}/api/products`);
+      const productsRes = await apiFetch(`${API_URL}/api/products`);
       if (productsRes.ok) {
         const productsList = await productsRes.json();
         setProducts(productsList);
@@ -160,7 +161,7 @@ export default function AdminDashboard() {
       }
 
       // 4. Fetch Customers
-      const customersRes = await fetch(`${API_URL}/api/customers`, {
+      const customersRes = await apiFetch(`${API_URL}/api/customers`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (customersRes.ok) {
@@ -184,7 +185,7 @@ export default function AdminDashboard() {
   // Quick Action Menu Handlers
   const handleUpdateOrderStatus = async (orderId: string, nextStatus: string) => {
     try {
-      const res = await fetch(`${API_URL}/api/orders/${orderId}?status_update=${nextStatus}`, {
+      const res = await apiFetch(`${API_URL}/api/orders/${orderId}?status_update=${nextStatus}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -227,7 +228,7 @@ export default function AdminDashboard() {
       const formData = new FormData();
       formData.append('in_stock', String(inStockFlag));
       
-      const res = await fetch(`${API_URL}/api/products/${productId}`, {
+      const res = await apiFetch(`${API_URL}/api/products/${productId}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -262,7 +263,7 @@ export default function AdminDashboard() {
         return;
       }
 
-      const res = await fetch(`${API_URL}/api/products/${productId}`, {
+      const res = await apiFetch(`${API_URL}/api/products/${productId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -287,7 +288,7 @@ export default function AdminDashboard() {
 
   const handleDeleteProduct = async (productId: string) => {
     try {
-      const res = await fetch(`${API_URL}/api/products/${productId}`, {
+      const res = await apiFetch(`${API_URL}/api/products/${productId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -305,7 +306,7 @@ export default function AdminDashboard() {
 
   const handleDownloadInvoice = async (orderId: string) => {
     try {
-      const res = await fetch(`${API_URL}/api/orders/${orderId}/invoice`, {
+      const res = await apiFetch(`${API_URL}/api/orders/${orderId}/invoice`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }

@@ -1,4 +1,5 @@
 'use client';
+import { apiFetch } from './utils/apiFetch';
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import Image from 'next/image';
@@ -80,7 +81,7 @@ export default function CrochetCreationPage() {
   useEffect(() => {
     const fetchHomepageImages = async () => {
       try {
-        const res = await fetch(`${API_URL}/api/settings/homepage-images`);
+        const res = await apiFetch(`${API_URL}/api/settings/homepage-images`);
         if (res.ok) {
           const data = await res.json();
           const resolved: Record<string, string> = {};
@@ -126,22 +127,11 @@ export default function CrochetCreationPage() {
   const [token, setToken] = useState<string | null>(null);
   const [userProfile, setUserProfile] = useState<any | null>(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [authMode, setAuthMode] = useState<'login' | 'register' | 'forgot' | 'verify' | 'reset'>('login');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 4000);
   };
-  const [authFormData, setAuthFormData] = useState({
-    first_name: '',
-    last_name: '',
-    email: '',
-    mobile: '',
-    password: ''
-  });
-  const [forgotEmail, setForgotEmail] = useState('');
-  const [otpCode, setOtpCode] = useState('');
-  const [newPassword, setNewPassword] = useState('');
   const [authError, setAuthError] = useState<string | null>(null);
   const [authSuccessMsg, setAuthSuccessMsg] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(false);
@@ -164,7 +154,7 @@ export default function CrochetCreationPage() {
     if (!token) return;
     setMobilePromptLoading(true);
     try {
-      const res = await fetch(`${API_URL}/api/users/me`, {
+      const res = await apiFetch(`${API_URL}/api/users/me`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ mobile: mobilePromptValue })
@@ -220,134 +210,11 @@ export default function CrochetCreationPage() {
     }
   }, [router]);
 
-  const handleAuthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setAuthFormData(prev => ({
-      ...prev,
-      [e.target.name]: e.target.value
-    }));
-  };
-
-  const handleAuthSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setAuthError(null);
-    setAuthSuccessMsg(null);
-    setAuthLoading(true);
-
-    const apiUrl = API_URL;
-
-    try {
-      if (authMode === 'forgot') {
-        const res = await fetch(`${apiUrl}/api/auth/forgot-password`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: forgotEmail })
-        });
-
-        if (!res.ok) {
-          const errData = await res.json();
-          throw new Error(errData.detail || 'Failed to request OTP. Please verify your email.');
-        }
-
-        setAuthSuccessMsg("OTP sent to your email!");
-        setAuthMode('verify');
-      } else if (authMode === 'verify') {
-        const res = await fetch(`${apiUrl}/api/auth/verify-otp`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: forgotEmail, otp: otpCode })
-        });
-
-        if (!res.ok) {
-          const errData = await res.json();
-          throw new Error(errData.detail || 'Invalid or expired OTP.');
-        }
-
-        setAuthSuccessMsg("OTP verified! Set your new password.");
-        setAuthMode('reset');
-      } else if (authMode === 'reset') {
-        const res = await fetch(`${apiUrl}/api/auth/reset-password`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: forgotEmail, otp: otpCode, password: newPassword })
-        });
-
-        if (!res.ok) {
-          const errData = await res.json();
-          throw new Error(errData.detail || 'Failed to reset password.');
-        }
-
-        setAuthSuccessMsg("Password reset successfully! Please log in.");
-        setAuthMode('login');
-        setForgotEmail('');
-        setOtpCode('');
-        setNewPassword('');
-      } else if (authMode === 'register') {
-        const res = await fetch(`${apiUrl}/api/auth/register`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(authFormData)
-        });
-
-        if (!res.ok) {
-          const errData = await res.json();
-          throw new Error(errData.detail || 'Registration failed.');
-        }
-
-        setAuthSuccessMsg("Registration successful! Please log in.");
-        setAuthMode('login');
-      } else {
-        const bodyData = new URLSearchParams();
-        bodyData.append('username', authFormData.email);
-        bodyData.append('password', authFormData.password);
-
-        const res = await fetch(`${apiUrl}/api/auth/login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: bodyData.toString()
-        });
-
-        if (!res.ok) {
-          const errData = await res.json();
-          throw new Error(errData.detail || 'Incorrect email/mobile or password.');
-        }
-
-        const data = await res.json();
-        setToken(data.access_token);
-        localStorage.setItem('token', data.access_token);
-
-        const userObj = data.user || {
-          email: authFormData.email,
-          first_name: authFormData.email.split('@')[0],
-          is_admin: false
-        };
-        setUserProfile(userObj);
-        localStorage.setItem('user', JSON.stringify(userObj));
-
-        setAuthModalOpen(false);
-        setAuthFormData({ first_name: '', last_name: '', email: '', mobile: '', password: '' });
-
-        if (userObj.is_admin) {
-          router.push('/admin/dashboard');
-        } else {
-          checkMobilePrompt(userObj);
-          const params = new URLSearchParams(window.location.search);
-          const redirectUrl = params.get('redirect');
-          if (redirectUrl) {
-            router.push(redirectUrl);
-          }
-        }
-      }
-    } catch (err: any) {
-      setAuthError(err.message || 'Something went wrong.');
-    } finally {
-      setAuthLoading(false);
-    }
-  };
-
   const handleLogout = () => {
     setToken(null);
     setUserProfile(null);
     localStorage.removeItem('token');
+    localStorage.removeItem('refresh_token');
     localStorage.removeItem('user');
   };
 
@@ -358,7 +225,7 @@ export default function CrochetCreationPage() {
       const result = await signInWithPopup(auth, googleProvider);
       const idToken = await result.user.getIdToken();
 
-      const res = await fetch(`${API_URL}/api/auth/google`, {
+      const res = await apiFetch(`${API_URL}/api/auth/google`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ firebase_id_token: idToken })
@@ -372,6 +239,9 @@ export default function CrochetCreationPage() {
       const data = await res.json();
       setToken(data.access_token);
       localStorage.setItem('token', data.access_token);
+      if (data.refresh_token) {
+        localStorage.setItem('refresh_token', data.refresh_token);
+      }
 
       const userObj = data.user || {
         email: result.user.email,
@@ -406,7 +276,7 @@ export default function CrochetCreationPage() {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const res = await fetch(`${API_URL}/api/products`);
+        const res = await apiFetch(`${API_URL}/api/products`);
         if (res.ok) {
           const data = await res.json();
           if (Array.isArray(data)) {
@@ -1717,270 +1587,79 @@ export default function CrochetCreationPage() {
 
       {/* Interactive Login/Registration Modal */}
       {authModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-950/70 backdrop-blur-sm">
-          <div className="bg-[#FEF9F6] border border-[#EADBDB] rounded-3xl max-w-md w-full p-8 shadow-2xl relative animate-scale-in">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-md transition-opacity animate-in fade-in duration-300">
+          <div className="bg-white/95 backdrop-blur-xl border border-white/50 rounded-3xl max-w-sm w-full shadow-2xl relative animate-in zoom-in-95 duration-300 overflow-hidden">
+            {/* Decorative Top Gradient */}
+            <div className="absolute top-0 left-0 right-0 h-3 bg-gradient-to-r from-[#D9B4B4] via-[#EADBDB] to-[#D9B4B4] opacity-80" />
+            
             <button
               onClick={() => setAuthModalOpen(false)}
-              className="absolute top-4 right-4 text-stone-500 hover:text-stone-800 p-1 text-sm font-bold"
+              className="absolute top-5 right-5 text-stone-400 hover:text-stone-700 bg-stone-100 hover:bg-stone-200 rounded-full p-2 transition-all"
             >
-              ✕
+              <X className="w-4 h-4" />
             </button>
-            <div className="text-center space-y-2 mb-6">
-              <div className="w-12 h-12 rounded-full bg-[#D9B4B4]/20 flex items-center justify-center mx-auto text-[#D9B4B4]">
-                <User className="w-6 h-6" />
+
+            <div className="px-8 pt-10 pb-8 text-center space-y-3">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#FEF9F6] to-[#EADBDB] flex items-center justify-center mx-auto shadow-sm border border-white">
+                <User className="w-8 h-8 text-[#6B5656]" strokeWidth={1.5} />
               </div>
-              <h3 className="text-xl font-bold text-[#6B5656]">
-                {authMode === 'forgot' && 'Forgot Password'}
-                {authMode === 'verify' && 'Verify Code'}
-                {authMode === 'reset' && 'Reset Password'}
-                {(authMode === 'login' || authMode === 'register') && 'Crochet Account'}
+              <h3 className="text-2xl font-serif font-bold text-[#6B5656] tracking-tight">
+                Welcome Back
               </h3>
-              <p className="text-xs text-stone-500">
-                {authMode === 'forgot' && 'Enter your email address to request a password reset code.'}
-                {authMode === 'verify' && 'Enter the 6-digit OTP code sent to your email.'}
-                {authMode === 'reset' && 'Create a new secure password for your account.'}
-                {(authMode === 'login' || authMode === 'register') && 'Access your custom orders and exclusive patterns.'}
+              <p className="text-xs text-stone-500 leading-relaxed max-w-[260px] mx-auto">
+                Sign in to seamlessly access your custom orders, tracking, and exclusive crochet patterns.
               </p>
             </div>
 
-            {/* Tab Swapper */}
-            {(authMode === 'login' || authMode === 'register') && (
-              <div className="flex border-b border-[#EADBDB] mb-6">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAuthMode('login');
-                    setAuthError(null);
-                    setAuthSuccessMsg(null);
-                  }}
-                  className={`flex-1 pb-3 text-xs font-black tracking-widest uppercase text-center transition-colors ${authMode === 'login' ? 'border-b-2 border-[#6B5656] text-[#6B5656]' : 'text-stone-400 hover:text-stone-600'}`}
-                >
-                  Login
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAuthMode('register');
-                    setAuthError(null);
-                    setAuthSuccessMsg(null);
-                  }}
-                  className={`flex-1 pb-3 text-xs font-black tracking-widest uppercase text-center transition-colors ${authMode === 'register' ? 'border-b-2 border-[#6B5656] text-[#6B5656]' : 'text-stone-400 hover:text-stone-600'}`}
-                >
-                  Register
-                </button>
-              </div>
-            )}
-
-            {authError && (
-              <div className="mb-4 p-3 bg-rose-50 border border-rose-100 text-rose-700 text-xs rounded-xl font-medium">
-                ⚠️ {authError}
-              </div>
-            )}
-
-            {authSuccessMsg && (
-              <div className="mb-4 p-3 bg-emerald-50 border border-emerald-100 text-emerald-700 text-xs rounded-xl font-medium">
-                ✨ {authSuccessMsg}
-              </div>
-            )}
-
-            <form onSubmit={handleAuthSubmit} className="space-y-4">
-              {authMode === 'forgot' && (
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Email Address</label>
-                  <input
-                    type="email"
-                    required
-                    value={forgotEmail}
-                    onChange={(e) => setForgotEmail(e.target.value)}
-                    placeholder="name@domain.com"
-                    className="w-full bg-stone-50 border border-stone-200 px-4 py-2.5 rounded-xl text-sm focus:outline-none focus:border-[#D9B4B4] text-stone-850"
-                  />
+            <div className="px-8 pb-10">
+              {authError && (
+                <div className="mb-5 p-3 bg-rose-50 border border-rose-100 text-rose-700 text-xs rounded-xl font-medium flex items-start gap-2">
+                  <span className="shrink-0 mt-0.5">⚠️</span>
+                  <span>{authError}</span>
                 </div>
               )}
 
-              {authMode === 'verify' && (
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">6-Digit Verification Code</label>
-                  <input
-                    type="text"
-                    required
-                    maxLength={6}
-                    pattern="\d{6}"
-                    value={otpCode}
-                    onChange={(e) => setOtpCode(e.target.value)}
-                    placeholder="123456"
-                    className="w-full bg-stone-50 border border-stone-200 px-4 py-2.5 rounded-xl text-sm text-center font-bold tracking-widest focus:outline-none focus:border-[#D9B4B4] text-stone-850"
-                  />
+              {authSuccessMsg && (
+                <div className="mb-5 p-3 bg-emerald-50 border border-emerald-100 text-emerald-700 text-xs rounded-xl font-medium flex items-start gap-2">
+                  <span className="shrink-0 mt-0.5">✨</span>
+                  <span>{authSuccessMsg}</span>
                 </div>
-              )}
-
-              {authMode === 'reset' && (
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">New Password</label>
-                  <input
-                    type="password"
-                    required
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full bg-stone-50 border border-stone-200 px-4 py-2.5 rounded-xl text-sm focus:outline-none focus:border-[#D9B4B4] text-stone-850"
-                  />
-                </div>
-              )}
-
-              {(authMode === 'login' || authMode === 'register') && (
-                <>
-                  {authMode === 'register' && (
-                    <>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">First Name</label>
-                          <input
-                            type="text"
-                            name="first_name"
-                            required
-                            value={authFormData.first_name}
-                            onChange={handleAuthChange}
-                            placeholder="John"
-                            className="w-full bg-stone-50 border border-stone-200 px-4 py-2.5 rounded-xl text-sm focus:outline-none focus:border-[#D9B4B4] text-stone-850"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Last Name</label>
-                          <input
-                            type="text"
-                            name="last_name"
-                            required
-                            value={authFormData.last_name}
-                            onChange={handleAuthChange}
-                            placeholder="Doe"
-                            className="w-full bg-stone-50 border border-stone-200 px-4 py-2.5 rounded-xl text-sm focus:outline-none focus:border-[#D9B4B4] text-stone-850"
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Mobile Number</label>
-                        <input
-                          type="tel"
-                          name="mobile"
-                          required
-                          value={authFormData.mobile}
-                          onChange={handleAuthChange}
-                          placeholder="+15550000000"
-                          className="w-full bg-stone-50 border border-stone-200 px-4 py-2.5 rounded-xl text-sm focus:outline-none focus:border-[#D9B4B4] text-stone-850"
-                        />
-                      </div>
-                    </>
-                  )}
-
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">
-                      {authMode === 'login' ? 'Email or Mobile Number' : 'Email Address'}
-                    </label>
-                    <input
-                      type={authMode === 'login' ? 'text' : 'email'}
-                      name="email"
-                      required
-                      value={authFormData.email}
-                      onChange={handleAuthChange}
-                      placeholder={authMode === 'login' ? 'name@domain.com or +15550000000' : 'name@domain.com'}
-                      className="w-full bg-stone-50 border border-stone-200 px-4 py-2.5 rounded-xl text-sm focus:outline-none focus:border-[#D9B4B4] text-stone-850"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <div className="flex justify-between items-center">
-                      <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Password</label>
-                      {authMode === 'login' && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setAuthMode('forgot');
-                            setAuthError(null);
-                            setAuthSuccessMsg(null);
-                          }}
-                          className="text-[#6B5656] hover:text-[#D9B4B4] text-[10px] font-bold uppercase tracking-wider transition-colors"
-                        >
-                          Forgot?
-                        </button>
-                      )}
-                    </div>
-                    <input
-                      type="password"
-                      name="password"
-                      required
-                      value={authFormData.password}
-                      onChange={handleAuthChange}
-                      placeholder="••••••••"
-                      className="w-full bg-stone-50 border border-stone-200 px-4 py-2.5 rounded-xl text-sm focus:outline-none focus:border-[#D9B4B4] text-stone-850"
-                    />
-                  </div>
-                </>
               )}
 
               <button
-                type="submit"
+                type="button"
+                onClick={handleGoogleLogin}
                 disabled={authLoading}
-                className="w-full bg-[#6B5656] hover:bg-[#D9B4B4] hover:text-[#6B5656] text-white font-bold py-3.5 rounded-xl text-xs tracking-widest uppercase mt-4 transition-all duration-350 active:scale-95 shadow-md flex items-center justify-center gap-2"
+                className="group relative w-full bg-white border border-stone-200 hover:border-[#D9B4B4] hover:shadow-[0_4px_12px_rgba(217,180,180,0.2)] text-stone-700 font-bold py-4 rounded-2xl text-[11px] tracking-[0.15em] uppercase transition-all duration-300 active:scale-[0.98] flex items-center justify-center gap-3 overflow-hidden"
               >
+                {/* Button Hover Glow */}
+                <div className="absolute inset-0 bg-gradient-to-r from-[#D9B4B4]/0 via-[#D9B4B4]/10 to-[#D9B4B4]/0 translate-x-[-100%] group-hover:animate-[shimmer_1.5s_infinite]" />
+                
                 {authLoading ? (
                   <>
-                    <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                    Processing...
+                    <span className="w-4 h-4 border-2 border-stone-300 border-t-[#6B5656] rounded-full animate-spin"></span>
+                    Authenticating...
                   </>
                 ) : (
                   <>
-                    {authMode === 'login' && 'Sign In'}
-                    {authMode === 'register' && 'Create Account'}
-                    {authMode === 'forgot' && 'Send OTP Code'}
-                    {authMode === 'verify' && 'Verify Code'}
-                    {authMode === 'reset' && 'Reset Password'}
-                  </>
-                )}
-              </button>
-
-              {(authMode === 'login' || authMode === 'register') && (
-                <div className="mt-4 flex flex-col space-y-4">
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                      <div className="w-full border-t border-stone-200"></div>
-                    </div>
-                    <div className="relative flex justify-center text-[10px] uppercase font-bold tracking-widest">
-                      <span className="bg-[#FEF9F6] px-4 text-stone-400">Or continue with</span>
-                    </div>
-                  </div>
-                  
-                  <button
-                    type="button"
-                    onClick={handleGoogleLogin}
-                    disabled={authLoading}
-                    className="w-full bg-white hover:bg-stone-50 border border-stone-200 text-stone-700 font-bold py-3.5 rounded-xl text-xs tracking-widest uppercase transition-all duration-350 active:scale-95 shadow-sm flex items-center justify-center gap-3"
-                  >
-                    <svg className="w-5 h-5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <svg className="w-5 h-5 relative z-10 transition-transform group-hover:scale-110 duration-300" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                       <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
                       <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
                       <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
                       <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
                     </svg>
-                    Google
-                  </button>
-                </div>
-              )}
-
-              {authMode !== 'login' && authMode !== 'register' && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAuthMode('login');
-                    setAuthError(null);
-                    setAuthSuccessMsg(null);
-                  }}
-                  className="w-full text-center text-[#6B5656] hover:text-[#D9B4B4] text-[10px] font-bold uppercase tracking-wider pt-2 block transition-colors"
-                >
-                  ← Back to Login
-                </button>
-              )}
-            </form>
+                    <span className="relative z-10">Continue with Google</span>
+                  </>
+                )}
+              </button>
+            </div>
+            
+            {/* Subtle Footer */}
+            <div className="bg-stone-50 border-t border-stone-100 py-4 text-center">
+              <p className="text-[9px] uppercase tracking-widest text-stone-400 font-bold">
+                Secure Authentication
+              </p>
+            </div>
           </div>
         </div>
       )}

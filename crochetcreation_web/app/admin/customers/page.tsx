@@ -1,4 +1,5 @@
 'use client';
+import { apiFetch } from '../../utils/apiFetch';
 
 export const dynamic = 'force-dynamic';
 
@@ -52,7 +53,7 @@ export default function AdminCustomers() {
         return;
       }
 
-      const res = await fetch(`${API_URL}/api/customers`, {
+      const res = await apiFetch(`${API_URL}/api/customers`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
