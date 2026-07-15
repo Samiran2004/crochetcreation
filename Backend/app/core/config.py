@@ -12,7 +12,8 @@ class Settings:
     CLOUDINARY_API_KEY: str = os.getenv("CLOUDINARY_API_KEY", "")
     CLOUDINARY_API_SECRET: str = os.getenv("CLOUDINARY_API_SECRET", "")
     
-    SECRET_KEY: str = os.getenv("SECRET_KEY", "7b0d77be361fcd68169992fbb9a1a8c0d9a6c9cf1c26b3c9597282672323f46f")
+    # SECURITY: SECRET_KEY must be set via environment variable. No hardcoded fallback.
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "")
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
     
@@ -21,7 +22,7 @@ class Settings:
     EMAIL_FROM: str = os.getenv("EMAIL_FROM", "crochetcreation@samiransamanta.in")
 
     # Brevo configuration
-    BREVO_API_KEY: str = os.getenv("BREVO_API_KEY", "")
+    BREVO_API_KEY: str = os.getenv("BREVO_API_KEY", "")                                                                                     
     SENDER_EMAIL: str = os.getenv("SENDER_EMAIL", "crochetcreation@samiransamanta.in")
 
     # Cron-job.org configuration
@@ -29,5 +30,13 @@ class Settings:
 
     # Database Fallback Configuration
     DB_FALLBACK_ENABLED: bool = os.getenv("DB_FALLBACK_ENABLED", "false").lower() == "true"
+
+    def __init__(self):
+        if not self.SECRET_KEY:
+            raise RuntimeError(
+                "FATAL: SECRET_KEY environment variable is not set. "
+                "Generate one with: python -c \"import secrets; print(secrets.token_hex(32))\" "
+                "and add it to your .env file."
+            )
 
 settings = Settings()

@@ -10,6 +10,11 @@ export function useOrderWebSocket(onMessage?: (message: WebSocketMessage) => voi
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectDelayRef = useRef(1000); // Start with 1 second
+  const savedOnMessage = useRef(onMessage);
+
+  useEffect(() => {
+    savedOnMessage.current = onMessage;
+  }, [onMessage]);
 
   useEffect(() => {
     let active = true;
@@ -21,7 +26,11 @@ export function useOrderWebSocket(onMessage?: (message: WebSocketMessage) => voi
 
       const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
       // Convert http/https to ws/wss
-      const wsUrl = API_URL.replace(/^http/, 'ws') + '/api/ws';
+      let wsUrl = API_URL.replace(/^http/, 'ws') + '/api/ws';
+      const token = localStorage.getItem('token');
+      if (token) {
+        wsUrl += `?token=${encodeURIComponent(token)}`;
+      }
       
       console.log(`Connecting to WebSocket: ${wsUrl}`);
       const socket = new WebSocket(wsUrl);
@@ -39,8 +48,8 @@ export function useOrderWebSocket(onMessage?: (message: WebSocketMessage) => voi
         try {
           const payload = JSON.parse(event.data);
           console.log('Received WebSocket message:', payload);
-          if (onMessage) {
-            onMessage(payload);
+          if (savedOnMessage.current) {
+            savedOnMessage.current(payload);
           }
         } catch (err) {
           console.error('Error parsing WebSocket message:', err);
@@ -85,7 +94,7 @@ export function useOrderWebSocket(onMessage?: (message: WebSocketMessage) => voi
         clearTimeout(reconnectTimeoutRef.current);
       }
     };
-  }, [onMessage]);
+  }, []);
 
   return { isConnected };
 }

@@ -61,40 +61,6 @@ const THEME_STYLES: Record<string, { primary: string; primaryDark: string; accen
   }
 };
 
-const REVIEWS = [
-  {
-    id: 1,
-    name: "Aarav Sharma",
-    avatar: "AS",
-    rating: 5,
-    date: "12 May 2026",
-    text: "Absolutely stunning craftsmanship! The colors are vibrant and the yarn is extremely soft. Highly recommend for any home decor."
-  },
-  {
-    id: 2,
-    name: "Priya Patel",
-    avatar: "PP",
-    rating: 5,
-    date: "28 April 2026",
-    text: "Purchased this as a gift for my mother and she loved it. The details are beautiful, and the packaging was lovely."
-  },
-  {
-    id: 3,
-    name: "Karan Malhotra",
-    avatar: "KM",
-    rating: 4,
-    date: "04 June 2026",
-    text: "Very neat work and lovely presentation. Delivery took about 6 days, but it was worth the wait. Will buy again!"
-  },
-  {
-    id: 4,
-    name: "Ananya Roy",
-    avatar: "AR",
-    rating: 5,
-    date: "20 May 2026",
-    text: "So soft and beautifully made! The stitching is precise and the finish is premium. 10/10 purchase!"
-  }
-];
 
 export default function ProductDetailPage() {
   const params = useParams();

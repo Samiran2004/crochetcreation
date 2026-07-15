@@ -64,6 +64,12 @@ export default function CartDrawer() {
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutSuccess, setCheckoutSuccess] = useState(false);
   const [whatsappUrl, setWhatsappUrl] = useState('');
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 4000);
+  };
   
   const [formData, setFormData] = useState({
     name: '',
@@ -137,7 +143,7 @@ export default function CartDrawer() {
   const handleCheckoutSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.email || !formData.mobile || !formData.address) {
-      alert('Please fill in all details.');
+      showToast('Please fill in all details.');
       return;
     }
 
@@ -232,7 +238,7 @@ export default function CartDrawer() {
       window.dispatchEvent(new Event('cart-change'));
     } catch (err: any) {
       console.error('Checkout error:', err);
-      alert(err.message || 'Failed to generate WhatsApp order details. Please try again.');
+      showToast(err.message || 'Failed to generate WhatsApp order details. Please try again.');
     } finally {
       setCheckoutLoading(false);
     }
@@ -242,6 +248,19 @@ export default function CartDrawer() {
 
   return (
     <>
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-[999] bg-white border-l-4 border-[#6B5656] shadow-2xl p-4 rounded-lg flex items-center gap-3 animate-in fade-in slide-in-from-bottom-5 duration-300 max-w-sm">
+          <div className="w-8 h-8 rounded-full bg-[#FDFBF7] flex items-center justify-center text-sm shadow-inner">
+            🧶
+          </div>
+          <div>
+            <p className="text-xs font-bold text-[#6B5656] uppercase tracking-wider">Cart Notice</p>
+            <p className="text-xs text-stone-600 mt-0.5">{toastMessage}</p>
+          </div>
+        </div>
+      )}
+
       {/* Backdrop */}
       {isOpen && (
         <div
@@ -543,9 +562,9 @@ export default function CartDrawer() {
                       const user = JSON.parse(localStorage.getItem('user') || '{}');
                       setFormData((prev) => ({
                         ...prev,
-                        name: user.name || '',
+                        name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || '',
                         email: user.email || '',
-                        mobile: user.mobile || '',
+                        mobile: user.phone || user.mobile || '',
                       }));
                     } catch (e) {}
                   }

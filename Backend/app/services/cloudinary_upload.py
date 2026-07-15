@@ -20,12 +20,17 @@ async def upload_image_to_cloudinary(file: UploadFile, folder: str = "crochetcre
     content = await file.read()
     
     # Upload to Cloudinary without cropping, ensuring high quality and auto format
-    result = cloudinary.uploader.upload(
-        content,
-        folder=folder,
-        resource_type="auto",
-        quality="auto:best",
-        fetch_format="auto"
+    import asyncio
+    loop = asyncio.get_event_loop()
+    result = await loop.run_in_executor(
+        None,
+        lambda: cloudinary.uploader.upload(
+            content,
+            folder=folder,
+            resource_type="auto",
+            quality="auto:best",
+            fetch_format="auto"
+        )
     )
     
     # Reset file cursor position in case the stream is reused
@@ -44,12 +49,17 @@ async def upload_image_and_get_details(file: UploadFile, folder: str = "crochetc
     Returns a dict with 'url', 'public_id', 'width', and 'height'.
     """
     content = await file.read()
-    result = cloudinary.uploader.upload(
-        content,
-        folder=folder,
-        resource_type="auto",
-        quality="auto:best",
-        fetch_format="auto"
+    import asyncio
+    loop = asyncio.get_event_loop()
+    result = await loop.run_in_executor(
+        None,
+        lambda: cloudinary.uploader.upload(
+            content,
+            folder=folder,
+            resource_type="auto",
+            quality="auto:best",
+            fetch_format="auto"
+        )
     )
     await file.seek(0)
     return {
@@ -64,7 +74,9 @@ async def delete_image_from_cloudinary(public_id: str):
     Deletes an image from Cloudinary using its public_id.
     """
     try:
-        cloudinary.uploader.destroy(public_id)
+        import asyncio
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, lambda: cloudinary.uploader.destroy(public_id))
     except Exception as e:
         print(f"Failed to delete Cloudinary image {public_id}: {e}")
 
@@ -89,7 +101,9 @@ async def delete_image_by_url(url: str):
         else:
             public_id = path_without_version
             
-        cloudinary.uploader.destroy(public_id)
+        import asyncio
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, lambda: cloudinary.uploader.destroy(public_id))
     except Exception as e:
         print(f"Failed to delete Cloudinary image from URL {url}: {e}")
 

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from bson import ObjectId
 from pydantic import BaseModel, Field, BeforeValidator
 from typing import Annotated
@@ -8,6 +8,7 @@ from typing import Annotated
 from app.core.db import get_database
 from app.api.deps import get_current_user
 from app.models.user import UserInDB
+from app.models.order import OrderStatus
 from app.utils.email_sender import send_review_thank_you_email
 
 router = APIRouter(prefix="/api/reviews", tags=["reviews"])
@@ -75,7 +76,7 @@ async def create_review(
             {"user_id": user_obj_id},
             {"user_id": str(current_user.id)}
         ],
-        "status": "Delivered",
+        "status": OrderStatus.DELIVERED.value,
         "items.product_id": product_id
     }
     
@@ -104,7 +105,7 @@ async def create_review(
         "product_id": product_id,
         "rating": review_in.rating,
         "comment": review_in.comment,
-        "created_at": datetime.utcnow()
+        "created_at": datetime.now(timezone.utc)
     }
     
     result = await db["reviews"].insert_one(review_dict)
@@ -182,7 +183,7 @@ async def check_review_eligibility(
             {"user_id": user_obj_id},
             {"user_id": str(current_user.id)}
         ],
-        "status": "Delivered",
+        "status": OrderStatus.DELIVERED.value,
         "items.product_id": product_id
     }
     

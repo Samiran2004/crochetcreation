@@ -1,11 +1,11 @@
 from fastapi import APIRouter, HTTPException, status, Depends, BackgroundTasks
 from typing import List, Optional
-from app.models.order import OrderCreate, OrderResponse, ManualOrderCreate, ManualOrderResponse
+from app.models.order import OrderCreate, OrderResponse, ManualOrderCreate, ManualOrderResponse, OrderStatus, StatusUpdateRequest
 from app.core.db import get_database
 from app.api.deps import get_current_admin_user, get_current_user, get_optional_current_user
 from app.models.user import UserInDB
 from bson import ObjectId
-from datetime import datetime
+from datetime import datetime, timezone
 from app.utils.email_sender import send_order_email, generate_and_send_invoice_task
 from app.utils.websocket import manager
 
@@ -26,8 +26,8 @@ async def create_order(
     try:
         # Save order document to MongoDB
         order_dict = order_in.model_dump()
-        order_dict["status"] = "Pending Validation"
-        order_dict["created_at"] = datetime.utcnow()
+        order_dict["status"] = OrderStatus.PENDING_VALIDATION.value
+        order_dict["created_at"] = datetime.now(timezone.utc)
         order_dict["email_sent"] = False
         # Explicitly attach the user_id as a BSON ObjectId if logged in
         order_dict["user_id"] = ObjectId(current_user.id) if (current_user and current_user.id) else None
@@ -108,7 +108,7 @@ async def get_orders(
 @router.put("/{order_id}", response_model=OrderResponse)
 async def update_order_status(
     order_id: str,
-    status_update: str,  # "Pending", "Processing", "Delivered", "Cancelled"
+    status_update: StatusUpdateRequest,
     background_tasks: BackgroundTasks,
     current_admin: UserInDB = Depends(get_current_admin_user)
 ):
@@ -119,12 +119,7 @@ async def update_order_status(
             detail="Database connection is not initialized."
         )
     
-    if status_update not in ["Pending", "Processing", "Delivered", "Cancelled"]:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid order status."
-        )
-        
+    # Validation is handled by Pydantic model StatusUpdateRequest
     try:
         existing_order = await db["orders"].find_one({"_id": ObjectId(order_id)})
         if not existing_order:
@@ -135,7 +130,7 @@ async def update_order_status(
 
         await db["orders"].update_one(
             {"_id": ObjectId(order_id)},
-            {"$set": {"status": status_update}}
+            {"$set": {"status": status_update.status.value}}
         )
 
         updated_order = await db["orders"].find_one({"_id": ObjectId(order_id)})
@@ -151,7 +146,7 @@ async def update_order_status(
             print(f"Error broadcasting order_updated: {ws_err}")
 
         # If payment is verified & confirmed (order status changed to Processing), send Brevo confirmation with invoice
-        if status_update == "Processing":
+        if status_update.status.value == OrderStatus.PROCESSING.value:
             to_email = updated_order.get("customer_email")
             name = updated_order.get("customer_name")
             if to_email:
@@ -197,7 +192,7 @@ async def confirm_order(
         await db["orders"].update_one(
             {"_id": ObjectId(order_id)},
             {"$set": {
-                "status": "Confirmed"
+                "status": OrderStatus.CONFIRMED.value
             }}
         )
 
@@ -267,8 +262,8 @@ async def create_manual_order(
         )
     try:
         order_dict = order_in.model_dump()
-        order_dict["status"] = "Pending"
-        order_dict["created_at"] = datetime.utcnow()
+        order_dict["status"] = OrderStatus.PENDING_VALIDATION.value
+        order_dict["created_at"] = datetime.now(timezone.utc)
         order_dict["is_manual"] = True
         order_dict["email_sent"] = False
 
@@ -352,7 +347,7 @@ async def download_invoice(
             )
 
         # Status check: order must be Confirmed
-        if order.get("status") != "Confirmed":
+        if order.get("status") != OrderStatus.CONFIRMED.value:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invoices can only be downloaded for Confirmed orders."

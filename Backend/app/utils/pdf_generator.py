@@ -1,6 +1,6 @@
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 import re
 from io import BytesIO
@@ -41,7 +41,7 @@ def render_invoice_template(order_data: dict) -> str:
         except ValueError:
             order_date = created_at
     else:
-        order_date = datetime.utcnow().strftime("%B %d, %Y")
+        order_date = datetime.now(timezone.utc).strftime("%B %d, %Y")
         
     customer_name = order_data.get("customer_name", "Valued Customer")
     customer_email = order_data.get("customer_email", "N/A")

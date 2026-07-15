@@ -1,6 +1,6 @@
 import logging
 import httpx
-from datetime import datetime
+from datetime import datetime, timezone
 from app.core.config import settings
 
 logger = logging.getLogger("app.cronjob")
@@ -113,7 +113,7 @@ def get_mock_stats() -> dict:
     """
     # 12 simulated points, spaced every 5 minutes
     mock_history = []
-    base_time = int(datetime.utcnow().timestamp()) - 3600  # 1 hour ago
+    base_time = int(datetime.now(timezone.utc).timestamp()) - 3600  # 1 hour ago
     
     # Realistic latency values around 140ms - 220ms
     latencies = [150, 180, 210, 140, 160, 240, 190, 145, 155, 170, 205, 165]

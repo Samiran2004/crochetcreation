@@ -29,8 +29,8 @@ app = FastAPI(
 # Configure CORS for frontend access
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
+    allow_origins=["https://crochetcreation.vercel.app", "http://localhost:3000"],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -45,6 +45,14 @@ app.include_router(admin_router)
 app.include_router(user_router)
 app.include_router(review_router)
 
+# Configure Rate Limiting
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from app.routes.auth_routes import limiter
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 @app.get("/")
 async def root():
     return {
@@ -58,11 +66,24 @@ async def keep_alive_ping():
     """Endpoint for cron jobs to keep the Render server awake."""
     return {"status": "Alive", "message": "Server is awake and running!"}
 
-from fastapi import WebSocket, WebSocketDisconnect
+from fastapi import WebSocket, WebSocketDisconnect, Query
+import jwt
+from app.core.config import settings
 from app.utils.websocket import manager
 
 @app.websocket("/api/ws")
-async def websocket_endpoint(websocket: WebSocket):
+async def websocket_endpoint(websocket: WebSocket, token: str = Query(None)):
+    if not token:
+        await websocket.close(code=4001, reason="Missing token")
+        return
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        if not payload.get("sub"):
+            raise ValueError("Missing subject")
+    except Exception:
+        await websocket.close(code=4001, reason="Invalid token")
+        return
+
     await manager.connect(websocket)
     try:
         while True:

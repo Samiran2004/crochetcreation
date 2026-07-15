@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field, BeforeValidator
 from typing import Annotated, Optional, List
-from datetime import datetime
+from datetime import datetime, timezone
 
 PyObjectId = Annotated[str, BeforeValidator(str)]
 
@@ -43,6 +43,18 @@ class ManualOrderCreate(BaseModel):
     latitude: Optional[float] = None
     longitude: Optional[float] = None
 
+from enum import Enum
+
+class OrderStatus(str, Enum):
+    PENDING_VALIDATION = "Pending Validation"
+    CONFIRMED = "Confirmed"
+    PROCESSING = "Processing"
+    DELIVERED = "Delivered"
+    CANCELLED = "Cancelled"
+
+class StatusUpdateRequest(BaseModel):
+    status: OrderStatus
+
 class OrderResponse(BaseModel):
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
     customer_name: str
@@ -52,10 +64,10 @@ class OrderResponse(BaseModel):
     total_amount: float = 0
     payment_method: str = "COD"
     user_id: Optional[PyObjectId] = None
-    status: str = "Pending"  # "Pending", "Processing", "Delivered", "Cancelled"
+    status: str = OrderStatus.PENDING_VALIDATION.value
     is_manual: bool = False
     notes: Optional[str] = None
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     shipping_address: Optional[str] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None

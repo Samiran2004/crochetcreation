@@ -1,7 +1,7 @@
 from motor.motor_asyncio import AsyncIOMotorClient # Async driver for mongoDB for async work
 from app.core.config import settings
 from bson import ObjectId
-from datetime import datetime
+from datetime import datetime, timezone
 
 class MockCursor:
     def __init__(self, data):
@@ -191,7 +191,7 @@ class MockDatabase:
             "total_amount": 499.00,
             "payment_method": "COD",
             "status": "Pending",
-            "created_at": datetime.utcnow()
+            "created_at": datetime.now(timezone.utc)
         }]
         
     def __getitem__(self, name):

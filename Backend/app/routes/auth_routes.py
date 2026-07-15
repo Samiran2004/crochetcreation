@@ -8,7 +8,12 @@ from app.core.security import get_password_hash, verify_password, create_access_
 from app.core.db import get_database
 from app.utils.email_sender import send_welcome_email, send_otp_email
 import random
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from fastapi import Request
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+
+limiter = Limiter(key_func=get_remote_address)
 
 router = APIRouter(prefix="/api/auth", tags=["authentication"])
 
@@ -105,7 +110,8 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
 
 
 @router.post("/forgot-password")
-async def forgot_password(req: ForgotPasswordRequest, background_tasks: BackgroundTasks):
+@limiter.limit("3/10minutes")
+async def forgot_password(req: ForgotPasswordRequest, background_tasks: BackgroundTasks, request: Request):
     db = get_database()
     if db is None:
         raise HTTPException(
@@ -123,12 +129,12 @@ async def forgot_password(req: ForgotPasswordRequest, background_tasks: Backgrou
 
     # Generate 6-digit OTP
     otp = f"{random.randint(100000, 999999)}"
-    expires_at = datetime.utcnow() + timedelta(minutes=10)
+    expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
 
     # Store OTP in DB (overwrite if already exists)
     await db["otps"].update_one(
         {"email": req.email},
-        {"$set": {"otp": otp, "expires_at": expires_at}},
+        {"$set": {"otp": otp, "expires_at": expires_at, "attempts": 0}},
         upsert=True
     )
 
@@ -146,7 +152,8 @@ async def forgot_password(req: ForgotPasswordRequest, background_tasks: Backgrou
 
 
 @router.post("/verify-otp")
-async def verify_otp(req: VerifyOTPRequest):
+@limiter.limit("5/10minutes")
+async def verify_otp(req: VerifyOTPRequest, request: Request):
     db = get_database()
     if db is None:
         raise HTTPException(
@@ -154,14 +161,31 @@ async def verify_otp(req: VerifyOTPRequest):
             detail="Database connection is not initialized."
         )
 
-    otp_doc = await db["otps"].find_one({"email": req.email, "otp": req.otp})
+    otp_doc = await db["otps"].find_one({"email": req.email})
     if not otp_doc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="OTP not found or expired."
+        )
+
+    if otp_doc.get("attempts", 0) >= 5:
+        await db["otps"].delete_one({"email": req.email})
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Too many failed attempts. OTP has been invalidated."
+        )
+
+    if otp_doc["otp"] != req.otp:
+        await db["otps"].update_one(
+            {"email": req.email},
+            {"$inc": {"attempts": 1}}
+        )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid OTP code. Please check and try again."
         )
 
-    if otp_doc["expires_at"] < datetime.utcnow():
+    if otp_doc["expires_at"] < datetime.now(timezone.utc):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="OTP code has expired. Please request a new one."
@@ -187,7 +211,7 @@ async def reset_password(req: ResetPasswordRequest):
             detail="Invalid OTP code."
         )
 
-    if otp_doc["expires_at"] < datetime.utcnow():
+    if otp_doc["expires_at"] < datetime.now(timezone.utc):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="OTP code has expired. Please request a new one."
