@@ -146,6 +146,51 @@ export default function CrochetCreationPage() {
   const [authSuccessMsg, setAuthSuccessMsg] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(false);
 
+  // Profile completion states
+  const [showMobilePrompt, setShowMobilePrompt] = useState(false);
+  const [mobilePromptValue, setMobilePromptValue] = useState('');
+  const [mobilePromptLoading, setMobilePromptLoading] = useState(false);
+
+  const checkMobilePrompt = (userObj: any) => {
+    if (!userObj?.is_admin && (!userObj?.mobile || userObj.mobile.trim() === '')) {
+      if (!sessionStorage.getItem('mobilePromptDismissed')) {
+        setShowMobilePrompt(true);
+      }
+    }
+  };
+
+  const handleMobilePromptSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!token) return;
+    setMobilePromptLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/api/users/me`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ mobile: mobilePromptValue })
+      });
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.detail || 'Failed to update mobile number');
+      }
+      const data = await res.json();
+      setUserProfile(data);
+      localStorage.setItem('user', JSON.stringify({
+        email: data.email,
+        first_name: data.first_name,
+        last_name: data.last_name,
+        mobile: data.mobile,
+        is_admin: data.is_admin
+      }));
+      setShowMobilePrompt(false);
+      showToast("Mobile number added successfully!");
+    } catch (err: any) {
+      showToast(err.message || 'Something went wrong.');
+    } finally {
+      setMobilePromptLoading(false);
+    }
+  };
+
   // Sync token and user profile on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -158,6 +203,8 @@ export default function CrochetCreationPage() {
           setUserProfile(parsedUser);
           if (savedToken && parsedUser.is_admin) {
             router.push('/admin/dashboard');
+          } else if (savedToken) {
+            checkMobilePrompt(parsedUser);
           }
         } catch (e) {
           console.error("Failed to parse user profile:", e);
@@ -282,6 +329,7 @@ export default function CrochetCreationPage() {
         if (userObj.is_admin) {
           router.push('/admin/dashboard');
         } else {
+          checkMobilePrompt(userObj);
           const params = new URLSearchParams(window.location.search);
           const redirectUrl = params.get('redirect');
           if (redirectUrl) {
@@ -339,6 +387,7 @@ export default function CrochetCreationPage() {
       if (userObj.is_admin) {
         router.push('/admin/dashboard');
       } else {
+        checkMobilePrompt(userObj);
         const params = new URLSearchParams(window.location.search);
         const redirectUrl = params.get('redirect');
         if (redirectUrl) {
@@ -1948,6 +1997,67 @@ export default function CrochetCreationPage() {
           </div>
         </div>
       )}
+
+      {/* Complete Profile Mobile Number Prompt */}
+      {showMobilePrompt && (
+        <div className="fixed inset-0 z-[110] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#FEF9F6] rounded-[24px] max-w-sm w-full p-8 shadow-2xl animate-scale-in relative border border-stone-100">
+            <button
+              onClick={() => {
+                sessionStorage.setItem('mobilePromptDismissed', 'true');
+                setShowMobilePrompt(false);
+              }}
+              className="absolute top-4 right-4 text-stone-400 hover:text-stone-600 transition-colors p-1"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <div className="flex justify-center mb-6">
+              <div className="w-14 h-14 bg-rose-100 rounded-full flex items-center justify-center border border-rose-200">
+                <Send className="w-6 h-6 text-rose-500" />
+              </div>
+            </div>
+            <h3 className="font-serif text-2xl text-center text-[#4A3E3E] mb-2 font-bold">Complete Your Profile</h3>
+            <p className="text-stone-500 text-xs text-center leading-relaxed mb-6">
+              Please provide your mobile number so we can seamlessly deliver your custom crochet creations and reach out for delivery updates.
+            </p>
+            <form onSubmit={handleMobilePromptSubmit} className="space-y-4">
+              <div>
+                <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider block mb-1">Mobile Number</label>
+                <input
+                  type="tel"
+                  required
+                  value={mobilePromptValue}
+                  onChange={(e) => setMobilePromptValue(e.target.value)}
+                  placeholder="e.g. +15550000000"
+                  className="w-full bg-white border border-stone-200 px-4 py-3 rounded-xl text-sm focus:outline-none focus:border-[#D9B4B4] transition-colors"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={mobilePromptLoading}
+                className="w-full bg-[#6B5656] hover:bg-[#4A3E3E] text-white font-bold py-3.5 rounded-xl text-xs tracking-widest uppercase transition-all duration-300 flex items-center justify-center gap-2 mt-4"
+              >
+                {mobilePromptLoading ? (
+                  <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                ) : (
+                  'Save Mobile Number'
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  sessionStorage.setItem('mobilePromptDismissed', 'true');
+                  setShowMobilePrompt(false);
+                }}
+                className="w-full text-center text-stone-400 hover:text-stone-600 text-[10px] font-bold uppercase tracking-wider pt-2 block transition-colors"
+              >
+                Skip for now
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
 
       {/* Policy Dialog Modal */}
       {policyModal && (
