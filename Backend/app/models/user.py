@@ -10,13 +10,15 @@ class UserBase(BaseModel):
     first_name: str = Field(..., min_length=1)
     last_name: str = Field(..., min_length=1)
     email: EmailStr
-    mobile: str = Field(..., min_length=1)
+    mobile: str = Field(default="")
     is_admin: bool = False
     picture: Optional[str] = None
 
     @field_validator("mobile")
     @classmethod
     def validate_mobile(cls, v: str) -> str:
+        if not v:
+            return v
         # Normalize and remove common separators
         v_clean = re.sub(r"[\s\-()]", "", v)
         # Allow optional '+' prefix and 10 to 15 digits
@@ -25,6 +27,13 @@ class UserBase(BaseModel):
         return v_clean
 class UserCreate(UserBase):
     password: str = Field(..., min_length=6, description="Password must be at least 6 characters.")
+
+    @field_validator("mobile")
+    @classmethod
+    def validate_mobile_create(cls, v: str) -> str:
+        if not v:
+            raise ValueError("Mobile number is required for registration.")
+        return v
 
 import uuid
 
@@ -75,7 +84,7 @@ class UserUpdate(BaseModel):
     @field_validator("mobile")
     @classmethod
     def validate_mobile(cls, v: Optional[str]) -> Optional[str]:
-        if v is None:
+        if not v: # Also catches "" and None
             return v
         v_clean = re.sub(r"[\s\-()]", "", v)
         if not re.match(r"^\+?\d{10,15}$", v_clean):
