@@ -25,7 +25,7 @@ interface NavbarProps {
   scrollY?: number;
   isScrolled?: boolean;
   showScrollEffect?: boolean;
-  showThemeSwitcher?: boolean;
+
   hideLinks?: boolean;
   currentPage?: string;
   // Auth state - null means logged out
@@ -68,7 +68,7 @@ export default function Navbar({
   scrollY = 0,
   isScrolled: controlledScrolled,
   showScrollEffect = true,
-  showThemeSwitcher = true,
+
   hideLinks = false,
   currentPage,
   token,
@@ -287,24 +287,7 @@ export default function Navbar({
               </button>
             )}
 
-            {/* Theme Switcher */}
-            {showThemeSwitcher && (
-              <div className="flex items-center gap-1.5 pl-2 border-l border-white/10">
-                {Object.entries(THEME_COLORS_MAP).map(([key, value]) => (
-                  <button
-                    key={key}
-                    onClick={() => onThemeChange(key)}
-                    className={`w-4 h-4 rounded-full transition-all duration-300 ${
-                      themeColor === key
-                        ? 'ring-2 ring-[#FEF9F6] ring-offset-1 ring-offset-transparent scale-110'
-                        : 'hover:scale-110 opacity-60 hover:opacity-100'
-                    }`}
-                    style={{ backgroundColor: value.bg }}
-                    title={`${key.charAt(0).toUpperCase() + key.slice(1)} theme`}
-                  />
-                ))}
-              </div>
-            )}
+
           </div>
 
           {/* Mobile Right Action Bar (visible on mobile only, < md) */}
@@ -421,23 +404,7 @@ export default function Navbar({
               )}
             </div>
 
-            {showThemeSwitcher && (
-              <div className="flex items-center justify-center gap-3 pt-3 border-t border-[#FEF9F6]/10 text-[#FEF9F6]">
-                <span className="text-[10px] text-stone-300 tracking-wider">THEME:</span>
-                <div className="flex items-center gap-2">
-                  {Object.entries(THEME_COLORS_MAP).map(([key, value]) => (
-                    <button
-                      key={key}
-                      onClick={() => onThemeChange(key)}
-                      className={`w-4 h-4 rounded-full border transition-transform ${
-                        themeColor === key ? 'border-[#FEF9F6] scale-125' : 'border-transparent'
-                      }`}
-                      style={{ backgroundColor: value.bg }}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
+
           </div>
         )}
       </header>
