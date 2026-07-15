@@ -104,8 +104,10 @@ export default function Navbar({
     if (typeof window !== 'undefined') {
       const syncCartCount = () => {
         const savedCount = localStorage.getItem('crochet_cart_count');
-        if (savedCount) {
+        if (savedCount !== null) {
           setLocalCartCount(parseInt(savedCount, 10));
+        } else {
+          setLocalCartCount(0);
         }
       };
       syncCartCount();
@@ -114,9 +116,11 @@ export default function Navbar({
     }
   }, []);
 
-  // Update when prop changes
+  // Update when prop changes only if explicitly provided (ignoring defaults of 0 if local storage has more)
   useEffect(() => {
-    setLocalCartCount((prev) => cartItemsCount > 0 ? cartItemsCount : prev);
+    if (cartItemsCount > 0) {
+      setLocalCartCount(cartItemsCount);
+    }
   }, [cartItemsCount]);
 
   // Local scroll tracking when not controlled
