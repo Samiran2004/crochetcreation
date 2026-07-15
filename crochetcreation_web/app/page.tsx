@@ -23,7 +23,10 @@ import {
   X,
   User,
   Lock,
-  LogOut
+  LogOut,
+  Star,
+  Wand2,
+  Leaf
 } from 'lucide-react';
 import { FadeUpWrapper, ScaleInWrapper, StaggerContainer, StaggerItem } from './components/AnimationWrappers';
 import Navbar from './components/Navbar';
@@ -1353,13 +1356,13 @@ export default function CrochetCreationPage() {
                     <span className="w-6 h-0.5 bg-[#D9B4B4]"></span> Hi, Welcome to Crochet Creation
                   </h4>
                   <p className="text-sm">
-                    I Started Crocheting In My First Year. Then, In Parallel With My Basic Education, I Received A Second Higher Education. And In The Break Between Classes I Managed To Go To Knitting Courses. I Devoted Two Years To The Courses, After Which I Was Given A Certificate. But I Learned The Simplest Things There - Hold The Hook, Learned The Types Of Loops, Read The Diagrams.
+                    At Crochet Creation, we believe that true elegance lies in the details. Every piece we create is born from a passion for handcrafted artistry, blending traditional crochet techniques with modern aesthetics. What started as a simple love for yarn and needles has blossomed into a premium studio dedicated to bringing warmth and beauty into your everyday life.
                   </p>
                 </div>
 
                 <div className="space-y-4 pt-6 border-t border-stone-100">
                   <p className="text-sm">
-                    In Order To Become A Real Master Of Crochet Or Knitting, It Is Absolutely Not Necessary To Graduate From A University Or Expensive Courses. All You Need To Get Started Is A Ball Of Wool Yarn, A Hook Or Knitting Needles And Your Boundless Desire To Create.
+                    We carefully select the finest wool and cotton threads to ensure that each product is not only visually stunning but also luxuriously soft and durable. Whether it's a cozy winter accessory, an intricate home decor piece, or a customized gift, our creations are woven with boundless dedication, love, and a desire to deliver nothing short of perfection.
                   </p>
                 </div>
               </div>
@@ -1368,9 +1371,9 @@ export default function CrochetCreationPage() {
           </FadeUpWrapper>
         </section>
 
-        {/* 6. Customer Reviews (Knit Textured Background) */}
-        <section id="portfolio" className="relative py-12 md:py-24 overflow-hidden text-center scroll-mt-28">
-          {/* Full Knit Background */}
+        {/* 6. Our Promises / Features Section */}
+        <section id="features" className="relative py-16 md:py-24 overflow-hidden text-center scroll-mt-28">
+          {/* Knit Background to maintain consistency */}
           <div className="absolute inset-0 z-0">
             <Image
               src={getImageSrc('knitTexture')}
@@ -1379,36 +1382,51 @@ export default function CrochetCreationPage() {
               sizes="100vw"
               className="object-cover opacity-20 filter grayscale"
             />
-            <div className="absolute inset-0 bg-[#FEF9F6]/90 mix-blend-overlay" />
+            <div className="absolute inset-0 bg-[#FEF9F6]/95 mix-blend-overlay" />
           </div>
 
-          <FadeUpWrapper className="max-w-3xl mx-auto px-4 md:px-12 relative z-10 space-y-6 md:space-y-8">
-            <span className="text-[10px] font-black tracking-widest text-[#D9B4B4] uppercase block">WHAT THEY SAY</span>
-            <h2 className="text-xl md:text-4xl font-serif font-medium text-[#6B5656]">CUSTOMER REVIEWS</h2>
+          <FadeUpWrapper className="max-w-7xl mx-auto px-4 md:px-12 relative z-10 space-y-12">
+            <div className="space-y-4">
+              <span className="text-[10px] font-black tracking-widest text-[#D9B4B4] uppercase block">THE CROCHET PROMISE</span>
+              <h2 className="text-2xl md:text-4xl font-serif font-medium text-[#6B5656]">Crafted With Care</h2>
+            </div>
 
-            <div className="flex flex-col items-center space-y-6">
-              {/* Alice avatar in pink ring */}
-              <div className="relative w-20 h-20 rounded-full p-1 border-2 border-[#D9B4B4]">
-                <div className="w-full h-full relative rounded-full overflow-hidden">
-                  <Image
-                    src={getImageSrc('customerAlice')}
-                    alt="Alice Review"
-                    fill
-                    sizes="80px"
-                    className="object-cover"
-                  />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-12 pt-8">
+              {/* Feature 1 */}
+              <div className="flex flex-col items-center space-y-4 group">
+                <div className="w-16 h-16 rounded-full bg-[#FDF8F6] border border-[#F5E6E6] shadow-sm flex items-center justify-center text-[#D9B4B4] group-hover:scale-110 group-hover:bg-[#D9B4B4] group-hover:text-white transition-all duration-300">
+                  <Heart className="w-7 h-7" />
                 </div>
+                <h3 className="text-lg font-bold text-stone-800">100% Handmade</h3>
+                <p className="text-sm text-stone-500 leading-relaxed max-w-[250px]">Every piece is uniquely crafted with love and precision by our expert artisans.</p>
               </div>
 
-              {/* Testimonial */}
-              <p className="text-sm md:text-base leading-relaxed text-stone-600 max-w-2xl italic">
-                "Thanks A Lot Parcel With A Jacket Came Very Quickly. Great Service! Prosperity To Your Store! As Always, Everything Is Impeccable, Neat, Very Touching Gifts From The Catalog, A Piece Of Canvas With A Leaf Is Different Every Time. This Emphasizes The Personal Care For Each Customer."
-              </p>
+              {/* Feature 2 */}
+              <div className="flex flex-col items-center space-y-4 group">
+                <div className="w-16 h-16 rounded-full bg-[#FDF8F6] border border-[#F5E6E6] shadow-sm flex items-center justify-center text-[#D9B4B4] group-hover:scale-110 group-hover:bg-[#D9B4B4] group-hover:text-white transition-all duration-300">
+                  <Star className="w-7 h-7" />
+                </div>
+                <h3 className="text-lg font-bold text-stone-800">Premium Yarn</h3>
+                <p className="text-sm text-stone-500 leading-relaxed max-w-[250px]">We use only the finest, softest wool and cotton threads for maximum comfort.</p>
+              </div>
 
-              {/* Sign-off */}
-              <span className="text-xs font-black tracking-widest text-[#6B5656] uppercase">
-                ALICE, 23/03/2021
-              </span>
+              {/* Feature 3 */}
+              <div className="flex flex-col items-center space-y-4 group">
+                <div className="w-16 h-16 rounded-full bg-[#FDF8F6] border border-[#F5E6E6] shadow-sm flex items-center justify-center text-[#D9B4B4] group-hover:scale-110 group-hover:bg-[#D9B4B4] group-hover:text-white transition-all duration-300">
+                  <Wand2 className="w-7 h-7" />
+                </div>
+                <h3 className="text-lg font-bold text-stone-800">Custom Designs</h3>
+                <p className="text-sm text-stone-500 leading-relaxed max-w-[250px]">Bring your ideas to life with our bespoke, personalized crochet creations.</p>
+              </div>
+
+              {/* Feature 4 */}
+              <div className="flex flex-col items-center space-y-4 group">
+                <div className="w-16 h-16 rounded-full bg-[#FDF8F6] border border-[#F5E6E6] shadow-sm flex items-center justify-center text-[#D9B4B4] group-hover:scale-110 group-hover:bg-[#D9B4B4] group-hover:text-white transition-all duration-300">
+                  <Leaf className="w-7 h-7" />
+                </div>
+                <h3 className="text-lg font-bold text-stone-800">Eco-Friendly</h3>
+                <p className="text-sm text-stone-500 leading-relaxed max-w-[250px]">We believe in sustainable practices and materials that care for our planet.</p>
+              </div>
             </div>
           </FadeUpWrapper>
         </section>
