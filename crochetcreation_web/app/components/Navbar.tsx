@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { ShoppingBag, User, LogOut, Menu, X, Search, Home } from 'lucide-react';
+import { ShoppingBag, User, LogOut, Menu, X, Search, Home, Instagram } from 'lucide-react';
 
 export interface NavbarTheme {
   primary: string;
@@ -243,6 +243,15 @@ export default function Navbar({
           <div className="hidden lg:flex items-center gap-3">
             {!hideLinks && <div className="h-6 w-px bg-white/10"></div>}
 
+            <a 
+              href="https://www.instagram.com/crochet_creation_02?igsh=OGwybjc3emljMzB6" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="p-1.5 rounded-full text-[#FEF9F6]/80 hover:text-white hover:bg-white/10 transition-colors"
+            >
+              <Instagram className="w-5 h-5" />
+            </a>
+
             {/* Cart Button */}
             <div
               id="header-cart-icon"
@@ -337,6 +346,14 @@ export default function Navbar({
 
           {/* Tablet/Medium Screen Icons (visible only on md to lg screens) */}
           <div className="hidden md:flex lg:hidden items-center gap-3">
+            <a 
+              href="https://www.instagram.com/crochet_creation_02?igsh=OGwybjc3emljMzB6" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="min-w-[44px] min-h-[44px] flex items-center justify-center text-[#FEF9F6] hover:text-[#D9B4B4] transition-colors"
+            >
+              <Instagram className="w-5 h-5" />
+            </a>
             <div
               id="mobile-cart-icon-header"
               onClick={openCart}
@@ -395,7 +412,14 @@ export default function Navbar({
                 <span>{localCartCount} items</span>
               </div>
               <span className="text-white/30">|</span>
-              <Search className="w-4 h-4 text-white/60" />
+              <a 
+                href="https://www.instagram.com/crochet_creation_02?igsh=OGwybjc3emljMzB6" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-[#D9B4B4] hover:text-white transition-colors"
+              >
+                <Instagram className="w-5 h-5" />
+              </a>
               <span className="text-white/30">|</span>
               {token && userProfile ? (
                 <div className="flex items-center gap-2">

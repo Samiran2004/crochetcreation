@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { apiFetch } from '../utils/apiFetch';
+import { Instagram } from 'lucide-react';
 
 interface FooterData {
   aboutText: string;
@@ -56,6 +57,11 @@ export default function Footer() {
           <p className="text-xs leading-relaxed">
             {footerData.aboutText}
           </p>
+          <div className="flex gap-4 pt-2">
+            <a href="https://www.instagram.com/crochet_creation_02?igsh=OGwybjc3emljMzB6" target="_blank" rel="noopener noreferrer" className="text-stone-400 hover:text-white transition-colors">
+              <Instagram className="w-5 h-5" />
+            </a>
+          </div>
         </div>
         <div>
           <h4 className="text-white font-bold text-sm tracking-wider uppercase mb-4">Quick Links</h4>
