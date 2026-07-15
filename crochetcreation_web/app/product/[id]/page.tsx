@@ -1017,14 +1017,14 @@ export default function ProductDetailPage() {
                 </motion.div>
               </div>
 
-              {/* Accordion 2: Shipping & Returns */}
+              {/* Accordion 2: Shipping Info */}
               <div className="border-b border-[#EADBDB]/50 pb-4">
                 <button
                   type="button"
                   onClick={() => setShippingOpen(!shippingOpen)}
                   className="w-full flex items-center justify-between text-left font-serif text-sm font-semibold text-gray-900 py-2 focus:outline-none"
                 >
-                  <span>Shipping & Returns</span>
+                  <span>Shipping Info</span>
                   <ChevronDown className={`w-4 h-4 text-stone-500 transition-transform duration-300 ${shippingOpen ? 'rotate-180' : ''}`} />
                 </button>
                 <motion.div
@@ -1048,14 +1048,7 @@ export default function ProductDetailPage() {
                         <p className="text-stone-450">100% encrypted ssl</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2.5 p-2 bg-[#FEF9F6] border border-[#EADBDB]/40 rounded-xl">
-                      <RotateCcw className="w-4 h-4 text-[#D9B4B4] shrink-0" />
-                      <div className="text-[9px] leading-tight">
-                        <p className="font-bold text-stone-700">Easy Returns</p>
-                        <p className="text-stone-450">30-day exchanges</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2.5 p-2 bg-[#FEF9F6] border border-[#EADBDB]/40 rounded-xl">
+                    <div className="flex items-center gap-2.5 p-2 bg-[#FEF9F6] border border-[#EADBDB]/40 rounded-xl col-span-2">
                       <Sparkles className="w-4 h-4 text-[#D9B4B4] shrink-0" />
                       <div className="text-[9px] leading-tight">
                         <p className="font-bold text-stone-700">Crafted to Order</p>
