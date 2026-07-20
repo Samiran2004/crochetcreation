@@ -89,12 +89,11 @@ export default function AdminProducts() {
   const fetchProducts = async () => {
     setLoading(true);
     try {
-      const res = await apiFetch(`${API_URL}/api/products`);
+      const res = await apiFetch(`${API_URL}/api/products?limit=1000`);
       if (!res.ok) throw new Error("Could not fetch product catalog.");
       const data = await res.json();
-      if (Array.isArray(data)) {
-        setProducts(data);
-      }
+      const items = Array.isArray(data) ? data : (data.items || []);
+      setProducts(items);
     } catch (err: any) {
       setError(err.message || "Something went wrong while loading products.");
     } finally {

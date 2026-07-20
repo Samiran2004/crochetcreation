@@ -1,6 +1,6 @@
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException, status, Depends
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, status, Depends, Query
 from typing import List, Optional
-from app.models.product import ProductModel, ProductUpdate, ProductCreate
+from app.models.product import ProductModel, ProductUpdate, ProductCreate, PaginatedProductsResponse
 from app.services.cloudinary_upload import upload_image_to_cloudinary, delete_image_by_url
 from app.core.db import get_database
 from app.api.deps import get_current_admin_user
@@ -100,8 +100,13 @@ async def create_product(
             detail=f"Failed to create product: {str(e)}"
         )
 
-@router.get("/", response_model=List[ProductModel])
-async def get_products():
+@router.get("/", response_model=PaginatedProductsResponse)
+async def get_products(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(12, ge=1, le=1000),
+    category: Optional[str] = Query(None),
+    search: Optional[str] = Query(None)
+):
     try:
         db = get_database()
         if db is None:
@@ -110,9 +115,22 @@ async def get_products():
                 detail="Database connection is not initialized."
             )
             
-        cursor = db["products"].find()
-        products = await cursor.to_list(length=100)
-        return products
+        query = {}
+        if category and category != 'ALL':
+            query["category"] = category
+            
+        if search:
+            # Case-insensitive search on title and description
+            query["$or"] = [
+                {"title": {"$regex": search, "$options": "i"}},
+                {"description": {"$regex": search, "$options": "i"}}
+            ]
+            
+        total = await db["products"].count_documents(query)
+        cursor = db["products"].find(query).skip(skip).limit(limit)
+        products = await cursor.to_list(length=limit)
+        
+        return {"items": products, "total": total}
         
     except Exception as e:
         raise HTTPException(

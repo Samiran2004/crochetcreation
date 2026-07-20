@@ -282,12 +282,11 @@ export default function CrochetCreationPage() {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const res = await apiFetch(`${API_URL}/api/products`);
+        const res = await apiFetch(`${API_URL}/api/products?limit=1000`);
         if (res.ok) {
           const data = await res.json();
-          if (Array.isArray(data)) {
-            setProductsList(data);
-          }
+          const items = Array.isArray(data) ? data : (data.items || []);
+          setProductsList(items);
         }
       } catch (err) {
         console.error("Failed to fetch products:", err);

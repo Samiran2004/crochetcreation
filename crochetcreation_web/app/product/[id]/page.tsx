@@ -276,14 +276,13 @@ export default function ProductDetailPage() {
         }
 
         // 2. Fetch all products to get related items
-        const allRes = await apiFetch(`${API_URL}/api/products`);
+        const allRes = await apiFetch(`${API_URL}/api/products?limit=100`);
         if (allRes.ok) {
           const allData = await allRes.json();
-          if (Array.isArray(allData)) {
-            // Filter out current product
-            const filtered = allData.filter((p: any) => (p._id || p.id) !== productId);
-            setRelatedProducts(filtered);
-          }
+          const items = Array.isArray(allData) ? allData : (allData.items || []);
+          // Filter out current product
+          const filtered = items.filter((p: any) => (p._id || p.id) !== productId);
+          setRelatedProducts(filtered);
         }
 
         // 3. Fetch custom homepage images/logo

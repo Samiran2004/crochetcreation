@@ -108,10 +108,11 @@ export default function InventoryTable({
   const fetchProducts = async () => {
     setLoading(true);
     try {
-      const res = await apiFetch(`${API_URL}/api/products`);
+      const res = await apiFetch(`${API_URL}/api/products?limit=1000`);
       if (res.ok) {
         const data = await res.json();
-        setProducts(data);
+        const items = Array.isArray(data) ? data : (data.items || []);
+        setProducts(items);
       } else {
         console.error("Failed to load live catalog products");
       }

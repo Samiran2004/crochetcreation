@@ -83,3 +83,7 @@ class ProductUpdate(BaseModel):
     width: Optional[int] = None
     height: Optional[int] = None
     sku: Optional[str] = None
+
+class PaginatedProductsResponse(BaseModel):
+    items: List[ProductModel]
+    total: int

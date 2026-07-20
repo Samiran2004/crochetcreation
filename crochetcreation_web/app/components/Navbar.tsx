@@ -55,9 +55,6 @@ const THEME_COLORS_MAP: Record<string, { bg: string; hoverBg?: string; border: s
 const NAV_LINKS: NavLink[] = [
   { label: 'Home', href: '/#home', isActive: false },
   { label: 'Shop', href: '/shop', isActive: false, isNew: true },
-  { label: 'Categories', href: '/shop?category=toys', isActive: false },
-  { label: 'About', href: '/#about', isActive: false },
-  { label: 'Contact', href: '/#contact', isActive: false },
 ];
 
 export default function Navbar({
@@ -214,22 +211,23 @@ export default function Navbar({
 
           {/* Desktop Nav Links */}
           {!hideLinks && (
-            <nav className="hidden lg:flex items-center gap-1">
+            <nav className="hidden lg:flex items-center gap-6">
               {NAV_LINKS.map((item) => {
                 const isActive = activeLabel.toUpperCase() === item.label.toUpperCase();
                 return (
                   <Link
                     key={item.label}
                     href={item.href}
-                    className={`relative px-3 xl:px-4 py-2 text-[10px] xl:text-[11px] font-bold tracking-[0.15em] uppercase rounded-xl transition-all duration-300 ${
+                    className={`relative py-2 text-[11px] font-bold tracking-[0.15em] uppercase transition-all duration-300 flex flex-col items-center group ${
                       isActive
-                        ? 'text-[#FEF9F6] bg-white/10 shadow-sm'
-                        : 'text-[#FEF9F6]/80 hover:text-[#FEF9F6] hover:bg-white/5'
+                        ? 'text-[#D9B4B4]'
+                        : 'text-[#FEF9F6]/80 hover:text-[#D9B4B4]'
                     }`}
                   >
-                    {item.label}
-                    {item.isNew && !isActive && (
-                      <span className="absolute -top-2 -right-2 bg-[#D9B4B4] text-[#6B5656] text-[7px] font-black px-1.5 py-0.5 rounded-full animate-bounce shadow-md">
+                    <span>{item.label}</span>
+                    <span className={`absolute bottom-0 h-[2px] bg-[#D9B4B4] transition-all duration-300 rounded-full ${isActive ? 'w-full' : 'w-0 group-hover:w-full'}`}></span>
+                    {item.isNew && (
+                      <span className="absolute -top-1 -right-5 bg-[#D9B4B4] text-[#6B5656] text-[7px] font-black px-1.5 py-0.5 rounded-full shadow-md">
                         NEW
                       </span>
                     )}
@@ -256,24 +254,23 @@ export default function Navbar({
             <div
               id="header-cart-icon"
               onClick={openCart}
-              className={`relative flex items-center gap-2 px-3 py-1.5 rounded-xl cursor-pointer transition-all duration-300 ${
-                cartBouncing ? 'bg-white/15 scale-105' : 'hover:bg-white/10'
+              className={`relative flex items-center gap-1.5 px-2 py-1.5 cursor-pointer transition-all duration-300 text-[#FEF9F6]/80 hover:text-[#D9B4B4] ${
+                cartBouncing ? 'scale-105 text-[#D9B4B4]' : ''
               }`}
             >
               <div className="relative">
-                <ShoppingBag className={`w-4 h-4 text-[#D9B4B4] ${cartBouncing ? 'animate-bounce' : ''}`} />
+                <ShoppingBag className={`w-5 h-5 ${cartBouncing ? 'animate-bounce' : ''}`} />
                 {localCartCount > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-[#D9B4B4] text-[#6B5656] text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center shadow-sm">
+                  <span className="absolute -top-1.5 -right-2 bg-[#D9B4B4] text-[#6B5656] text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center shadow-sm">
                     {localCartCount > 9 ? '9+' : localCartCount}
                   </span>
                 )}
               </div>
-              <span className="text-[11px] font-bold text-[#FEF9F6]/90">{localCartCount} items</span>
             </div>
 
             {/* Auth Section */}
             {token && userProfile ? (
-              <div className="flex items-center gap-2 pl-2">
+              <div className="flex items-center gap-2 pl-2 border-l border-white/10">
                 {userProfile.is_admin && (
                   <Link
                     href="/admin/dashboard"
@@ -284,10 +281,10 @@ export default function Navbar({
                 )}
                 <Link
                   href="/dashboard"
-                  className="flex items-center gap-1.5 bg-white/5 hover:bg-white/10 px-2.5 py-1 rounded-full border border-white/5 transition-all text-[11px] font-semibold text-[#FEF9F6]/90 shadow-sm"
+                  className="flex items-center gap-1.5 hover:text-[#D9B4B4] transition-all text-[11px] font-semibold text-[#FEF9F6]/90"
                 >
                   {userProfile.picture ? (
-                    <img src={userProfile.picture} alt="Profile" className="w-5 h-5 rounded-full border border-white/20 object-cover shadow-sm" />
+                    <img src={userProfile.picture} alt="Profile" className="w-5 h-5 rounded-full border border-[#D9B4B4]/30 object-cover shadow-sm" />
                   ) : (
                     <span className="text-[12px]">👋</span>
                   )}
@@ -295,7 +292,7 @@ export default function Navbar({
                 </Link>
                 <button
                   onClick={handleLogout}
-                  className="p-1.5 rounded-lg text-[#FEF9F6]/60 hover:text-[#D9B4B4] hover:bg-white/5 transition-all"
+                  className="p-1.5 rounded-lg text-[#FEF9F6]/60 hover:text-[#D9B4B4] transition-all"
                   title="Sign Out"
                 >
                   <LogOut className="w-3.5 h-3.5" />
@@ -310,9 +307,9 @@ export default function Navbar({
                     router.push('/?login=true&redirect=' + encodeURIComponent(window.location.pathname));
                   }
                 }}
-                className="flex items-center gap-2 px-4 py-2 bg-[#D9B4B4]/15 hover:bg-[#D9B4B4]/25 border border-[#D9B4B4]/20 text-[#FEF9F6] rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all duration-300"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-[#FEF9F6]/80 hover:text-[#D9B4B4] transition-all duration-300 text-[11px] font-bold uppercase tracking-widest border-l border-white/10 pl-4 ml-2"
               >
-                <User className="w-3.5 h-3.5" />
+                <User className="w-4 h-4" />
                 Sign In
               </button>
             )}
@@ -394,9 +391,6 @@ export default function Navbar({
             <nav className="flex flex-col items-center gap-1 flex-1 justify-center">
               <Link href="/#home" onClick={() => setIsMenuOpen(false)} className="w-full py-4 min-h-[48px] flex items-center justify-center hover:text-[#D9B4B4] hover:bg-white/5 rounded-xl transition-all text-[#FEF9F6] text-base tracking-[0.2em]">HOME</Link>
               <Link href="/shop" onClick={() => setIsMenuOpen(false)} className="w-full py-4 min-h-[48px] flex items-center justify-center hover:text-[#D9B4B4] hover:bg-white/5 rounded-xl transition-all text-[#FEF9F6] text-base tracking-[0.2em]">SHOP</Link>
-              <Link href="/shop?category=toys" onClick={() => setIsMenuOpen(false)} className="w-full py-4 min-h-[48px] flex items-center justify-center hover:text-[#D9B4B4] hover:bg-white/5 rounded-xl transition-all text-[#FEF9F6] text-base tracking-[0.2em]">CATEGORIES</Link>
-              <Link href="/#about" onClick={() => setIsMenuOpen(false)} className="w-full py-4 min-h-[48px] flex items-center justify-center hover:text-[#D9B4B4] hover:bg-white/5 rounded-xl transition-all text-[#FEF9F6] text-base tracking-[0.2em]">ABOUT US</Link>
-              <Link href="/#contact" onClick={() => setIsMenuOpen(false)} className="w-full py-4 min-h-[48px] flex items-center justify-center hover:text-[#D9B4B4] hover:bg-white/5 rounded-xl transition-all text-[#FEF9F6] text-base tracking-[0.2em]">CONTACT</Link>
             </nav>
 
             <div className="flex items-center justify-center gap-4 pt-4 border-t border-[#FEF9F6]/10 text-[#FEF9F6]">

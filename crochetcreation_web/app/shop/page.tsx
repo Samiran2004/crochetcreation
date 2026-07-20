@@ -1,7 +1,7 @@
 'use client';
 import { apiFetch } from '../utils/apiFetch';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import { addToCart } from '../components/CartDrawer';
 import Link from 'next/link';
@@ -31,7 +31,23 @@ export default function ShopPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('ALL');
+  
+  // Pagination states
+  const [skip, setSkip] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+  const [totalProducts, setTotalProducts] = useState(0);
+  const LIMIT = 12;
+
+  // Search debounce
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
 
   const dynamicCategories = useMemo(() => {
     const cats = Array.from(new Set(products.map((p) => p.category).filter(Boolean)));
@@ -136,25 +152,57 @@ export default function ShopPage() {
     fetchProfile();
   }, [token]);
 
-  // Fetch products and custom settings
-  const loadData = async () => {
-    setLoading(true);
+  // Fetch products
+  const fetchProducts = useCallback(async (reset = false) => {
+    if (reset) {
+      setLoading(true);
+    } else {
+      setIsFetchingMore(true);
+    }
     setError(null);
     try {
-      // 1. Fetch catalog
-      const res = await apiFetch(`${API_URL}/api/products`);
+      const currentSkip = reset ? 0 : skip;
+      let url = `${API_URL}/api/products?skip=${currentSkip}&limit=${LIMIT}`;
+      if (activeFilter !== 'ALL') {
+        url += `&category=${encodeURIComponent(activeFilter)}`;
+      }
+      if (debouncedSearchQuery) {
+        url += `&search=${encodeURIComponent(debouncedSearchQuery)}`;
+      }
+
+      const res = await apiFetch(url);
       if (res.ok) {
         const data = await res.json();
-        if (Array.isArray(data)) {
-          setProducts(data);
+        
+        // Ensure we are working with the new PaginatedProductsResponse structure
+        const fetchedItems = Array.isArray(data) ? data : (data.items || []);
+        const total = data.total || fetchedItems.length;
+
+        if (reset) {
+          setProducts(fetchedItems);
         } else {
-          setProducts([]);
+          setProducts((prev) => [...prev, ...fetchedItems]);
         }
+        
+        setTotalProducts(total);
+        setSkip(currentSkip + LIMIT);
+        setHasMore(currentSkip + LIMIT < total);
+
       } else {
         throw new Error('Could not fetch the product catalog.');
       }
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || 'Something went wrong while loading shop catalog.');
+    } finally {
+      setLoading(false);
+      setIsFetchingMore(false);
+    }
+  }, [skip, activeFilter, debouncedSearchQuery]);
 
-      // 2. Fetch custom homepage images/logo
+  // Fetch custom settings (once on mount)
+  const fetchSettings = async () => {
+    try {
       const settingsRes = await apiFetch(`${API_URL}/api/settings/homepage-images`);
       if (settingsRes.ok) {
         const settingsData = await settingsRes.json();
@@ -166,17 +214,20 @@ export default function ShopPage() {
         }
         setCustomImages(resolved);
       }
-    } catch (err: any) {
-      console.error(err);
-      setError(err.message || 'Something went wrong while loading shop catalog.');
-    } finally {
-      setLoading(false);
+    } catch (err) {
+      console.error("Failed to fetch settings", err);
     }
   };
 
   useEffect(() => {
-    loadData();
+    fetchSettings();
   }, []);
+
+  // Trigger fetch when filter or search changes
+  useEffect(() => {
+    fetchProducts(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeFilter, debouncedSearchQuery]);
 
   // Sync theme
   const handleThemeChange = (color: string) => {
@@ -352,20 +403,20 @@ export default function ShopPage() {
     }
   };
 
-  // Filter and Search logic
-  const filteredProducts = useMemo(() => {
-    return products.filter((p) => {
-      const title = (p.title || p.name || '').toLowerCase();
-      const desc = (p.description || '').toLowerCase();
-      const matchesSearch = title.includes(searchQuery.toLowerCase()) || desc.includes(searchQuery.toLowerCase());
-
-      const productCat = p.category || '';
-      const filterCat = activeFilter;
-      const matchesCategory = filterCat === 'ALL' || productCat === filterCat;
-
-      return matchesSearch && matchesCategory;
+  // Infinite scroll observer
+  const observer = useRef<IntersectionObserver | null>(null);
+  const lastElementRef = useCallback((node: HTMLDivElement | null) => {
+    if (loading || isFetchingMore) return;
+    if (observer.current) observer.current.disconnect();
+    
+    observer.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && hasMore) {
+        fetchProducts(); // fetch more without resetting
+      }
     });
-  }, [products, searchQuery, activeFilter]);
+    
+    if (node) observer.current.observe(node);
+  }, [loading, isFetchingMore, hasMore, fetchProducts]);
 
   return (
     <div className="min-h-screen bg-[#FEF9F6] text-[#4A3E3E] font-sans selection:bg-[#D9B4B4]/30">
@@ -482,7 +533,7 @@ export default function ShopPage() {
               Retry Connection
             </button>
           </div>
-        ) : filteredProducts.length === 0 ? (
+        ) : products.length === 0 ? (
           <div className="text-center py-20 bg-white border border-[#EADBDB] border-dashed rounded-3xl p-8 space-y-4">
             <div className="w-12 h-12 bg-[#FEF9F6] border border-[#D9B4B4] rounded-full flex items-center justify-center text-xl mx-auto">
               🧶
@@ -493,13 +544,14 @@ export default function ShopPage() {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
-            {filteredProducts.map((p) => (
-              <div
-                key={p._id || p.id}
-                onClick={() => router.push(`/product/${p._id || p.id}`)}
-                className="flex flex-col h-full bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 group cursor-pointer"
-              >
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
+              {products.map((p, index) => (
+                <div
+                  key={p._id || p.id}
+                  onClick={() => router.push(`/product/${p._id || p.id}`)}
+                  className="flex flex-col h-full bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 group cursor-pointer"
+                >
                 
                 {/* Product Image */}
                 <div className="relative aspect-[4/5] w-full bg-stone-50 overflow-hidden">
@@ -589,6 +641,20 @@ export default function ShopPage() {
               </div>
             ))}
           </div>
+
+          {/* Infinite Scroll Trigger & Loading Indicator */}
+          <div ref={lastElementRef} className="w-full flex flex-col items-center justify-center py-12 mt-4">
+            {isFetchingMore && (
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-8 h-8 border-2 border-stone-200 border-t-[#D9B4B4] rounded-full animate-spin" />
+                <span className="text-[10px] font-bold tracking-widest text-[#6B5656] uppercase animate-pulse">Loading more...</span>
+              </div>
+            )}
+            {!hasMore && products.length > 0 && (
+              <span className="text-[10px] font-bold tracking-widest text-stone-400 uppercase">You've reached the end</span>
+            )}
+          </div>
+          </>
         )}
 
       </main>

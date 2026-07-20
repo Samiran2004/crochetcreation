@@ -59,6 +59,7 @@ export default function AdminDashboard() {
   
   // Tab/Module Navigation State: overview | orders | inventory | crm
   const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'inventory' | 'crm'>('overview');
+  const [chartPeriod, setChartPeriod] = useState('Current Year'); // 'Last 30 Days' | 'Current Year'
 
   // Stats Data
   const [statsData, setStatsData] = useState({
@@ -146,9 +147,11 @@ export default function AdminDashboard() {
       }
 
       // 3. Fetch Products
-      const productsRes = await apiFetch(`${API_URL}/api/products`);
+      const productsRes = await apiFetch(`${API_URL}/api/products?limit=1000`);
       if (productsRes.ok) {
-        const productsList = await productsRes.json();
+        const productsData = await productsRes.json();
+        const productsList = Array.isArray(productsData) ? productsData : (productsData.items || []);
+        
         setProducts(productsList);
         
         // Initialize local stock edit numbers
@@ -329,45 +332,63 @@ export default function AdminDashboard() {
     }
   };
 
-  // Sparkline Generator Helper
+  // Sparkline Generator Helper (Dynamic based on last 7 days)
   const revenueSparklineData = useMemo(() => {
-    const base = statsData.total_revenue || 25000;
-    return [
-      { value: base * 0.75 },
-      { value: base * 0.8 },
-      { value: base * 0.95 },
-      { value: base * 0.9 },
-      { value: base * 1.1 },
-      { value: base * 1.05 },
-      { value: base }
-    ];
-  }, [statsData.total_revenue]);
+    if (!orders || orders.length === 0) return Array(7).fill({ value: 0 });
+    const now = new Date();
+    now.setHours(0,0,0,0);
+    const data = Array(7).fill(0);
+    orders.forEach(o => {
+      if (o.status === 'Cancelled') return;
+      const d = new Date(o.created_at || o.createdAt);
+      d.setHours(0,0,0,0);
+      const diffTime = now.getTime() - d.getTime();
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      if (diffDays >= 0 && diffDays < 7) {
+        data[6 - diffDays] += (o.total_amount || 0);
+      }
+    });
+    return data.map(val => ({ value: val }));
+  }, [orders]);
 
   const pendingSparklineData = useMemo(() => {
+    if (!orders || orders.length === 0) return Array(7).fill({ value: 0 });
+    const now = new Date();
+    now.setHours(0,0,0,0);
+    const data = Array(7).fill(0);
+    orders.forEach(o => {
+      if (o.status !== 'Pending') return;
+      const d = new Date(o.created_at || o.createdAt);
+      d.setHours(0,0,0,0);
+      const diffTime = now.getTime() - d.getTime();
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      if (diffDays >= 0 && diffDays < 7) {
+        data[6 - diffDays] += 1;
+      }
+    });
+    // Add current pending total to the last day to make the sparkline meaningful if there are older pending orders
     const count = orders.filter(o => o.status === 'Pending').length;
-    return [
-      { value: count + 4 },
-      { value: count + 3 },
-      { value: count + 5 },
-      { value: count + 2 },
-      { value: count + 1 },
-      { value: count + 2 },
-      { value: count }
-    ];
+    data[6] = count;
+    return data.map(val => ({ value: val }));
   }, [orders]);
 
   const customersSparklineData = useMemo(() => {
-    const base = statsData.customers_count || 12;
-    return [
-      { value: base - 5 },
-      { value: base - 4 },
-      { value: base - 3 },
-      { value: base - 2 },
-      { value: base - 2 },
-      { value: base - 1 },
-      { value: base }
-    ];
-  }, [statsData.customers_count]);
+    if (!orders || orders.length === 0) return Array(7).fill({ value: 0 });
+    const now = new Date();
+    now.setHours(0,0,0,0);
+    const data = Array(7).fill(0);
+    orders.forEach(o => {
+      const d = new Date(o.created_at || o.createdAt);
+      d.setHours(0,0,0,0);
+      const diffTime = now.getTime() - d.getTime();
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      if (diffDays >= 0 && diffDays < 7) {
+        // Counting orders as a proxy for customer activity
+        data[6 - diffDays] += 1;
+      }
+    });
+    return data.map(val => ({ value: val }));
+  }, [orders]);
 
   const lowStockCount = useMemo(() => {
     return products.filter(p => {
@@ -377,32 +398,81 @@ export default function AdminDashboard() {
   }, [products, stockEditState]);
 
   const stockSparklineData = useMemo(() => {
-    return [
-      { value: lowStockCount + 3 },
-      { value: lowStockCount + 2 },
-      { value: lowStockCount + 4 },
-      { value: lowStockCount + 1 },
-      { value: lowStockCount + 2 },
-      { value: lowStockCount + 1 },
-      { value: lowStockCount }
-    ];
-  }, [lowStockCount]);
+    if (!orders || orders.length === 0) return Array(7).fill({ value: lowStockCount });
+    const now = new Date();
+    now.setHours(0,0,0,0);
+    const data = Array(7).fill(0);
+    orders.forEach(o => {
+      const d = new Date(o.created_at || o.createdAt);
+      d.setHours(0,0,0,0);
+      const diffTime = now.getTime() - d.getTime();
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      if (diffDays >= 0 && diffDays < 7) {
+        // Items sold
+        data[6 - diffDays] += o.items?.length || 1;
+      }
+    });
+    return data.map(val => ({ value: val }));
+  }, [orders, lowStockCount]);
 
   // Main Revenue Chart Data
   const mainChartData = useMemo(() => {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const currentMonth = new Date().getMonth();
-    const totalRev = statsData.total_revenue || 25000;
-    const baseVal = totalRev / (currentMonth + 1);
+    if (!orders || orders.length === 0) return [];
     
-    return Array.from({ length: currentMonth + 1 }).map((_, idx) => {
-      const multiplier = 0.85 + (Math.sin(idx) * 0.1) + (idx * 0.05);
-      return {
-        name: months[idx],
-        revenue: Math.round(baseVal * (idx + 1) * multiplier)
-      };
-    });
-  }, [statsData.total_revenue]);
+    // Ensure we only count non-cancelled orders for revenue
+    const validOrders = orders.filter(o => o.status !== 'Cancelled');
+    const now = new Date();
+    
+    if (chartPeriod === 'Last 30 Days') {
+      // Group by day for the last 30 days
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(now.getDate() - 29); // 30 days inclusive
+      thirtyDaysAgo.setHours(0, 0, 0, 0);
+      
+      const dailyData: Record<string, number> = {};
+      
+      // Initialize all 30 days to 0
+      for (let i = 0; i < 30; i++) {
+        const d = new Date(thirtyDaysAgo);
+        d.setDate(d.getDate() + i);
+        const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        dailyData[dateStr] = 0;
+      }
+      
+      validOrders.forEach(o => {
+        const orderDate = new Date(o.created_at || o.createdAt);
+        if (orderDate >= thirtyDaysAgo && orderDate <= now) {
+          const dateStr = orderDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+          if (dailyData[dateStr] !== undefined) {
+            dailyData[dateStr] += (o.total_amount || 0);
+          }
+        }
+      });
+      
+      return Object.entries(dailyData).map(([name, revenue]) => ({ name, revenue }));
+      
+    } else {
+      // Current Year - group by month
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const currentYear = now.getFullYear();
+      
+      const monthlyData = Array(12).fill(0);
+      
+      validOrders.forEach(o => {
+        const orderDate = new Date(o.created_at || o.createdAt);
+        if (orderDate.getFullYear() === currentYear) {
+          monthlyData[orderDate.getMonth()] += (o.total_amount || 0);
+        }
+      });
+      
+      // Only show up to current month so the chart doesn't drop to 0 for future months unnecessarily
+      const currentMonth = now.getMonth();
+      return months.slice(0, currentMonth + 1).map((name, idx) => ({
+        name,
+        revenue: monthlyData[idx]
+      }));
+    }
+  }, [orders, chartPeriod]);
 
   // Custom Glassmorphism Tooltip for AreaChart
   const CustomTooltip = ({ active, payload, label }: any) => {
@@ -637,9 +707,13 @@ export default function AdminDashboard() {
                 <h3 className="text-sm font-semibold tracking-wide text-gray-500 uppercase">Revenue over Time</h3>
                 <p className="text-xs text-gray-450 mt-0.5 font-medium">Aggregated weekly sales projection chart</p>
               </div>
-              <select className="text-[10px] font-bold border border-gray-200 rounded-lg p-1.5 uppercase bg-white cursor-pointer hover:border-gray-300">
-                <option>Last 30 Days</option>
-                <option>Current Year</option>
+              <select 
+                value={chartPeriod}
+                onChange={(e) => setChartPeriod(e.target.value)}
+                className="text-[10px] font-bold border border-gray-200 rounded-lg p-1.5 uppercase bg-white cursor-pointer hover:border-gray-300"
+              >
+                <option value="Current Year">Current Year</option>
+                <option value="Last 30 Days">Last 30 Days</option>
               </select>
             </div>
             
