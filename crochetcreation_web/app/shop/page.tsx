@@ -527,7 +527,7 @@ export default function ShopPage() {
               <p className="text-xs text-red-650 mt-1">{error}</p>
             </div>
             <button 
-              onClick={loadData}
+              onClick={() => fetchProducts(true)}
               className="bg-white border border-red-300 text-xs font-semibold px-5 py-2.5 rounded-xl hover:bg-red-100 transition-colors uppercase tracking-wider"
             >
               Retry Connection

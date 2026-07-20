@@ -391,8 +391,17 @@ export default function OrderTable({
                         className="w-4 h-4 rounded border-gray-300 text-slate-950 focus:ring-slate-950 cursor-pointer"
                       />
                     </td>
-                    <td className="py-3.5 px-4 font-extrabold text-slate-900">
-                      ORD-{order._id?.slice(-6).toUpperCase()}
+                    <td className="py-3.5 px-4">
+                      <div className="flex items-center gap-2">
+                        <span className="font-extrabold text-slate-900">
+                          ORD-{order._id?.slice(-6).toUpperCase()}
+                        </span>
+                        {order.is_manual && (
+                          <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest bg-violet-50 text-violet-600 ring-1 ring-violet-200">
+                            Manual
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="py-3.5 px-4 text-gray-450 font-medium">
                       {order.created_at ? new Date(order.created_at).toLocaleDateString() : 'Unknown'}

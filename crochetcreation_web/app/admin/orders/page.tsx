@@ -1,8 +1,6 @@
 'use client';
 import { apiFetch } from '../../utils/apiFetch';
 
-export const dynamic = 'force-dynamic';
-
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useOrderWebSocket } from '../../hooks/useOrderWebSocket';
 import { 

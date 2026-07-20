@@ -1,8 +1,6 @@
 'use client';
 import { apiFetch } from '../../utils/apiFetch';
 
-export const dynamic = 'force-dynamic';
-
 import React, { useEffect, useState, useMemo } from 'react';
 import { 
   IndianRupee, 
@@ -53,6 +51,7 @@ import {
 import OrderTable from './components/OrderTable';
 import OrderDrawer from './components/OrderDrawer';
 import InventoryTable from './components/InventoryTable';
+import AddManualOrderDrawer from './components/AddManualOrderDrawer';
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -100,6 +99,7 @@ export default function AdminDashboard() {
   const [trackingNumber, setTrackingNumber] = useState('');
   const [statusUpdateOrder, setStatusUpdateOrder] = useState<any | null>(null);
   const [selectedOrderForDetail, setSelectedOrderForDetail] = useState<any | null>(null);
+  const [isManualOrderDrawerOpen, setIsManualOrderDrawerOpen] = useState(false);
 
   const API_URL = useMemo(() => {
     if (process.env.NEXT_PUBLIC_API_URL) {
@@ -871,9 +871,17 @@ export default function AdminDashboard() {
       {/* ==================================================== */}
       {activeTab === 'orders' && (
         <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-6 space-y-6">
-          <div className="text-left">
-            <h3 className="text-base font-black tracking-tight text-slate-900 uppercase">Order Operations</h3>
-            <p className="text-[10px] text-gray-450 mt-0.5 font-medium">Filter, fulfill, and update tracking indicators for artisan creations.</p>
+          <div className="flex items-center justify-between text-left">
+            <div>
+              <h3 className="text-base font-black tracking-tight text-slate-900 uppercase">Order Operations</h3>
+              <p className="text-[10px] text-gray-450 mt-0.5 font-medium">Filter, fulfill, and update tracking indicators for artisan creations.</p>
+            </div>
+            <button 
+              onClick={() => setIsManualOrderDrawerOpen(true)}
+              className="text-xs font-bold bg-emerald-50 text-emerald-600 px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-emerald-100 transition-colors"
+            >
+              <Plus className="w-4 h-4" /> Create Manual Order
+            </button>
           </div>
           <OrderTable
             orders={orders}
@@ -1097,6 +1105,15 @@ export default function AdminDashboard() {
         onValidatePayment={async (orderId) => {
           await handleUpdateOrderStatus(orderId, 'Processing');
           alert(`Payment verified successfully for Order #${orderId.slice(-6).toUpperCase()}`);
+        }}
+      />
+
+      {/* Add Manual Order Drawer */}
+      <AddManualOrderDrawer 
+        isOpen={isManualOrderDrawerOpen}
+        onClose={() => setIsManualOrderDrawerOpen(false)}
+        onSuccess={() => {
+          fetchERPData();
         }}
       />
 

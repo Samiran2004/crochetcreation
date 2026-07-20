@@ -1,8 +1,6 @@
 'use client';
 import { apiFetch } from '../../../utils/apiFetch';
 
-export const dynamic = 'force-dynamic';
-
 import React, { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import {
