@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { ShoppingBag, User, LogOut, Menu, X, Search, Home, Instagram } from 'lucide-react';
+import { ShoppingBag, User, LogOut, Menu, X, Search, Home, Instagram, PlayCircle } from 'lucide-react';
 
 export interface NavbarTheme {
   primary: string;
@@ -55,6 +55,7 @@ const THEME_COLORS_MAP: Record<string, { bg: string; hoverBg?: string; border: s
 const NAV_LINKS: NavLink[] = [
   { label: 'Home', href: '/#home', isActive: false },
   { label: 'Shop', href: '/shop', isActive: false, isNew: true },
+  { label: 'Videos', href: '/videos', isActive: false },
 ];
 
 export default function Navbar({
@@ -391,6 +392,7 @@ export default function Navbar({
             <nav className="flex flex-col items-center gap-1 flex-1 justify-center">
               <Link href="/#home" onClick={() => setIsMenuOpen(false)} className="w-full py-4 min-h-[48px] flex items-center justify-center hover:text-[#D9B4B4] hover:bg-white/5 rounded-xl transition-all text-[#FEF9F6] text-base tracking-[0.2em]">HOME</Link>
               <Link href="/shop" onClick={() => setIsMenuOpen(false)} className="w-full py-4 min-h-[48px] flex items-center justify-center hover:text-[#D9B4B4] hover:bg-white/5 rounded-xl transition-all text-[#FEF9F6] text-base tracking-[0.2em]">SHOP</Link>
+              <Link href="/videos" onClick={() => setIsMenuOpen(false)} className="w-full py-4 min-h-[48px] flex items-center justify-center hover:text-[#D9B4B4] hover:bg-white/5 rounded-xl transition-all text-[#FEF9F6] text-base tracking-[0.2em]">VIDEOS</Link>
             </nav>
 
             <div className="flex items-center justify-center gap-4 pt-4 border-t border-[#FEF9F6]/10 text-[#FEF9F6]">
@@ -475,6 +477,14 @@ export default function Navbar({
         >
           <Search className={`w-5 h-5 ${pathname?.startsWith('/shop') ? 'text-[#D9B4B4]' : 'text-[#FEF9F6]/70'}`} />
           <span className="text-[9px] font-black uppercase tracking-wider">Shop</span>
+        </Link>
+        
+        <Link 
+          href="/videos" 
+          className="flex flex-col items-center gap-1 text-[#FEF9F6]/70 hover:text-[#FEF9F6] active:scale-95 transition-all py-1 px-3"
+        >
+          <PlayCircle className={`w-5 h-5 ${pathname?.startsWith('/videos') ? 'text-[#D9B4B4]' : 'text-[#FEF9F6]/70'}`} />
+          <span className="text-[9px] font-black uppercase tracking-wider">Videos</span>
         </Link>
         
         <button 

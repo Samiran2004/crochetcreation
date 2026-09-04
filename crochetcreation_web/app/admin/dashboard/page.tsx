@@ -52,12 +52,13 @@ import OrderTable from './components/OrderTable';
 import OrderDrawer from './components/OrderDrawer';
 import InventoryTable from './components/InventoryTable';
 import AddManualOrderDrawer from './components/AddManualOrderDrawer';
+import ManageVideosTab from './components/ManageVideosTab';
 
 export default function AdminDashboard() {
   const router = useRouter();
   
   // Tab/Module Navigation State: overview | orders | inventory | crm
-  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'inventory' | 'crm'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'inventory' | 'crm' | 'videos'>('overview');
   const [chartPeriod, setChartPeriod] = useState('Current Year'); // 'Last 30 Days' | 'Current Year'
 
   // Stats Data
@@ -552,7 +553,7 @@ export default function AdminDashboard() {
         
         {/* Module Segment Buttons */}
         <div className="flex items-center bg-gray-50 p-1 rounded-xl border border-gray-100 shadow-sm">
-          {(['overview', 'orders', 'inventory', 'crm'] as const).map((tab) => (
+          {(['overview', 'orders', 'inventory', 'crm', 'videos'] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -993,6 +994,15 @@ export default function AdminDashboard() {
             </table>
           </div>
 
+        </div>
+      )}
+
+      {/* ==================================================== */}
+      {/* MODULE 5: VIDEO MANAGEMENT */}
+      {/* ==================================================== */}
+      {activeTab === 'videos' && (
+        <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-6">
+          <ManageVideosTab apiUrl={API_URL} token={token} />
         </div>
       )}
 
