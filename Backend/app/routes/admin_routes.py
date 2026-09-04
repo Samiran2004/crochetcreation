@@ -1,3 +1,4 @@
+import logging
 from fastapi import APIRouter, HTTPException, status, Depends
 import fastapi
 import sys
@@ -9,6 +10,8 @@ from pydantic import BaseModel
 from typing import List, Dict, Any
 from app.utils.cronjob_service import fetch_cronjob_stats
 from app.core.config import settings
+
+logger = logging.getLogger("app.admin")
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -116,10 +119,13 @@ async def get_admin_stats(
             alerts=alerts
         )
 
-    except Exception as e:
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Failed to fetch admin stats")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch admin stats: {str(e)}"
+            detail="Could not load dashboard stats. Please try again."
         )
 
 @router.get("/server-stats")
@@ -132,10 +138,13 @@ async def get_server_stats(
     try:
         stats = await fetch_cronjob_stats()
         return stats
-    except Exception as e:
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Failed to fetch server stats")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch server stats: {str(e)}"
+            detail="Could not load server stats. Please try again."
         )
 
 

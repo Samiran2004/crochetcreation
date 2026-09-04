@@ -1,3 +1,4 @@
+import logging
 from fastapi import APIRouter, HTTPException, status, Depends, BackgroundTasks
 from typing import List, Optional
 from app.models.order import OrderCreate, OrderResponse, ManualOrderCreate, ManualOrderResponse, OrderStatus, StatusUpdateRequest
@@ -9,7 +10,141 @@ from datetime import datetime, timezone
 from app.utils.email_sender import send_order_email, generate_and_send_invoice_task
 from app.utils.websocket import manager
 
+logger = logging.getLogger("app.orders")
+
 router = APIRouter(prefix="/api/orders", tags=["orders"])
+
+# Every order on the storefront is prepaid by UPI and verified by an admin
+# against a payment screenshot, so the client never chooses a payment method.
+PAYMENT_METHOD = "UPI"
+
+# Hard ceiling per line. The storefront caps the stepper at 10; this is the
+# same limit enforced where it counts, and it also bounds products whose stock
+# level was never recorded.
+MAX_QUANTITY_PER_ITEM = 10
+
+
+def _product_query(product_id: str):
+    try:
+        return {"_id": ObjectId(product_id)}
+    except Exception:
+        return {"_id": product_id}
+
+
+async def _price_items_from_catalog(db, raw_items):
+    """
+    Rebuild the order lines from the product catalog.
+
+    Titles, prices and the order total that arrive in the request body are
+    treated as display hints only — a client that posts price: 1 for a ₹499
+    item would otherwise be charged ₹1. Everything that touches money is read
+    back from the database here.
+
+    Returns (items, total). Raises HTTPException on an unknown product, a
+    non-positive quantity, or insufficient stock.
+    """
+    if not raw_items:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Your basket is empty."
+        )
+
+    priced_items = []
+    total = 0.0
+
+    for line in raw_items:
+        if not line.product_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"'{line.title}' is no longer available. Please remove it and try again."
+            )
+
+        quantity = int(line.quantity or 0)
+        if quantity < 1:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Choose at least 1 of '{line.title}'."
+            )
+        if quantity > MAX_QUANTITY_PER_ITEM:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    f"You can order at most {MAX_QUANTITY_PER_ITEM} of '{line.title}' at a time. "
+                    "Message us on WhatsApp for a bulk order."
+                )
+            )
+
+        product = await db["products"].find_one(_product_query(line.product_id))
+        if not product:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"'{line.title}' is no longer available. Please remove it and try again."
+            )
+
+        available = product.get("stock_quantity")
+        if available is None:
+            available = product.get("stock_count")
+        if product.get("in_stock") is False or (available is not None and available < quantity):
+            in_stock_count = available if available is not None else 0
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    f"Only {in_stock_count} left of '{product.get('title')}'. "
+                    "Please reduce the quantity."
+                ) if in_stock_count else f"'{product.get('title')}' has just sold out."
+            )
+
+        unit_price = product.get("sellingPrice")
+        if unit_price is None:
+            unit_price = product.get("price")
+        unit_price = float(unit_price or 0)
+
+        priced_items.append({
+            "product_id": str(product.get("_id")),
+            "title": product.get("title", line.title),
+            "price": unit_price,
+            "quantity": quantity,
+            # Size is the buyer's choice, not a catalog value, so it is the one
+            # field carried straight through from the request.
+            "size": line.size,
+        })
+        total += unit_price * quantity
+
+    return priced_items, round(total, 2)
+
+
+async def _adjust_stock(db, items, delta):
+    """
+    Move stock by `delta` per unit ordered (-1 to reserve, +1 to release).
+    Runs when an admin confirms or cancels an order, never at checkout, since
+    an unpaid order should not hold inventory.
+    """
+    for item in items or []:
+        product_id = item.get("product_id")
+        if not product_id:
+            continue
+        try:
+            product = await db["products"].find_one(_product_query(product_id))
+            if not product:
+                continue
+            current = product.get("stock_quantity")
+            if current is None:
+                current = product.get("stock_count")
+            if current is None:
+                continue
+            new_count = max(0, int(current) + delta * int(item.get("quantity", 0)))
+            await db["products"].update_one(
+                _product_query(product_id),
+                {"$set": {
+                    "stock_quantity": new_count,
+                    "stock_count": new_count,
+                    "in_stock": new_count > 0,
+                }}
+            )
+        except Exception:
+            # Stock drift must never block confirming an order the customer
+            # has already paid for; it is logged for manual reconciliation.
+            logger.exception("Could not adjust stock for product %s", product_id)
 
 @router.post("/", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
 async def create_order(
@@ -24,8 +159,14 @@ async def create_order(
             detail="Database connection is not initialized."
         )
     try:
-        # Save order document to MongoDB
         order_dict = order_in.model_dump()
+
+        # Money is never taken from the request body — re-price from the catalog.
+        items, total = await _price_items_from_catalog(db, order_in.items)
+        order_dict["items"] = items
+        order_dict["total_amount"] = total
+        order_dict["payment_method"] = PAYMENT_METHOD
+
         order_dict["status"] = OrderStatus.PENDING_VALIDATION.value
         order_dict["created_at"] = datetime.now(timezone.utc)
         order_dict["email_sent"] = False
@@ -36,24 +177,28 @@ async def create_order(
 
         # Retrieve and return the created order
         inserted_order = await db["orders"].find_one({"_id": result.inserted_id})
-        
-        # Broadcast to all websocket connections
+
+        # Notify admins, and the customer who placed it — never anyone else.
         try:
             order_response = OrderResponse(**inserted_order)
-            await manager.broadcast({
-                "action": "order_created",
-                "data": order_response.model_dump(by_alias=True)
-            })
-        except Exception as ws_err:
-            print(f"Error broadcasting order_created: {ws_err}")
+            await manager.send_order_event(
+                "order_created",
+                order_response.model_dump(by_alias=True),
+                inserted_order.get("user_id"),
+            )
+        except Exception:
+            logger.exception("Error sending order_created event")
 
         # Do NOT trigger the Brevo email here. It is triggered only upon confirmation/validation.
         return inserted_order
 
-    except Exception as e:
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Failed to place order")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to place order: {str(e)}"
+            detail="We couldn't place your order just now. Please try again."
         )
 
 @router.get("/my-orders", response_model=List[OrderResponse])
@@ -71,10 +216,11 @@ async def get_my_orders(
         cursor = db["orders"].find({"user_id": ObjectId(current_user.id)}).sort("created_at", -1)
         orders = await cursor.to_list(length=200)
         return orders
-    except Exception as e:
+    except Exception:
+        logger.exception("Failed to fetch orders for user %s", current_user.id)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch my orders: {str(e)}"
+            detail="Could not load your orders. Please try again."
         )
 
 @router.get("/", response_model=List[OrderResponse])
@@ -97,10 +243,11 @@ async def get_orders(
         orders = await cursor.to_list(length=200)
         return orders
 
-    except Exception as e:
+    except Exception:
+        logger.exception("Failed to fetch orders")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch orders: {str(e)}"
+            detail="Could not load orders. Please try again."
         )
 
 # Invoice background task is imported from app.utils.email_sender
@@ -128,25 +275,37 @@ async def update_order_status(
                 detail="Order not found"
             )
 
+        previous_status = existing_order.get("status")
+        new_status = status_update.status.value
+
         await db["orders"].update_one(
             {"_id": ObjectId(order_id)},
-            {"$set": {"status": status_update.status.value}}
+            {"$set": {"status": new_status}}
         )
 
+        # Release reserved stock when a live order is cancelled.
+        was_reserved = previous_status in (
+            OrderStatus.CONFIRMED.value,
+            OrderStatus.PROCESSING.value,
+            OrderStatus.DELIVERED.value,
+        )
+        if new_status == OrderStatus.CANCELLED.value and was_reserved:
+            await _adjust_stock(db, existing_order.get("items"), +1)
+
         updated_order = await db["orders"].find_one({"_id": ObjectId(order_id)})
-        
-        # Broadcast to all websocket connections
+
         try:
             order_response = OrderResponse(**updated_order)
-            await manager.broadcast({
-                "action": "order_updated",
-                "data": order_response.model_dump(by_alias=True)
-            })
-        except Exception as ws_err:
-            print(f"Error broadcasting order_updated: {ws_err}")
+            await manager.send_order_event(
+                "order_updated",
+                order_response.model_dump(by_alias=True),
+                updated_order.get("user_id"),
+            )
+        except Exception:
+            logger.exception("Error sending order_updated event")
 
         # If payment is verified & confirmed (order status changed to Processing), send Brevo confirmation with invoice
-        if status_update.status.value == OrderStatus.PROCESSING.value:
+        if new_status == OrderStatus.PROCESSING.value:
             to_email = updated_order.get("customer_email")
             name = updated_order.get("customer_name")
             if to_email:
@@ -154,10 +313,13 @@ async def update_order_status(
 
         return updated_order
 
-    except Exception as e:
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Failed to update order status for %s", order_id)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to update order status: {str(e)}"
+            detail="Could not update the order status. Please try again."
         )
 
 @router.put("/{order_id}/confirm", response_model=OrderResponse)
@@ -184,6 +346,12 @@ async def confirm_order(
                 detail="Order not found"
             )
 
+        if existing_order.get("status") == OrderStatus.CONFIRMED.value:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="This order is already confirmed."
+            )
+
         # Step 1: Await the PDF byte generation BEFORE triggering the Brevo background task.
         from app.utils.pdf_generator import generate_invoice_pdf
         pdf_bytes = await generate_invoice_pdf(existing_order)
@@ -192,21 +360,26 @@ async def confirm_order(
         await db["orders"].update_one(
             {"_id": ObjectId(order_id)},
             {"$set": {
-                "status": OrderStatus.CONFIRMED.value
+                "status": OrderStatus.CONFIRMED.value,
+                "payment_verified_at": datetime.now(timezone.utc),
             }}
         )
 
+        # Confirmation is the point the payment has been verified, so this is
+        # where the stock is actually committed.
+        await _adjust_stock(db, existing_order.get("items"), -1)
+
         updated_order = await db["orders"].find_one({"_id": ObjectId(order_id)})
 
-        # Broadcast to all websocket connections
         try:
             order_response = OrderResponse(**updated_order)
-            await manager.broadcast({
-                "action": "order_updated",
-                "data": order_response.model_dump(by_alias=True)
-            })
-        except Exception as ws_err:
-            print(f"Error broadcasting order_updated: {ws_err}")
+            await manager.send_order_event(
+                "order_updated",
+                order_response.model_dump(by_alias=True),
+                updated_order.get("user_id"),
+            )
+        except Exception:
+            logger.exception("Error sending order_updated event")
 
         # Step 3: Add the Brevo email dispatch to BackgroundTasks, passing the generated bytes.
         to_email = updated_order.get("customer_email")
@@ -216,10 +389,13 @@ async def confirm_order(
 
         return updated_order
 
-    except Exception as e:
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Failed to confirm order %s", order_id)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to confirm order: {str(e)}"
+            detail="Could not confirm the order. Please try again."
         )
 
 @router.delete("/{order_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -241,10 +417,13 @@ async def delete_order(
                 detail="Order not found"
             )
         return
-    except Exception as e:
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Failed to delete order %s", order_id)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to delete order: {str(e)}"
+            detail="Could not delete the order. Please try again."
         )
 
 @router.post("/manual", response_model=ManualOrderResponse, status_code=status.HTTP_201_CREATED)
@@ -279,36 +458,40 @@ async def create_manual_order(
         result = await db["orders"].insert_one(order_dict)
         inserted_order = await db["orders"].find_one({"_id": result.inserted_id})
 
-        # Broadcast to all websocket connections
         try:
             order_response = OrderResponse(**inserted_order)
-            await manager.broadcast({
-                "action": "order_created",
-                "data": order_response.model_dump(by_alias=True)
-            })
-        except Exception as ws_err:
-            print(f"Error broadcasting order_created: {ws_err}")
+            await manager.send_order_event(
+                "order_created",
+                order_response.model_dump(by_alias=True),
+                inserted_order.get("user_id"),
+            )
+        except Exception:
+            logger.exception("Error sending order_created event")
 
-        # Queue emails in background (non-blocking) via Brevo REST API
+        # Whether the customer has a registered account is irrelevant to email
+        # delivery — a WhatsApp buyer who gave an address should still hear back.
         email_sent = False
-        if inserted_order.get("customer_email") and inserted_order.get("user_id"):
+        if inserted_order.get("customer_email"):
             try:
                 background_tasks.add_task(
-                    send_order_email, 
-                    inserted_order.get("customer_email"), 
-                    inserted_order.get("customer_name", "Valued Customer"), 
+                    send_order_email,
+                    inserted_order.get("customer_email"),
+                    inserted_order.get("customer_name", "Valued Customer"),
                     inserted_order
                 )
                 email_sent = True
-            except Exception as email_err:
-                print(f"Error queueing manual order confirmation email: {email_err}")
+            except Exception:
+                logger.exception("Error queueing manual order confirmation email")
 
         return ManualOrderResponse(order=inserted_order, email_sent=email_sent)
 
-    except Exception as e:
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Failed to create manual order")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create manual order: {str(e)}"
+            detail="Could not create the manual order. Please try again."
         )
 
 @router.get("/{order_id}/invoice")
@@ -369,8 +552,9 @@ async def download_invoice(
 
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
+        logger.exception("Failed to generate invoice for order %s", order_id)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to generate invoice: {str(e)}"
+            detail="Could not generate the invoice. Please try again."
         )

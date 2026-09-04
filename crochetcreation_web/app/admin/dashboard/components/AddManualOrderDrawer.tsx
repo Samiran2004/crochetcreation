@@ -1,5 +1,5 @@
 'use client';
-import { apiFetch } from '../../../utils/apiFetch';
+import { apiFetch, getApiUrl } from '../../../utils/apiFetch';
 
 import React, { useState, useEffect } from 'react';
 import { 
@@ -40,20 +40,12 @@ export default function AddManualOrderDrawer({ isOpen, onClose, onSuccess }: Add
   const [customerEmail, setCustomerEmail] = useState('');
   const [shippingAddress, setShippingAddress] = useState('');
   const [notes, setNotes] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('COD'); // COD, UPI, Cash, Bank Transfer
+  const [paymentMethod, setPaymentMethod] = useState('UPI'); // UPI, Cash, Bank Transfer
   const [items, setItems] = useState<OrderItemInput[]>([{ title: '', price: 0, quantity: 1 }]);
   const [manualTotal, setManualTotal] = useState<string>('');
 
   // API Config
-  const API_URL = (() => {
-    if (process.env.NEXT_PUBLIC_API_URL) {
-      return process.env.NEXT_PUBLIC_API_URL;
-    }
-    if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-      return 'http://localhost:8000';
-    }
-    return 'https://crochetcreation.onrender.com';
-  })();
+  const API_URL = getApiUrl();
 
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
 
@@ -78,7 +70,7 @@ export default function AddManualOrderDrawer({ isOpen, onClose, onSuccess }: Add
     setCustomerEmail('');
     setShippingAddress('');
     setNotes('');
-    setPaymentMethod('COD');
+    setPaymentMethod('UPI');
     setItems([{ title: '', price: 0, quantity: 1 }]);
     setManualTotal('');
     setError(null);
@@ -335,7 +327,6 @@ export default function AddManualOrderDrawer({ isOpen, onClose, onSuccess }: Add
                     onChange={e => setPaymentMethod(e.target.value)}
                     className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all appearance-none cursor-pointer"
                   >
-                    <option value="COD">Cash on Delivery (COD)</option>
                     <option value="UPI">UPI / Online Payment</option>
                     <option value="Cash">Cash (In-person)</option>
                     <option value="Bank Transfer">Bank Transfer</option>

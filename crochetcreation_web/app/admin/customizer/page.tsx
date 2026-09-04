@@ -1,5 +1,5 @@
 'use client';
-import { apiFetch } from '../../utils/apiFetch';
+import { apiFetch, getApiUrl } from '../../utils/apiFetch';
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
@@ -84,15 +84,7 @@ export default function AdminCustomizer() {
   const [previewDevice, setPreviewDevice] = useState<'mobile' | 'tablet' | 'desktop'>('desktop');
   const [localPreviews, setLocalPreviews] = useState<Record<string, string>>({});
 
-  const API_URL = useMemo(() => {
-    if (process.env.NEXT_PUBLIC_API_URL) {
-      return process.env.NEXT_PUBLIC_API_URL;
-    }
-    if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-      return 'http://localhost:8000';
-    }
-    return 'https://crochetcreation.onrender.com';
-  }, []);
+  const API_URL = useMemo(() => getApiUrl(), []);
 
   const fetchImages = async () => {
     try {

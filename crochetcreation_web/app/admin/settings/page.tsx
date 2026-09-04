@@ -1,5 +1,5 @@
 'use client';
-import { apiFetch } from '../../utils/apiFetch';
+import { apiFetch, getApiUrl } from '../../utils/apiFetch';
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
@@ -26,8 +26,6 @@ export default function AdminSettings() {
     supportEmail: 'support@crochetcreation.com',
     supportPhone: '+91 86375 10045',
     currency: 'INR',
-    enableCOD: true,
-    enableUPI: true,
     upiId: 'samiran.samanta@upi',
     maxCustomRequestsPerDay: '5',
     enableEmailNotifications: true,
@@ -37,15 +35,7 @@ export default function AdminSettings() {
     footerCopyrightText: 'Crochet Creation. All rights reserved.',
   });
 
-  const API_URL = useMemo(() => {
-    if (process.env.NEXT_PUBLIC_API_URL) {
-      return process.env.NEXT_PUBLIC_API_URL;
-    }
-    if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-      return 'http://localhost:8000';
-    }
-    return 'https://crochetcreation.onrender.com';
-  }, []);
+  const API_URL = useMemo(() => getApiUrl(), []);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -58,8 +48,6 @@ export default function AdminSettings() {
             supportEmail: data.support_email,
             supportPhone: data.support_phone,
             currency: data.currency,
-            enableCOD: data.enable_cod,
-            enableUPI: data.enable_upi,
             upiId: data.upi_id,
             maxCustomRequestsPerDay: data.max_custom_requests_per_day.toString(),
             enableEmailNotifications: data.enable_email_notifications ?? true,
@@ -107,8 +95,8 @@ export default function AdminSettings() {
         support_email: formData.supportEmail,
         support_phone: formData.supportPhone,
         currency: formData.currency,
-        enable_cod: formData.enableCOD,
-        enable_upi: formData.enableUPI,
+        enable_cod: false,
+        enable_upi: true,
         upi_id: formData.upiId,
         max_custom_requests_per_day: parseInt(formData.maxCustomRequestsPerDay) || 5,
         enable_email_notifications: formData.enableEmailNotifications,
@@ -252,44 +240,22 @@ export default function AdminSettings() {
               </div>
 
               <div className="space-y-4 text-xs">
-                <div className="flex items-center justify-between p-3 rounded-xl bg-stone-50/50 border border-stone-100">
-                  <div>
-                    <h4 className="font-bold text-stone-800">Cash on Delivery (COD)</h4>
-                    <p className="text-[10px] text-stone-450 mt-0.5">Allow buyers to pay when delivery arrives at their address.</p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      name="enableCOD"
-                      checked={formData.enableCOD}
-                      onChange={handleInputChange}
-                      className="sr-only peer"
-                    />
-                    <div className="w-9 h-5 bg-stone-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#6B5656]"></div>
-                  </label>
+                {/* The storefront is UPI-prepaid only, so there is nothing to
+                    toggle here — a switch that changes nothing is worse than
+                    no switch. What matters is the VPA buyers are shown. */}
+                <div className="p-3.5 rounded-xl bg-stone-50/50 border border-stone-100">
+                  <h4 className="font-bold text-stone-800">Advance UPI payment only</h4>
+                  <p className="text-[10px] text-stone-500 mt-1 leading-relaxed">
+                    Buyers pay by UPI before an order is confirmed, then send the payment
+                    screenshot on WhatsApp. You confirm the order once you have verified it.
+                    Cash on Delivery and card payments are not offered.
+                  </p>
                 </div>
 
-                <div className="flex items-center justify-between p-3 rounded-xl bg-stone-50/50 border border-stone-100">
-                  <div>
-                    <h4 className="font-bold text-stone-800">Direct UPI Gateway</h4>
-                    <p className="text-[10px] text-stone-450 mt-0.5">Collect digital payments using barcode or instant VPA routing.</p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
+                <div className="space-y-1 p-3.5 bg-[#FEF9F6] border border-[#D9B4B4]/40 rounded-xl">
+                    <label htmlFor="upiId" className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">UPI VPA Address</label>
                     <input
-                      type="checkbox"
-                      name="enableUPI"
-                      checked={formData.enableUPI}
-                      onChange={handleInputChange}
-                      className="sr-only peer"
-                    />
-                    <div className="w-9 h-5 bg-stone-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#6B5656]"></div>
-                  </label>
-                </div>
-
-                {formData.enableUPI && (
-                  <div className="space-y-1 p-3.5 bg-[#FEF9F6] border border-[#D9B4B4]/40 rounded-xl animate-in fade-in duration-200">
-                    <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">UPI VPA Address</label>
-                    <input
+                      id="upiId"
                       type="text"
                       name="upiId"
                       value={formData.upiId}
@@ -297,8 +263,10 @@ export default function AdminSettings() {
                       placeholder="e.g. name@upi"
                       className="w-full bg-white border border-stone-250 px-4 py-2.5 rounded-xl text-xs focus:outline-none focus:border-[#D9B4B4] text-stone-850 font-bold"
                     />
+                    <p className="text-[10px] text-stone-500 pt-1">
+                      Shown to every buyer at checkout and included in the WhatsApp order message.
+                    </p>
                   </div>
-                )}
               </div>
             </div>
 

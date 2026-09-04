@@ -1,24 +1,49 @@
+import os
 from motor.motor_asyncio import AsyncIOMotorClient # Async driver for mongoDB for async work
 from app.core.config import settings
 from bson import ObjectId
 from datetime import datetime, timezone
 
 class MockCursor:
+    """
+    Mirrors the parts of a Motor cursor the app actually uses. skip/limit/sort
+    are applied for real so that pagination behaves the same in fallback mode
+    as it does against Atlas.
+    """
+
     def __init__(self, data):
-        self.data = data
-    
+        self.data = list(data)
+        self._skip = 0
+        self._limit = None
+
     async def to_list(self, length=None):
+        result = self.data[self._skip:]
+        if self._limit is not None:
+            result = result[:self._limit]
         if length is not None:
-            return self.data[:length]
-        return self.data
-    
+            result = result[:length]
+        return result
+
     def skip(self, n):
+        self._skip = n or 0
         return self
-        
+
     def limit(self, n):
+        self._limit = n if n else None
         return self
-        
-    def sort(self, *args, **kwargs):
+
+    def sort(self, key_or_list, direction=1):
+        # Accepts both sort("field", -1) and sort([("field", -1)]).
+        if isinstance(key_or_list, str):
+            keys = [(key_or_list, direction)]
+        else:
+            keys = list(key_or_list)
+
+        for field, dir_ in reversed(keys):
+            self.data.sort(
+                key=lambda d: (d.get(field) is None, d.get(field)),
+                reverse=(dir_ == -1),
+            )
         return self
 
 class MockInsertResult:
@@ -121,6 +146,16 @@ class MockCollection:
             return doc
         return None
 
+    async def distinct(self, key, filter=None):
+        seen = []
+        for doc in self.db._store[self.name]:
+            if not self._matches_filter(doc, filter or {}):
+                continue
+            value = doc.get(key)
+            if value is not None and value not in seen:
+                seen.append(value)
+        return seen
+
     async def count_documents(self, filter=None):
         filter = filter or {}
         count = 0
@@ -137,16 +172,23 @@ class MockCollection:
 class MockDatabase:
     def __init__(self):
         self._store = {}
-        # Prepopulate default admin user
-        self._store["users"] = [{
-            "_id": ObjectId("647a7b8e1f3d8a5c4e9d0e12"),
-            "first_name": "Samiran",
-            "last_name": "Samanta",
-            "email": "samiran.samanta.dev@gmail.com",
-            "mobile": "8637510045",
-            "hashed_password": "$2b$12$n2mDEpwA.PPUFcSUpxNTNevDKGWayhORc6ZvjQZCQVu734srGWwXq",
-            "is_admin": True
-        }]
+        # Optional local-only admin, seeded from the environment. Nothing is
+        # hardcoded here: a committed password hash is a credential in git
+        # history even when the fallback is disabled in production.
+        self._store["users"] = []
+        seed_email = os.getenv("MOCK_ADMIN_EMAIL", "")
+        seed_password = os.getenv("MOCK_ADMIN_PASSWORD", "")
+        if seed_email and seed_password:
+            from app.core.security import get_password_hash
+            self._store["users"].append({
+                "_id": ObjectId(),
+                "first_name": os.getenv("MOCK_ADMIN_FIRST_NAME", "Local"),
+                "last_name": os.getenv("MOCK_ADMIN_LAST_NAME", "Admin"),
+                "email": seed_email,
+                "mobile": os.getenv("MOCK_ADMIN_MOBILE", ""),
+                "hashed_password": get_password_hash(seed_password),
+                "is_admin": True
+            })
         # Prepopulate default settings
         self._store["homepage_images"] = [{
             "_id": "homepage_images",
@@ -174,7 +216,9 @@ class MockDatabase:
             "size": "Height: 12cm, Width: 8cm",
             "materials": "100% Organic Cotton Yarn, Fiberfill stuffing",
             "care_instructions": "Handwash with mild liquid detergent. Dry flat in shade.",
-            "in_stock": True
+            "in_stock": True,
+            "stock_quantity": 15,
+            "stock_count": 15
         }]
         # Seed a dummy order
         self._store["orders"] = [{
@@ -243,6 +287,32 @@ async def connect_to_mongo():
             print("Database connection failed. Fallback is disabled. Database instance set to None.")
             db_instance.client = None
             db_instance.db = None
+
+async def ensure_indexes():
+    """
+    Create the indexes the hot paths depend on. `users.email` is read on every
+    authenticated request, so without it each one is a collection scan.
+    Safe to call on every boot — createIndex is idempotent.
+    """
+    db = db_instance.db
+    if db is None or isinstance(db, MockDatabase):
+        return
+    try:
+        await db["users"].create_index("email", unique=True)
+        await db["users"].create_index("mobile", sparse=True)
+        await db["products"].create_index("category")
+        await db["orders"].create_index("user_id")
+        await db["orders"].create_index("customer_email")
+        await db["orders"].create_index([("created_at", -1)])
+        await db["reviews"].create_index([("product_id", 1), ("user_id", 1)], unique=True)
+        # OTPs clean themselves up once they expire.
+        await db["otps"].create_index("email", unique=True)
+        await db["otps"].create_index("expires_at", expireAfterSeconds=0)
+        print("Database indexes ensured.")
+    except Exception as e:
+        # A failed index build must never stop the app from serving.
+        print(f"Warning: could not ensure indexes: {e}")
+
 
 # Close database connection...
 def close_mongo_connection():

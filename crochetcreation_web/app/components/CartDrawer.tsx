@@ -1,5 +1,13 @@
 'use client';
-import { apiFetch } from '../utils/apiFetch';
+import { apiFetch, getApiUrl, clearSession } from '../utils/apiFetch';
+import {
+  PAYMENT_METHOD,
+  useStoreSettings,
+  formatOrderRef,
+  buildWhatsAppOrderMessage,
+  buildWhatsAppUrl,
+} from '../utils/checkout';
+import { PrepaidNotice, PaymentInstructions } from './PaymentNotice';
 
 import React, { useState, useEffect } from 'react';
 import { X, Plus, Minus, Trash2, ShoppingBag, ArrowRight, Lock } from 'lucide-react';
@@ -83,8 +91,15 @@ export default function CartDrawer() {
     email: '',
     mobile: '',
     address: '',
-    paymentMethod: 'COD',
   });
+
+  // Amount and order reference are held so the post-order screen can show the
+  // buyer exactly what to pay after the cart has been emptied.
+  const [placedOrder, setPlacedOrder] = useState<{ ref: string; amount: number }>({
+    ref: '',
+    amount: 0,
+  });
+  const storeSettings = useStoreSettings();
 
   // Load and sync cart items
   const syncCart = () => {
@@ -161,13 +176,10 @@ export default function CartDrawer() {
 
     setCheckoutLoading(true);
     try {
-      const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-      const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
-      const paymentMethodText = formData.paymentMethod === 'COD' ? 'Cash on Delivery (COD)' : 'Prepaid (Online Payment)';
+      const origin = typeof window !== 'undefined' ? window.location.origin : '';
 
       // Post the order to the backend first
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-      const token = localStorage.getItem('token');
+      const API_URL = getApiUrl();
 
       const payload = {
         customer_name: formData.name,
@@ -179,70 +191,59 @@ export default function CartDrawer() {
           price: item.price,
           quantity: item.quantity
         })),
-        total_amount: subtotal,
-        payment_method: formData.paymentMethod,
+        payment_method: PAYMENT_METHOD,
         shipping_address: formData.address
       };
 
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json'
-      };
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-
       const res = await apiFetch(`${API_URL}/api/orders/`, {
         method: 'POST',
-        headers,
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.detail || 'Failed to save order to the database. Please try again.');
+        throw new Error(
+          typeof errorData.detail === 'string'
+            ? errorData.detail
+            : "We couldn't place your order. Please try again."
+        );
       }
 
       const orderData = await res.json();
       const orderId = orderData.id || orderData._id || '';
-      const displayOrderId = orderId ? `ORD-${orderId.slice(-6).toUpperCase()}` : 'PENDING';
+      const displayOrderId = formatOrderRef(orderId);
+      // The server re-prices the order, so the amount to pay is the server's
+      // total — never the one the browser worked out.
+      const payableTotal = Number(orderData.total_amount ?? subtotal);
 
-      let itemsSummary = '';
-      items.forEach((item, index) => {
-        const productUrl = `${origin}/product/${item.id}`;
-        itemsSummary += `\n📦 *Item ${index + 1}:*\n` +
-          `- *Name:* ${item.name}\n` +
-          (item.size ? `- *Size:* ${item.size}\n` : '') +
-          `- *Category:* ${item.category}\n` +
-          `- *Price:* ₹${item.price.toFixed(2)}\n` +
-          `- *Quantity:* ${item.quantity}\n` +
-          `- *Product Link:* ${productUrl}\n` +
-          (item.image_url ? `- *Image Link:* ${item.image_url}\n` : '');
+      const message = buildWhatsAppOrderMessage({
+        items: items.map((item) => ({
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          category: item.category,
+          size: item.size,
+        })),
+        subtotal: payableTotal,
+        customer: {
+          name: formData.name,
+          email: formData.email,
+          mobile: formData.mobile,
+          address: formData.address,
+        },
+        orderRef: displayOrderId,
+        upiId: storeSettings.upiId,
+        origin,
       });
 
-      const message = `🧶 *New Bundle Order - Crochet Creation* 🧶\n\n` +
-        `Hello! I would like to place a custom order for the following items:\n` +
-        itemsSummary + `\n` +
-        `💰 *Summary:*\n` +
-        `- *Total Items:* ${items.reduce((sum, i) => sum + i.quantity, 0)}\n` +
-        `- *Subtotal:* ₹${subtotal.toFixed(2)}\n\n` +
-        `👤 *Customer Details:*\n` +
-        `- *Name:* ${formData.name}\n` +
-        `- *Email:* ${formData.email}\n` +
-        `- *Mobile:* ${formData.mobile}\n` +
-        `- *Delivery Address:* ${formData.address}\n\n` +
-        `💳 *Payment Method:* ${paymentMethodText}\n\n` +
-        `🆔 *Order Reference ID:* ${displayOrderId}\n\n` +
-        `Please confirm this order. Thank you!`;
+      const url = buildWhatsAppUrl(message);
 
-      const formattedPhone = '917551041853';
-      const url = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`;
-      
-      // Open WhatsApp chat
-      window.open(url, '_blank');
-      
+      setPlacedOrder({ ref: displayOrderId, amount: payableTotal });
       setWhatsappUrl(url);
       setCheckoutSuccess(true);
-      
+
       // Clear cart
       localStorage.setItem('crochet_cart', '[]');
       localStorage.setItem('crochet_cart_count', '0');
@@ -305,6 +306,7 @@ export default function CartDrawer() {
             </div>
             <button
               onClick={() => setIsOpen(false)}
+              aria-label="Close cart"
               className="p-1.5 rounded-full hover:bg-white/10 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
             >
               <X className="w-5 h-5" />
@@ -315,31 +317,14 @@ export default function CartDrawer() {
         {/* Scrollable Container */}
         <div className="flex-grow overflow-y-auto p-5 space-y-4">
           {checkoutSuccess ? (
-            <div className="text-center py-10 space-y-5">
-              <div className="w-16 h-16 bg-emerald-50 border border-emerald-200 rounded-full flex items-center justify-center text-3xl mx-auto shadow animate-pulse">
-                💬
-              </div>
-              <h4 className="text-lg font-bold text-[#6B5656]">Redirecting to WhatsApp...</h4>
-              <p className="text-xs text-stone-500 max-w-sm mx-auto leading-relaxed">
-                We are opening a WhatsApp chat with the admin to place your order. If it didn't open, please click the button below to send your details.
-              </p>
-              <div className="pt-2 flex flex-col gap-3">
-                <a
-                  href={whatsappUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-3 px-6 rounded-xl uppercase tracking-wider transition-colors shadow flex items-center justify-center gap-2"
-                >
-                  Send Message on WhatsApp
-                </a>
-                <button
-                  onClick={() => setIsOpen(false)}
-                  className="border border-[#6B5656] text-[#6B5656] hover:bg-[#6B5656] hover:text-[#FEF9F6] text-xs font-bold py-3 px-6 rounded-xl uppercase tracking-wider transition-all duration-300"
-                >
-                  Close Cart
-                </button>
-              </div>
-            </div>
+            <PaymentInstructions
+              amount={placedOrder.amount}
+              upiId={storeSettings.upiId}
+              orderRef={placedOrder.ref}
+              whatsappUrl={whatsappUrl}
+              onClose={() => setIsOpen(false)}
+              closeLabel="Close cart"
+            />
           ) : isCheckoutView ? (
             <form onSubmit={handleCheckoutSubmit} className="space-y-4">
               <div className="p-4 bg-stone-50 border border-[#EADBDB] rounded-2xl">
@@ -360,12 +345,14 @@ export default function CartDrawer() {
 
               <div className="space-y-3 pt-2">
                 <div>
-                  <label className="block text-[10px] font-bold text-[#6B5656] uppercase tracking-wider mb-1">
+                  <label htmlFor="cart-name" className="block text-[10px] font-bold text-[#6B5656] uppercase tracking-wider mb-1">
                     Your Name
                   </label>
                   <input
                     type="text"
+                    id="cart-name"
                     name="name"
+                    autoComplete="name"
                     required
                     value={formData.name}
                     onChange={handleInputChange}
@@ -375,12 +362,14 @@ export default function CartDrawer() {
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold text-[#6B5656] uppercase tracking-wider mb-1">
+                  <label htmlFor="cart-email" className="block text-[10px] font-bold text-[#6B5656] uppercase tracking-wider mb-1">
                     Email Address
                   </label>
                   <input
                     type="email"
+                    id="cart-email"
                     name="email"
+                    autoComplete="email"
                     required
                     value={formData.email}
                     onChange={handleInputChange}
@@ -390,12 +379,14 @@ export default function CartDrawer() {
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold text-[#6B5656] uppercase tracking-wider mb-1">
+                  <label htmlFor="cart-mobile" className="block text-[10px] font-bold text-[#6B5656] uppercase tracking-wider mb-1">
                     Mobile Number
                   </label>
                   <input
                     type="tel"
+                    id="cart-mobile"
                     name="mobile"
+                    autoComplete="tel"
                     required
                     value={formData.mobile}
                     onChange={handleInputChange}
@@ -405,11 +396,13 @@ export default function CartDrawer() {
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold text-[#6B5656] uppercase tracking-wider mb-1">
+                  <label htmlFor="cart-address" className="block text-[10px] font-bold text-[#6B5656] uppercase tracking-wider mb-1">
                     Delivery Address
                   </label>
                   <textarea
+                    id="cart-address"
                     name="address"
+                    autoComplete="street-address"
                     required
                     rows={3}
                     value={formData.address}
@@ -419,35 +412,7 @@ export default function CartDrawer() {
                   />
                 </div>
 
-                <div>
-                  <label className="block text-[10px] font-bold text-[#6B5656] uppercase tracking-wider mb-1">
-                    Payment Method
-                  </label>
-                  <div className="grid grid-cols-2 gap-3 mt-1">
-                    <button
-                      type="button"
-                      onClick={() => setFormData((prev) => ({ ...prev, paymentMethod: 'COD' }))}
-                      className={`py-2 px-3 text-xs font-bold rounded-xl border transition-all ${
-                        formData.paymentMethod === 'COD'
-                          ? 'border-[#6B5656] bg-[#6B5656] text-[#FEF9F6]'
-                          : 'border-[#EADBDB] text-stone-600 hover:bg-stone-50'
-                      }`}
-                    >
-                      Cash on Delivery
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setFormData((prev) => ({ ...prev, paymentMethod: 'ONLINE' }))}
-                      className={`py-2 px-3 text-xs font-bold rounded-xl border transition-all ${
-                        formData.paymentMethod === 'ONLINE'
-                          ? 'border-[#6B5656] bg-[#6B5656] text-[#FEF9F6]'
-                          : 'border-[#EADBDB] text-stone-600 hover:bg-stone-50'
-                      }`}
-                    >
-                      UPI / Online Pay
-                    </button>
-                  </div>
-                </div>
+                <PrepaidNotice amount={subtotal} upiId={storeSettings.upiId} />
               </div>
 
               <div className="pt-4 flex gap-3 select-none">

@@ -1,9 +1,12 @@
+import logging
 from fastapi import APIRouter, HTTPException, status, Depends, UploadFile, File, Form
 from app.models.settings import SettingsModel
 from app.core.db import get_database
 from app.api.deps import get_current_admin_user
 from app.models.user import UserInDB
 from app.services.cloudinary_upload import upload_image_and_get_details, delete_image_from_cloudinary
+
+logger = logging.getLogger("app.settings")
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 
@@ -27,10 +30,13 @@ async def get_settings():
         
         return SettingsModel(**settings_doc)
 
-    except Exception as e:
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Failed to fetch settings")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch settings: {str(e)}"
+            detail="Could not load settings. Please try again."
         )
 
 @router.put("/", response_model=SettingsModel)
@@ -56,10 +62,13 @@ async def update_settings(
         )
         return SettingsModel(**result)
 
-    except Exception as e:
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Failed to update settings")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to update settings: {str(e)}"
+            detail="Could not save settings. Please try again."
         )
 
 VALID_SECTIONS = {"heroYarn", "craftingTools", "stackedSweaters", "womanKnitting", "knitTexture", "customerAlice", "logo"}
@@ -81,10 +90,13 @@ async def get_homepage_images():
         for s in VALID_SECTIONS:
             result[s] = doc.get("images", {}).get(s, None)
         return result
-    except Exception as e:
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Failed to fetch homepage images")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch homepage images: {str(e)}"
+            detail="Could not load homepage images. Please try again."
         )
 
 @router.post("/homepage-images/upload")
@@ -136,10 +148,13 @@ async def upload_homepage_image(
             result[s] = updated_doc.get("images", {}).get(s, None) if updated_doc else None
         return result
         
-    except Exception as e:
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Failed to upload homepage image")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to upload homepage image: {str(e)}"
+            detail="Could not upload the image. Please try again."
         )
 
 @router.post("/homepage-images/reset")
@@ -184,8 +199,11 @@ async def reset_homepage_image(
             result[s] = updated_doc.get("images", {}).get(s, None) if updated_doc else None
         return result
         
-    except Exception as e:
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Failed to reset homepage image")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to reset homepage image: {str(e)}"
+            detail="Could not reset the image. Please try again."
         )

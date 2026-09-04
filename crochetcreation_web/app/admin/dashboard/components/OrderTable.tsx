@@ -204,7 +204,7 @@ export default function OrderTable({
       o.customer_name,
       o.customer_email || 'N/A',
       o.total_amount,
-      o.payment_method || 'COD',
+      o.payment_method || 'UPI',
       o.status
     ]);
 

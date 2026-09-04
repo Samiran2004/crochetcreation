@@ -1,5 +1,5 @@
 'use client';
-import { apiFetch } from '../../utils/apiFetch';
+import { apiFetch, getApiUrl } from '../../utils/apiFetch';
 
 import React, { useEffect, useState, useMemo } from 'react';
 import { 
@@ -101,15 +101,7 @@ export default function AdminDashboard() {
   const [selectedOrderForDetail, setSelectedOrderForDetail] = useState<any | null>(null);
   const [isManualOrderDrawerOpen, setIsManualOrderDrawerOpen] = useState(false);
 
-  const API_URL = useMemo(() => {
-    if (process.env.NEXT_PUBLIC_API_URL) {
-      return process.env.NEXT_PUBLIC_API_URL;
-    }
-    if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-      return 'http://localhost:8000';
-    }
-    return 'https://crochetcreation.onrender.com';
-  }, []);
+  const API_URL = useMemo(() => getApiUrl(), []);
 
   const token = useMemo(() => {
     if (typeof window !== 'undefined') {

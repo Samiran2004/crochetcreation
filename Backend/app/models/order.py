@@ -17,14 +17,18 @@ class OrderItem(BaseModel):
     title: str
     price: float
     quantity: int
+    # Garment orders carry a size; without this field it was silently dropped.
+    size: Optional[str] = None
 
 class OrderCreate(BaseModel):
     customer_name: str
     customer_email: str
     customer_mobile: str
     items: List[OrderItem]
-    total_amount: float
-    payment_method: str = "COD"  # "COD", "UPI", "CARD"
+    # Server-derived. Anything the client sends for these two is ignored and
+    # recomputed from the product catalog, so neither is required.
+    total_amount: Optional[float] = None
+    payment_method: str = "UPI"
     user_id: Optional[PyObjectId] = None
     shipping_address: Optional[str] = None
     latitude: Optional[float] = None
@@ -37,7 +41,7 @@ class ManualOrderCreate(BaseModel):
     customer_mobile: Optional[str] = None
     items: List[OrderItem]
     total_amount: float
-    payment_method: str = "COD"
+    payment_method: str = "UPI"
     notes: Optional[str] = None
     shipping_address: Optional[str] = None
     latitude: Optional[float] = None
@@ -62,7 +66,7 @@ class OrderResponse(BaseModel):
     customer_mobile: Optional[str] = None
     items: List[OrderItem] = []
     total_amount: float = 0
-    payment_method: str = "COD"
+    payment_method: str = "UPI"
     user_id: Optional[PyObjectId] = None
     status: str = OrderStatus.PENDING_VALIDATION.value
     is_manual: bool = False

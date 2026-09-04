@@ -1,5 +1,5 @@
 'use client';
-import { apiFetch } from '../utils/apiFetch';
+import { apiFetch, getApiUrl, clearSession } from '../utils/apiFetch';
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useOrderWebSocket } from '../hooks/useOrderWebSocket';
@@ -26,8 +26,9 @@ import {
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import ReviewDrawer from '../components/ReviewDrawer';
+import { useStoreSettings } from '../utils/checkout';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_URL = getApiUrl();
 
 interface Address {
   id: string;
@@ -60,6 +61,23 @@ interface Order {
   created_at: string;
   invoice_url?: string;
 }
+
+/**
+ * "Pending Validation" is the stored value, but it means nothing to a shopper.
+ * Every order is prepaid, so what they need to know at that point is that we
+ * are waiting on their payment.
+ */
+const customerStatusLabel = (status: string): string => {
+  switch (status) {
+    case 'Pending Validation':
+    case 'Pending':
+      return 'Awaiting payment';
+    case 'Confirmed':
+      return 'Payment verified';
+    default:
+      return status;
+  }
+};
 
 export default function UserDashboard() {
   const router = useRouter();
@@ -109,6 +127,8 @@ export default function UserDashboard() {
 
   // UI Notification Toast
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  const storeSettings = useStoreSettings();
 
   // Navigation / Header States
   const [cartItemsCount, setCartItemsCount] = useState(0);
@@ -455,11 +475,8 @@ export default function UserDashboard() {
 
   // Logout Handler
   const handleLogout = () => {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      router.push('/');
-    }
+    clearSession();
+    router.push('/');
   };
 
   if (authLoading) {
@@ -624,11 +641,13 @@ export default function UserDashboard() {
                   <div className="space-y-7 bg-[#FAFAFA] p-6 rounded-2xl border border-stone-100 mb-8 shadow-sm">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                       <div className="relative group">
-                        <label className="absolute -top-2.5 left-3 bg-[#FAFAFA] px-1 text-[9px] font-black uppercase tracking-widest text-stone-400 z-10 transition-colors group-focus-within:text-[#D9B4B4]">
+                        <label htmlFor="profile-first-name" className="absolute -top-2.5 left-3 bg-[#FAFAFA] px-1 text-[9px] font-black uppercase tracking-widest text-stone-400 z-10 transition-colors group-focus-within:text-[#D9B4B4]">
                           First Name
                         </label>
                         <input
+                          id="profile-first-name"
                           type="text"
+                          autoComplete="given-name"
                           required
                           value={profileForm.first_name}
                           onChange={(e) => setProfileForm({ ...profileForm, first_name: e.target.value })}
@@ -637,11 +656,13 @@ export default function UserDashboard() {
                       </div>
 
                       <div className="relative group">
-                        <label className="absolute -top-2.5 left-3 bg-[#FAFAFA] px-1 text-[9px] font-black uppercase tracking-widest text-stone-400 z-10 transition-colors group-focus-within:text-[#D9B4B4]">
+                        <label htmlFor="profile-last-name" className="absolute -top-2.5 left-3 bg-[#FAFAFA] px-1 text-[9px] font-black uppercase tracking-widest text-stone-400 z-10 transition-colors group-focus-within:text-[#D9B4B4]">
                           Last Name
                         </label>
                         <input
+                          id="profile-last-name"
                           type="text"
+                          autoComplete="family-name"
                           required
                           value={profileForm.last_name}
                           onChange={(e) => setProfileForm({ ...profileForm, last_name: e.target.value })}
@@ -651,11 +672,13 @@ export default function UserDashboard() {
                     </div>
 
                     <div className="relative group opacity-75">
-                      <label className="absolute -top-2.5 left-3 bg-[#FAFAFA] px-1 text-[9px] font-black uppercase tracking-widest text-stone-400 z-10">
+                      <label htmlFor="profile-email" className="absolute -top-2.5 left-3 bg-[#FAFAFA] px-1 text-[9px] font-black uppercase tracking-widest text-stone-400 z-10">
                         Email Address (Cannot be changed)
                       </label>
                       <input
+                        id="profile-email"
                         type="email"
+                        autoComplete="email"
                         disabled
                         value={userProfile?.email || ''}
                         className="w-full bg-stone-50 border-2 border-stone-100 text-stone-400 rounded-xl px-4 py-3.5 text-sm cursor-not-allowed font-medium"
@@ -663,11 +686,13 @@ export default function UserDashboard() {
                     </div>
 
                     <div className="relative group">
-                      <label className="absolute -top-2.5 left-3 bg-[#FAFAFA] px-1 text-[9px] font-black uppercase tracking-widest text-stone-400 z-10 transition-colors group-focus-within:text-[#D9B4B4]">
+                      <label htmlFor="profile-phone" className="absolute -top-2.5 left-3 bg-[#FAFAFA] px-1 text-[9px] font-black uppercase tracking-widest text-stone-400 z-10 transition-colors group-focus-within:text-[#D9B4B4]">
                         Phone Number
                       </label>
                       <input
+                        id="profile-phone"
                         type="tel"
+                        autoComplete="tel"
                         required
                         value={profileForm.mobile}
                         onChange={(e) => setProfileForm({ ...profileForm, mobile: e.target.value })}
@@ -851,7 +876,7 @@ export default function UserDashboard() {
                               )}
                               
                               <span className={`text-[10px] font-black tracking-widest px-3 py-1 rounded-full uppercase ${badgeClasses}`}>
-                                {order.status}
+                                {customerStatusLabel(order.status)}
                               </span>
                               
                               <button
@@ -863,6 +888,20 @@ export default function UserDashboard() {
                               </button>
                             </div>
                           </div>
+
+                          {/* An unpaid order needs a standing reminder of what
+                              is owed and what to do about it. */}
+                          {(order.status === 'Pending Validation' || order.status === 'Pending') && (
+                            <div className="px-6 py-3.5 bg-amber-50 border-b border-amber-200 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                              <span className="text-[10px] font-black uppercase tracking-widest text-amber-800">
+                                Payment pending
+                              </span>
+                              <p className="text-xs text-amber-900">
+                                Pay <strong>₹{Number(order.total_amount || 0).toLocaleString('en-IN')}</strong> by UPI to{' '}
+                                <strong className="break-all">{storeSettings.upiId}</strong>, then send the screenshot on WhatsApp.
+                              </p>
+                            </div>
+                          )}
 
                           {/* Order Quick Details & Items */}
                           <div className="p-6 divide-y divide-stone-100/50 space-y-4">
@@ -1116,7 +1155,7 @@ export default function UserDashboard() {
                     Order Status
                   </span>
                   <span className="inline-block text-[10px] font-black tracking-widest bg-stone-100 text-stone-600 border border-stone-200 px-3 py-1 rounded-full uppercase">
-                    {selectedOrder.status}
+                    {customerStatusLabel(selectedOrder.status)}
                   </span>
                 </div>
                 <div>

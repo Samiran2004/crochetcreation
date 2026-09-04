@@ -1,5 +1,5 @@
 'use client';
-import { apiFetch } from '../../utils/apiFetch';
+import { apiFetch, getApiUrl } from '../../utils/apiFetch';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useOrderWebSocket } from '../../hooks/useOrderWebSocket';
@@ -57,15 +57,7 @@ export default function AdminOrders() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
 
-  const API_URL = useMemo(() => {
-    if (process.env.NEXT_PUBLIC_API_URL) {
-      return process.env.NEXT_PUBLIC_API_URL;
-    }
-    if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-      return 'http://localhost:8000';
-    }
-    return 'https://crochetcreation.onrender.com';
-  }, []);
+  const API_URL = useMemo(() => getApiUrl(), []);
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -94,7 +86,7 @@ export default function AdminOrders() {
           amount: o.total_amount,
           date: o.created_at ? new Date(o.created_at).toLocaleString() : 'Just now',
           status: o.status,
-          payment: o.payment_method || 'COD',
+          payment: o.payment_method || 'UPI',
           rawItems: o.items || [],
           is_manual: o.is_manual || false,
           notes: o.notes || null,
@@ -144,7 +136,7 @@ export default function AdminOrders() {
         amount: o.total_amount,
         date: o.created_at ? new Date(o.created_at).toLocaleString() : 'Just now',
         status: o.status,
-        payment: o.payment_method || 'COD',
+        payment: o.payment_method || 'UPI',
         rawItems: o.items || [],
         is_manual: o.is_manual || false,
         notes: o.notes || null,

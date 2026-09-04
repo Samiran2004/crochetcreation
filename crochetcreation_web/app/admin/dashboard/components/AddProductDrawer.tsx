@@ -1,5 +1,5 @@
 'use client';
-import { apiFetch } from '../../../utils/apiFetch';
+import { apiFetch, getApiUrl } from '../../../utils/apiFetch';
 
 import React, { useState, useEffect } from 'react';
 import { 
@@ -68,15 +68,7 @@ export default function AddProductDrawer({ isOpen, onClose, onSuccess }: AddProd
   const [dragActive, setDragActive] = useState(false);
 
   // API Config
-  const API_URL = (() => {
-    if (process.env.NEXT_PUBLIC_API_URL) {
-      return process.env.NEXT_PUBLIC_API_URL;
-    }
-    if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-      return 'http://localhost:8000';
-    }
-    return 'https://crochetcreation.onrender.com';
-  })();
+  const API_URL = getApiUrl();
 
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
 

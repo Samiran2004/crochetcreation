@@ -244,7 +244,7 @@ export default function OrderDrawer({
             <div className="text-xs space-y-2">
               <div className="flex justify-between items-center py-1">
                 <span className="text-gray-500 font-medium">Payment Method</span>
-                <span className="font-extrabold text-slate-900 uppercase">{order.payment_method || 'COD'}</span>
+                <span className="font-extrabold text-slate-900 uppercase">{order.payment_method || 'UPI'}</span>
               </div>
               
               {isUPI && (

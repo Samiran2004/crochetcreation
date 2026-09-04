@@ -1,7 +1,7 @@
 'use client';
-import { apiFetch } from './utils/apiFetch';
+import { apiFetch, getApiUrl, clearSession } from './utils/apiFetch';
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import Image from 'next/image';
 import { addToCart } from './components/CartDrawer';
 import Link from 'next/link';
@@ -47,19 +47,11 @@ const IMAGES = {
 
 
 export default function CrochetCreationPage() {
-  const API_URL = useMemo(() => {
-    if (process.env.NEXT_PUBLIC_API_URL) {
-      return process.env.NEXT_PUBLIC_API_URL;
-    }
-    if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-      return 'http://localhost:8000';
-    }
-    return 'https://crochetcreation.onrender.com';
-  }, []);
+  const API_URL = useMemo(() => getApiUrl(), []);
 
   const router = useRouter();
 
-  const [activeFilter, setActiveFilter] = useState('TOYS');
+  const [activeFilter, setActiveFilter] = useState<string>('');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [customRequestModal, setCustomRequestModal] = useState(false);
   const [policyModal, setPolicyModal] = useState<string | null>(null);
@@ -78,6 +70,9 @@ export default function CrochetCreationPage() {
   const [loading, setLoading] = useState(true);
   const [selectedTexture, setSelectedTexture] = useState<string | null>(null);
   const [productsList, setProductsList] = useState<any[]>([]);
+  const [productsLoading, setProductsLoading] = useState(true);
+  const [productsError, setProductsError] = useState<string | null>(null);
+  const [categories, setCategories] = useState<string[]>([]);
   const [customImages, setCustomImages] = useState<Record<string, string>>({});
 
   // Load custom homepage images on mount
@@ -217,9 +212,8 @@ export default function CrochetCreationPage() {
   const handleLogout = () => {
     setToken(null);
     setUserProfile(null);
-    localStorage.removeItem('token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('user');
+    setCartItemsCount(0);
+    clearSession();
   };
 
   const handleGoogleLogin = async () => {
@@ -279,29 +273,55 @@ export default function CrochetCreationPage() {
   };
 
 
+  // The tabs come from the categories that actually have stock. Hardcoding
+  // six of them meant four could only ever show an empty state.
   useEffect(() => {
-    const fetchProducts = async () => {
+    let cancelled = false;
+    const loadCategories = async () => {
       try {
-        const res = await apiFetch(`${API_URL}/api/products?limit=1000`);
-        if (res.ok) {
-          const data = await res.json();
-          const items = Array.isArray(data) ? data : (data.items || []);
-          setProductsList(items);
-        }
+        const res = await apiFetch(`${API_URL}/api/products/categories`);
+        if (!res.ok || cancelled) return;
+        const data = await res.json();
+        if (cancelled || !Array.isArray(data) || data.length === 0) return;
+        setCategories(data);
+        setActiveFilter((current) => (current && data.includes(current) ? current : data[0]));
       } catch (err) {
-        console.error("Failed to fetch products:", err);
+        console.error('Failed to load categories:', err);
       }
     };
-    fetchProducts();
-  }, []);
+    loadCategories();
+    return () => { cancelled = true; };
+  }, [API_URL]);
 
-  const displayProducts = useMemo(() => {
-    return productsList.filter(p => {
-      const cat = (p.category || '').toUpperCase();
-      const filter = activeFilter.toUpperCase();
-      return cat === filter || (filter === 'TOYS' && cat.includes('TOY')) || (filter === 'ACCESSORIES' && cat.includes('ACCESSORY'));
-    });
-  }, [productsList, activeFilter]);
+  // Ask the server for the handful of products this section shows, rather
+  // than downloading the whole catalog and filtering it in the browser.
+  const fetchProducts = useCallback(async () => {
+    if (!activeFilter) return;
+    setProductsLoading(true);
+    setProductsError(null);
+    try {
+      const res = await apiFetch(
+        `${API_URL}/api/products?limit=6&category=${encodeURIComponent(activeFilter)}`
+      );
+      if (!res.ok) {
+        throw new Error(`Catalog request failed (${res.status})`);
+      }
+      const data = await res.json();
+      const items = Array.isArray(data) ? data : (data.items || []);
+      setProductsList(items);
+    } catch (err: any) {
+      console.error("Failed to fetch products:", err);
+      setProductsError("We couldn't load the catalog just now.");
+    } finally {
+      setProductsLoading(false);
+    }
+  }, [API_URL, activeFilter]);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
+
+  const displayProducts = productsList;
 
 
   // Theme configuration
@@ -624,6 +644,7 @@ export default function CrochetCreationPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <button
+              aria-label="Close"
               className="absolute top-4 right-4 text-stone-400 hover:text-stone-600 p-1.5 rounded-full hover:bg-stone-50 transition-colors"
               onClick={() => setSelectedTexture(null)}
             >
@@ -1108,20 +1129,31 @@ export default function CrochetCreationPage() {
             {/* Filter bar with subtle stripe pattern */}
             <div className="bg-crochet-stripe h-12 rounded-lg flex items-center px-2 md:px-4 overflow-x-auto gap-2 md:gap-8 justify-between shadow-inner mb-8 md:mb-12 scrollbar-hide snap-x">
               <div className="flex items-center gap-2 md:gap-8 min-w-max">
-                {['TOYS', 'SCARVES AND HATS', 'ACCESSORIES', 'PULLOVERS', 'DRESSES', 'FOR KIDS'].map((filter) => (
-                  <button
-                    key={filter}
-                    onClick={() => setActiveFilter(filter)}
-                    className={`text-[9px] md:text-[10px] font-black uppercase tracking-widest transition-all px-2.5 md:px-3 py-1.5 rounded whitespace-nowrap snap-start min-h-[36px] flex items-center ${activeFilter === filter
-                      ? 'bg-[#6B5656] text-[#FEF9F6] shadow-sm'
-                      : 'text-[#6B5656] hover:text-black'
-                      }`}
-                  >
-                    {filter}
-                  </button>
-                ))}
+                {categories.length > 0
+                  ? categories.map((filter) => (
+                      <button
+                        key={filter}
+                        onClick={() => setActiveFilter(filter)}
+                        aria-pressed={activeFilter === filter}
+                        className={`text-[9px] md:text-[10px] font-black uppercase tracking-widest transition-all px-2.5 md:px-3 py-1.5 rounded whitespace-nowrap snap-start min-h-[36px] flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6B5656] focus-visible:ring-offset-1 ${activeFilter === filter
+                          ? 'bg-[#6B5656] text-[#FEF9F6] shadow-sm'
+                          : 'text-[#6B5656] hover:text-black'
+                          }`}
+                      >
+                        {filter}
+                      </button>
+                    ))
+                  : Array.from({ length: 3 }).map((_, i) => (
+                      <span
+                        key={`cat-skeleton-${i}`}
+                        className="h-4 w-20 rounded bg-[#6B5656]/10 animate-pulse"
+                        aria-hidden="true"
+                      />
+                    ))}
               </div>
-              <ChevronRight className="w-4 h-4 text-[#6B5656] shrink-0 animate-pulse" />
+              {categories.length > 3 && (
+                <ChevronRight className="w-4 h-4 text-[#6B5656] shrink-0 animate-pulse" aria-hidden="true" />
+              )}
             </div>
           </FadeUpWrapper>
 
@@ -1219,11 +1251,36 @@ export default function CrochetCreationPage() {
                 </div>      </div>
                 </StaggerItem>
               ))
+            ) : productsLoading ? (
+              // Skeletons: the API can be slow to wake (free-tier cold start),
+              // so never show "no products" until we actually know.
+              Array.from({ length: 3 }).map((_, i) => (
+                <div key={`skeleton-${i}`} className="flex flex-col h-full bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
+                  <div className="aspect-[4/5] w-full bg-stone-100 animate-pulse" />
+                  <div className="p-4 md:p-5 space-y-3">
+                    <div className="h-3 w-16 bg-stone-100 rounded animate-pulse" />
+                    <div className="h-4 w-3/4 bg-stone-100 rounded animate-pulse" />
+                    <div className="h-3 w-full bg-stone-100 rounded animate-pulse" />
+                    <div className="h-8 w-full bg-stone-100 rounded-lg animate-pulse" />
+                  </div>
+                </div>
+              ))
+            ) : productsError ? (
+              <div className="col-span-full py-12 flex flex-col items-center justify-center bg-white border border-dashed border-[#EADBDB] rounded-2xl text-center">
+                <Scissors className="w-8 h-8 text-[#D9B4B4] mb-3" />
+                <h4 className="text-base font-bold text-[#6B5656] mb-1">{productsError}</h4>
+                <button
+                  onClick={() => fetchProducts()}
+                  className="mt-3 px-5 py-2 bg-[#6B5656] hover:bg-[#5C4949] text-white text-[10px] font-bold rounded-full transition-all active:scale-95 uppercase tracking-widest"
+                >
+                  Try again
+                </button>
+              </div>
             ) : (
               <div className="col-span-full py-12 flex flex-col items-center justify-center bg-white border border-dashed border-[#EADBDB] rounded-2xl text-center">
                 <Scissors className="w-8 h-8 text-[#D9B4B4] mb-3 animate-bounce" />
                 <h4 className="text-base font-bold text-[#6B5656] mb-1">No products found in this category</h4>
-                <p className="text-xs text-stone-500">Add products using the backend API to see them here.</p>
+                <p className="text-xs text-stone-500">Try another category, or browse the full shop.</p>
               </div>
             )}
           </StaggerContainer>
@@ -1464,10 +1521,10 @@ export default function CrochetCreationPage() {
 
               {/* Scattered pink/purple buttons visual representation */}
               <div className="flex flex-wrap gap-2 pt-4">
-                <button onClick={() => setCustomRequestModal(true)} className="w-6 h-6 rounded-full bg-[#D9B4B4] border border-[#FEF9F6]/20 flex items-center justify-center hover:scale-110 transition-transform"><div className="grid grid-cols-2 gap-0.5 w-1.5 h-1.5"><div className="bg-[#6B5656] rounded-full w-0.5 h-0.5"></div><div className="bg-[#6B5656] rounded-full w-0.5 h-0.5"></div><div className="bg-[#6B5656] rounded-full w-0.5 h-0.5"></div><div className="bg-[#6B5656] rounded-full w-0.5 h-0.5"></div></div></button>
-                <button onClick={() => setCustomRequestModal(true)} className="w-5 h-5 rounded-full bg-[#B67E7E] border border-[#FEF9F6]/20 flex items-center justify-center hover:scale-110 transition-transform"><div className="grid grid-cols-2 gap-0.5 w-1.5 h-1.5"><div className="bg-[#FEF9F6] rounded-full w-0.5 h-0.5"></div><div className="bg-[#FEF9F6] rounded-full w-0.5 h-0.5"></div><div className="bg-[#FEF9F6] rounded-full w-0.5 h-0.5"></div><div className="bg-[#FEF9F6] rounded-full w-0.5 h-0.5"></div></div></button>
-                <button onClick={() => setCustomRequestModal(true)} className="w-7 h-7 rounded-full bg-[#E8D3D3] border border-[#FEF9F6]/20 flex items-center justify-center hover:scale-110 transition-transform"><div className="grid grid-cols-2 gap-0.5 w-2 h-2"><div className="bg-[#6B5656] rounded-full w-0.5 h-0.5"></div><div className="bg-[#6B5656] rounded-full w-0.5 h-0.5"></div><div className="bg-[#6B5656] rounded-full w-0.5 h-0.5"></div><div className="bg-[#6B5656] rounded-full w-0.5 h-0.5"></div></div></button>
-                <button onClick={() => setCustomRequestModal(true)} className="w-6 h-6 rounded-full bg-[#C89696] border border-[#FEF9F6]/20 flex items-center justify-center hover:scale-110 transition-transform"><div className="grid grid-cols-2 gap-0.5 w-1.5 h-1.5"><div className="bg-[#FEF9F6] rounded-full w-0.5 h-0.5"></div><div className="bg-[#FEF9F6] rounded-full w-0.5 h-0.5"></div><div className="bg-[#FEF9F6] rounded-full w-0.5 h-0.5"></div><div className="bg-[#FEF9F6] rounded-full w-0.5 h-0.5"></div></div></button>
+                <button onClick={() => setCustomRequestModal(true)} aria-label="Request a custom creation" className="w-6 h-6 rounded-full bg-[#D9B4B4] border border-[#FEF9F6]/20 flex items-center justify-center hover:scale-110 transition-transform"><div className="grid grid-cols-2 gap-0.5 w-1.5 h-1.5"><div className="bg-[#6B5656] rounded-full w-0.5 h-0.5"></div><div className="bg-[#6B5656] rounded-full w-0.5 h-0.5"></div><div className="bg-[#6B5656] rounded-full w-0.5 h-0.5"></div><div className="bg-[#6B5656] rounded-full w-0.5 h-0.5"></div></div></button>
+                <button onClick={() => setCustomRequestModal(true)} aria-label="Request a custom creation" className="w-5 h-5 rounded-full bg-[#B67E7E] border border-[#FEF9F6]/20 flex items-center justify-center hover:scale-110 transition-transform"><div className="grid grid-cols-2 gap-0.5 w-1.5 h-1.5"><div className="bg-[#FEF9F6] rounded-full w-0.5 h-0.5"></div><div className="bg-[#FEF9F6] rounded-full w-0.5 h-0.5"></div><div className="bg-[#FEF9F6] rounded-full w-0.5 h-0.5"></div><div className="bg-[#FEF9F6] rounded-full w-0.5 h-0.5"></div></div></button>
+                <button onClick={() => setCustomRequestModal(true)} aria-label="Request a custom creation" className="w-7 h-7 rounded-full bg-[#E8D3D3] border border-[#FEF9F6]/20 flex items-center justify-center hover:scale-110 transition-transform"><div className="grid grid-cols-2 gap-0.5 w-2 h-2"><div className="bg-[#6B5656] rounded-full w-0.5 h-0.5"></div><div className="bg-[#6B5656] rounded-full w-0.5 h-0.5"></div><div className="bg-[#6B5656] rounded-full w-0.5 h-0.5"></div><div className="bg-[#6B5656] rounded-full w-0.5 h-0.5"></div></div></button>
+                <button onClick={() => setCustomRequestModal(true)} aria-label="Request a custom creation" className="w-6 h-6 rounded-full bg-[#C89696] border border-[#FEF9F6]/20 flex items-center justify-center hover:scale-110 transition-transform"><div className="grid grid-cols-2 gap-0.5 w-1.5 h-1.5"><div className="bg-[#FEF9F6] rounded-full w-0.5 h-0.5"></div><div className="bg-[#FEF9F6] rounded-full w-0.5 h-0.5"></div><div className="bg-[#FEF9F6] rounded-full w-0.5 h-0.5"></div><div className="bg-[#FEF9F6] rounded-full w-0.5 h-0.5"></div></div></button>
               </div>
             </div>
 
@@ -1686,6 +1743,7 @@ export default function CrochetCreationPage() {
                 sessionStorage.setItem('mobilePromptDismissed', 'true');
                 setShowMobilePrompt(false);
               }}
+              aria-label="Close"
               className="absolute top-4 right-4 text-stone-400 hover:text-stone-600 transition-colors p-1"
             >
               <X className="w-5 h-5" />
@@ -1701,9 +1759,11 @@ export default function CrochetCreationPage() {
             </p>
             <form onSubmit={handleMobilePromptSubmit} className="space-y-4">
               <div>
-                <label className="text-[10px] font-bold text-stone-500 uppercase tracking-wider block mb-1">Mobile Number</label>
+                <label htmlFor="mobile-prompt" className="text-[10px] font-bold text-stone-500 uppercase tracking-wider block mb-1">Mobile Number</label>
                 <input
+                  id="mobile-prompt"
                   type="tel"
+                  autoComplete="tel"
                   required
                   value={mobilePromptValue}
                   onChange={(e) => setMobilePromptValue(e.target.value)}

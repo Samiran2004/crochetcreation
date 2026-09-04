@@ -1,5 +1,5 @@
 'use client';
-import { apiFetch } from '../../utils/apiFetch';
+import { apiFetch, getApiUrl } from '../../utils/apiFetch';
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
@@ -31,15 +31,7 @@ export default function AdminCustomers() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const API_URL = useMemo(() => {
-    if (process.env.NEXT_PUBLIC_API_URL) {
-      return process.env.NEXT_PUBLIC_API_URL;
-    }
-    if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-      return 'http://localhost:8000';
-    }
-    return 'https://crochetcreation.onrender.com';
-  }, []);
+  const API_URL = useMemo(() => getApiUrl(), []);
 
   const fetchCustomers = async () => {
     setLoading(true);

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { getApiUrl } from '../utils/apiFetch';
 
 export interface WebSocketMessage {
   action: 'order_created' | 'order_updated';
@@ -24,21 +25,21 @@ export function useOrderWebSocket(onMessage?: (message: WebSocketMessage) => voi
         wsRef.current.close();
       }
 
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-      // Convert http/https to ws/wss
-      let wsUrl = API_URL.replace(/^http/, 'ws') + '/api/ws';
       const token = localStorage.getItem('token');
-      if (token) {
-        wsUrl += `?token=${encodeURIComponent(token)}`;
-      }
-      
-      console.log(`Connecting to WebSocket: ${wsUrl}`);
+      // The server rejects anonymous sockets, so don't open one — and don't
+      // start a reconnect loop against a connection that can never succeed.
+      if (!token) return;
+
+      const API_URL = getApiUrl();
+      // Convert http/https to ws/wss
+      const wsUrl = `${API_URL.replace(/^http/, 'ws')}/api/ws?token=${encodeURIComponent(token)}`;
+
+      // Never log the URL itself: it carries the access token.
       const socket = new WebSocket(wsUrl);
       wsRef.current = socket;
 
       socket.onopen = () => {
         if (!active) return;
-        console.log('WebSocket connected successfully.');
         setIsConnected(true);
         reconnectDelayRef.current = 1000; // Reset reconnection delay
       };
@@ -47,7 +48,6 @@ export function useOrderWebSocket(onMessage?: (message: WebSocketMessage) => voi
         if (!active) return;
         try {
           const payload = JSON.parse(event.data);
-          console.log('Received WebSocket message:', payload);
           if (savedOnMessage.current) {
             savedOnMessage.current(payload);
           }
@@ -59,12 +59,14 @@ export function useOrderWebSocket(onMessage?: (message: WebSocketMessage) => voi
       socket.onclose = (event) => {
         if (!active) return;
         setIsConnected(false);
-        console.log(`WebSocket closed: ${event.reason || 'No reason'}. Attempting to reconnect...`);
+        // 4001 means the server rejected our credentials; retrying with the
+        // same token would just loop forever.
+        if (event.code === 4001) return;
         scheduleReconnect();
       };
 
-      socket.onerror = (err) => {
-        console.error('WebSocket error occurred:', err);
+      socket.onerror = () => {
+        // onclose always follows; reconnection is handled there.
       };
     }
 
@@ -75,7 +77,6 @@ export function useOrderWebSocket(onMessage?: (message: WebSocketMessage) => voi
       const delay = reconnectDelayRef.current;
       // Exponential backoff with jitter, maxing at 30 seconds
       reconnectDelayRef.current = Math.min(delay * 2 + Math.random() * 500, 30000);
-      console.log(`Scheduling reconnect in ${delay.toFixed(0)}ms`);
       reconnectTimeoutRef.current = setTimeout(() => {
         if (active) {
           connect();

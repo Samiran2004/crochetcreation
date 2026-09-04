@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-from app.core.db import connect_to_mongo, close_mongo_connection
+from app.core.db import connect_to_mongo, close_mongo_connection, ensure_indexes
 from app.routes.product_routes import router as product_router
 from app.routes.auth_routes import router as auth_router
 from app.routes.order_routes import router as order_router
@@ -15,6 +15,7 @@ from app.routes.review_routes import router as review_router
 async def lifespan(app: FastAPI):
     # Startup: Connect to MongoDB Atlas
     await connect_to_mongo()
+    await ensure_indexes()
     yield
     # Shutdown: Close database connection
     close_mongo_connection()
@@ -85,8 +86,8 @@ async def keep_alive_ping():
     return {"status": "Alive", "message": "Server is awake and running!"}
 
 from fastapi import WebSocket, WebSocketDisconnect, Query
-import jwt
-from app.core.config import settings
+from app.api.deps import decode_access_token
+from app.core.db import get_database
 from app.utils.websocket import manager
 
 @app.websocket("/api/ws")
@@ -94,15 +95,30 @@ async def websocket_endpoint(websocket: WebSocket, token: str = Query(None)):
     if not token:
         await websocket.close(code=4001, reason="Missing token")
         return
-    try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-        if not payload.get("sub"):
-            raise ValueError("Missing subject")
-    except Exception:
+
+    # Same rules as the HTTP API: access tokens only, and the identity has to
+    # exist. The connection is tagged with that identity so order events can be
+    # addressed to admins and the order's owner instead of every listener.
+    email = decode_access_token(token)
+    if email is None:
         await websocket.close(code=4001, reason="Invalid token")
         return
 
-    await manager.connect(websocket)
+    db = get_database()
+    if db is None:
+        await websocket.close(code=1013, reason="Service unavailable")
+        return
+
+    user = await db["users"].find_one({"email": email})
+    if user is None:
+        await websocket.close(code=4001, reason="Invalid token")
+        return
+
+    await manager.connect(
+        websocket,
+        user_id=str(user.get("_id")),
+        is_admin=bool(user.get("is_admin", False)),
+    )
     try:
         while True:
             await websocket.receive_text()

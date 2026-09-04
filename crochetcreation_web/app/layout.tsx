@@ -10,6 +10,16 @@ export const metadata: Metadata = {
   },
   description: 'Discover aesthetic, handmade crochet plushies, cozy apparel, and DIY masterclasses crafted with love.',
   manifest: '/manifest.json',
+  // Without these the browser falls back to /favicon.ico, which did not exist —
+  // a 404 on every page load and a blank tab icon.
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/icons/icon-192x192.png', type: 'image/png', sizes: '192x192' },
+      { url: '/icons/icon-512x512.png', type: 'image/png', sizes: '512x512' },
+    ],
+    apple: '/icons/icon-192x192.png',
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',

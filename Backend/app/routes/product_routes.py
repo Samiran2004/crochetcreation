@@ -1,3 +1,4 @@
+import logging
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, status, Depends, Query
 from typing import List, Optional
 from app.models.product import ProductModel, ProductUpdate, ProductCreate, PaginatedProductsResponse
@@ -6,6 +7,8 @@ from app.core.db import get_database
 from app.api.deps import get_current_admin_user
 from app.models.user import UserInDB
 from bson import ObjectId
+
+logger = logging.getLogger("app.products")
 
 router = APIRouter(prefix="/api/products", tags=["products"])
 
@@ -94,10 +97,13 @@ async def create_product(
         inserted_product = await db["products"].find_one({"_id": result.inserted_id})
         return inserted_product
 
-    except Exception as e:
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Failed to create product")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create product: {str(e)}"
+            detail="Could not create the product. Please try again."
         )
 
 @router.get("/", response_model=PaginatedProductsResponse)
@@ -132,10 +138,39 @@ async def get_products(
         
         return {"items": products, "total": total}
         
-    except Exception as e:
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Failed to fetch products")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch products: {str(e)}"
+            detail="Could not load the catalog. Please try again."
+        )
+
+@router.get("/categories", response_model=List[str])
+async def get_categories():
+    """
+    The distinct categories that actually have products. The storefront builds
+    its filter tabs from this, so shoppers are never offered a tab that can
+    only ever show an empty state.
+
+    Declared before /{product_id} — FastAPI matches in order, and otherwise
+    "categories" would be read as a product id.
+    """
+    db = get_database()
+    if db is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Service temporarily unavailable. Please try again shortly."
+        )
+    try:
+        categories = await db["products"].distinct("category")
+        return sorted([c for c in categories if c])
+    except Exception:
+        logger.exception("Failed to fetch categories")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not load categories. Please try again."
         )
 
 @router.get("/{product_id}", response_model=ProductModel)
@@ -163,10 +198,11 @@ async def get_product(product_id: str):
         return product
     except HTTPException:
         raise
-    except Exception as e:
+    except Exception:
+        logger.exception("Failed to fetch product")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch product: {str(e)}"
+            detail="Could not load this product. Please try again."
         )
 
 @router.put("/{product_id}", response_model=ProductModel)
@@ -304,10 +340,13 @@ async def update_product(
         updated_product = await db["products"].find_one({"_id": ObjectId(product_id)})
         return updated_product
         
-    except Exception as e:
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Failed to update product")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to update product: {str(e)}"
+            detail="Could not update the product. Please try again."
         )
 
 @router.patch("/{product_id}", response_model=ProductModel)
@@ -368,10 +407,13 @@ async def patch_product(
 
         updated_product = await db["products"].find_one({"_id": ObjectId(product_id)})
         return updated_product
-    except Exception as e:
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Failed to partially update product")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to partially update product: {str(e)}"
+            detail="Could not update the product. Please try again."
         )
 
 @router.delete("/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -409,8 +451,11 @@ async def delete_product(
         await db["products"].delete_one({"_id": ObjectId(product_id)})
         return
         
-    except Exception as e:
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Failed to delete product")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to delete product: {str(e)}"
+            detail="Could not delete the product. Please try again."
         )

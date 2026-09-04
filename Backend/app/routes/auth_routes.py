@@ -24,7 +24,8 @@ limiter = Limiter(key_func=get_remote_address)
 router = APIRouter(prefix="/api/auth", tags=["authentication"])
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-async def register(user_in: UserCreate, background_tasks: BackgroundTasks):
+@limiter.limit("5/hour")
+async def register(user_in: UserCreate, background_tasks: BackgroundTasks, request: Request):
     db = get_database()
     if db is None:
         raise HTTPException(
@@ -33,19 +34,15 @@ async def register(user_in: UserCreate, background_tasks: BackgroundTasks):
         )
 
     # Check if the email already exists in MongoDB
-    existing_user_email = await db["users"].find_one({"email": user_in.email})
-    if existing_user_email:
+    # One message for both clashes — telling the caller *which* field matched
+    # turns registration into a lookup for existing customers.
+    existing_user = await db["users"].find_one({
+        "$or": [{"email": user_in.email}, {"mobile": user_in.mobile}]
+    })
+    if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="An account with this email address already exists."
-        )
-
-    # Check if the mobile number already exists in MongoDB
-    existing_user_mobile = await db["users"].find_one({"mobile": user_in.mobile})
-    if existing_user_mobile:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="An account with this mobile number already exists."
+            detail="An account with these details already exists. Try signing in instead."
         )
 
     # Hash the password
@@ -77,7 +74,8 @@ async def register(user_in: UserCreate, background_tasks: BackgroundTasks):
     return created_user
 
 @router.post("/login")
-async def login(form_data: OAuth2PasswordRequestForm = Depends()):
+@limiter.limit("10/minute")
+async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends()):
     db = get_database()
     if db is None:
         raise HTTPException(
@@ -228,13 +226,12 @@ async def forgot_password(req: ForgotPasswordRequest, background_tasks: Backgrou
             detail="Database connection is not initialized."
         )
 
-    # Check if email exists
+    # Deliberately does not reveal whether the address has an account: the
+    # response below is identical either way, so this endpoint cannot be used
+    # to enumerate customers.
     user = await db["users"].find_one({"email": req.email})
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No account found with this email address."
-        )
+        return {"message": "If that email address has an account, an OTP is on its way."}
 
     # Generate 6-digit OTP
     otp = f"{random.randint(100000, 999999)}"
@@ -257,7 +254,7 @@ async def forgot_password(req: ForgotPasswordRequest, background_tasks: Backgrou
             detail="Failed to send OTP email. Please try again later."
         )
 
-    return {"message": "OTP has been successfully sent to your email address."}
+    return {"message": "If that email address has an account, an OTP is on its way."}
 
 
 @router.post("/verify-otp")
@@ -300,11 +297,19 @@ async def verify_otp(req: VerifyOTPRequest, request: Request):
             detail="OTP code has expired. Please request a new one."
         )
 
+    # Mark it verified so the same code cannot be replayed against this
+    # endpoint indefinitely; /reset-password consumes it for good.
+    await db["otps"].update_one(
+        {"email": req.email},
+        {"$set": {"verified": True}}
+    )
+
     return {"message": "OTP verified successfully."}
 
 
 @router.post("/reset-password")
-async def reset_password(req: ResetPasswordRequest):
+@limiter.limit("5/10minutes")
+async def reset_password(req: ResetPasswordRequest, request: Request):
     db = get_database()
     if db is None:
         raise HTTPException(

@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { apiFetch } from '../utils/apiFetch';
+import { apiFetch, getApiUrl } from '../utils/apiFetch';
 import { Instagram } from 'lucide-react';
 
 interface FooterData {
@@ -24,14 +24,7 @@ export default function Footer() {
   useEffect(() => {
     const fetchFooterData = async () => {
       try {
-        let API_URL = 'http://localhost:8000';
-        if (process.env.NEXT_PUBLIC_API_URL) {
-          API_URL = process.env.NEXT_PUBLIC_API_URL;
-        } else if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-          API_URL = 'https://crochetcreation.onrender.com';
-        }
-        
-        const res = await apiFetch(`${API_URL}/api/settings/`);
+        const res = await apiFetch(`${getApiUrl()}/api/settings/`);
         if (res.ok) {
           const data = await res.json();
           setFooterData(prev => ({

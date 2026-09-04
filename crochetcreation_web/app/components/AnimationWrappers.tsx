@@ -1,7 +1,7 @@
 "use client";
 
-import React from "react";
-import { motion, HTMLMotionProps } from "framer-motion";
+import React, { useRef } from "react";
+import { motion, useInView, HTMLMotionProps } from "framer-motion";
 
 // Global spring transition settings for elite un-intrusive physics
 const defaultSpring = {
@@ -40,6 +40,9 @@ export const FadeUpWrapper: React.FC<FadeUpWrapperProps> = ({
   className,
   ...props
 }) => {
+  const ref = useRef<HTMLDivElement>(null);
+  const isInView = useInView(ref, { once, margin: margin as any });
+
   const variants = {
     hidden: { opacity: 0, y: yOffset },
     visible: {
@@ -53,26 +56,12 @@ export const FadeUpWrapper: React.FC<FadeUpWrapperProps> = ({
     },
   };
 
-  if (inView) {
-    return (
-      <motion.div
-        variants={variants}
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once, margin }}
-        className={className}
-        {...props}
-      >
-        {children}
-      </motion.div>
-    );
-  }
-
   return (
     <motion.div
+      ref={ref}
       variants={variants}
       initial="hidden"
-      animate="visible"
+      animate={!inView || isInView ? "visible" : "hidden"}
       className={className}
       {...props}
     >
@@ -105,6 +94,9 @@ export const ScaleInWrapper: React.FC<ScaleInWrapperProps> = ({
   className,
   ...props
 }) => {
+  const ref = useRef<HTMLDivElement>(null);
+  const isInView = useInView(ref, { once, margin: margin as any });
+
   const variants = {
     hidden: { opacity: 0, scale: scaleOffset },
     visible: {
@@ -118,26 +110,12 @@ export const ScaleInWrapper: React.FC<ScaleInWrapperProps> = ({
     },
   };
 
-  if (inView) {
-    return (
-      <motion.div
-        variants={variants}
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once, margin }}
-        className={className}
-        {...props}
-      >
-        {children}
-      </motion.div>
-    );
-  }
-
   return (
     <motion.div
+      ref={ref}
       variants={variants}
       initial="hidden"
-      animate="visible"
+      animate={!inView || isInView ? "visible" : "hidden"}
       className={className}
       {...props}
     >
@@ -167,6 +145,9 @@ export const StaggerContainer: React.FC<StaggerContainerProps> = ({
   className,
   ...props
 }) => {
+  const ref = useRef<HTMLDivElement>(null);
+  const isInView = useInView(ref, { once, margin: margin as any });
+
   const containerVariants = {
     hidden: {},
     visible: {
@@ -177,12 +158,22 @@ export const StaggerContainer: React.FC<StaggerContainerProps> = ({
     },
   };
 
+  /**
+   * NOTE: this deliberately uses `animate` driven by `useInView` rather than
+   * `whileInView`. Framer Motion only propagates `initial`/`animate` variant
+   * labels down through MotionContext — `whileInView` is not propagated. With
+   * `whileInView`, any child that mounts *after* the container has already
+   * scrolled into view (e.g. product cards arriving from a slow API call)
+   * inherits `initial="hidden"` and never receives the "visible" variant, so it
+   * stays at opacity 0 forever. Driving `animate` explicitly means late-mounting
+   * children inherit "visible" from context and animate in correctly.
+   */
   return (
     <motion.div
+      ref={ref}
       variants={containerVariants}
       initial="hidden"
-      whileInView="visible"
-      viewport={{ once, margin }}
+      animate={isInView ? "visible" : "hidden"}
       className={className}
       {...props}
     >

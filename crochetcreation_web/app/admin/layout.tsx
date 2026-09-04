@@ -26,6 +26,7 @@ import {
   Activity
 } from 'lucide-react';
 import Link from 'next/link';
+import { apiFetch, getApiUrl, clearSession } from '../utils/apiFetch';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -47,43 +48,68 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   // Load user, admin verify and theme state
   useEffect(() => {
-    // 1. Verify credentials
-    const token = localStorage.getItem('token');
-    const userStr = localStorage.getItem('user');
+    let cancelled = false;
 
-    if (!token || !userStr) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      router.push('/');
-      return;
-    }
-
-    try {
-      const parsedUser = JSON.parse(userStr);
-      if (!parsedUser.is_admin) {
-        router.push('/');
+    // Admin access is confirmed against the server, not against the
+    // `is_admin` flag in localStorage — that flag is trivially editable in
+    // the console, which let anyone load the whole ERP shell.
+    const verifyAdmin = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        clearSession();
+        router.replace('/');
         return;
       }
-      setAdminUser(parsedUser);
-      setIsAdmin(true);
-    } catch (err) {
-      console.error("Failed to parse admin profile:", err);
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      router.push('/');
-    } finally {
-      setLoading(false);
-    }
 
-    // 2. Load theme preference
+      // Show the cached identity immediately so the shell does not flash
+      // empty while the check runs; it is replaced by the verified profile.
+      try {
+        const cached = localStorage.getItem('user');
+        if (cached) setAdminUser(JSON.parse(cached));
+      } catch {
+        /* a corrupt cache is not fatal — the server decides below */
+      }
+
+      try {
+        const res = await apiFetch(`${getApiUrl()}/api/users/me`);
+        if (cancelled) return;
+
+        if (!res.ok) {
+          clearSession();
+          router.replace('/');
+          return;
+        }
+
+        const profile = await res.json();
+        if (cancelled) return;
+
+        if (!profile.is_admin) {
+          router.replace('/');
+          return;
+        }
+
+        setAdminUser(profile);
+        localStorage.setItem('user', JSON.stringify(profile));
+        setIsAdmin(true);
+      } catch {
+        if (!cancelled) router.replace('/');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    verifyAdmin();
+
+    // Load theme preference
     const savedTheme = localStorage.getItem('admin_theme') as 'light' | 'dark';
     if (savedTheme) {
       setTheme(savedTheme);
     } else {
-      // Check system pref
       const systemPref = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
       setTheme(systemPref);
     }
+
+    return () => { cancelled = true; };
   }, [router]);
 
   // Toggle Theme helper
@@ -94,9 +120,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    router.push('/');
+    clearSession();
+    router.replace('/');
   };
 
   // Close mobile sidebar on route change

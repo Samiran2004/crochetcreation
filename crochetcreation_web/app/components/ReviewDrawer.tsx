@@ -1,5 +1,5 @@
 'use client';
-import { apiFetch } from '../utils/apiFetch';
+import { apiFetch, getApiUrl } from '../utils/apiFetch';
 
 import React, { useState, useEffect } from 'react';
 import { X, Star, Loader2 } from 'lucide-react';
@@ -53,7 +53,7 @@ export default function ReviewDrawer({
     setSubmitting(true);
     setErrorMessage(null);
 
-    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    const API_URL = getApiUrl();
 
     try {
       const response = await apiFetch(`${API_URL}/api/reviews/`, {

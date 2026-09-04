@@ -1,5 +1,5 @@
 'use client';
-import { apiFetch } from '../../utils/apiFetch';
+import { apiFetch, getApiUrl } from '../../utils/apiFetch';
 
 import React, { useEffect, useState } from 'react';
 import { 
@@ -79,10 +79,7 @@ export default function AdminProducts() {
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 
-    (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-      ? 'http://localhost:8000'
-      : 'https://crochetcreation.onrender.com');
+  const API_URL = getApiUrl();
 
   const fetchProducts = async () => {
     setLoading(true);

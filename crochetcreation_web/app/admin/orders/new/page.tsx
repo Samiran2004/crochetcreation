@@ -1,5 +1,5 @@
 'use client';
-import { apiFetch } from '../../../utils/apiFetch';
+import { apiFetch, getApiUrl } from '../../../utils/apiFetch';
 
 import React, { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
@@ -29,19 +29,13 @@ interface LineItem {
 export default function CreateManualOrder() {
   const router = useRouter();
 
-  const API_URL = useMemo(() => {
-    if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
-    if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-      return 'http://localhost:8000';
-    }
-    return 'https://crochetcreation.onrender.com';
-  }, []);
+  const API_URL = useMemo(() => getApiUrl(), []);
 
   // Form states
   const [customerName, setCustomerName] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
   const [customerMobile, setCustomerMobile] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('COD');
+  const [paymentMethod, setPaymentMethod] = useState('UPI');
   const [notes, setNotes] = useState('');
   const [items, setItems] = useState<LineItem[]>([
     { id: Math.random().toString(36).substring(2, 9), title: '', price: 0, quantity: 1 }
@@ -200,7 +194,7 @@ export default function CreateManualOrder() {
                 setCustomerEmail('');
                 setCustomerMobile('');
                 setNotes('');
-                setPaymentMethod('COD');
+                setPaymentMethod('UPI');
                 setItems([{ id: Math.random().toString(36).substring(2, 9), title: '', price: 0, quantity: 1 }]);
                 setLinkedAccount(null);
                 setEmailSent(false);
@@ -440,7 +434,7 @@ export default function CreateManualOrder() {
                 Payment Method
               </label>
               <div className="flex flex-wrap gap-2">
-                {['COD', 'UPI', 'CARD', 'Prepaid'].map(method => (
+                {['UPI', 'Cash', 'Bank Transfer'].map(method => (
                   <button
                     key={method}
                     type="button"

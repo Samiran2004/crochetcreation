@@ -1,5 +1,13 @@
 'use client';
-import { apiFetch } from '../../utils/apiFetch';
+import { apiFetch, getApiUrl, clearSession } from '../../utils/apiFetch';
+import {
+  PAYMENT_METHOD,
+  useStoreSettings,
+  formatOrderRef,
+  buildWhatsAppOrderMessage,
+  buildWhatsAppUrl,
+} from '../../utils/checkout';
+import { PrepaidNotice, PaymentInstructions } from '../../components/PaymentNotice';
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
@@ -30,7 +38,7 @@ import {
   Info
 } from 'lucide-react';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_URL = getApiUrl();
 
 const THEME_STYLES: Record<string, { primary: string; primaryDark: string; accent: string; bgGrad: string; textDark: string }> = {
   rose: {
@@ -136,7 +144,6 @@ export default function ProductDetailPage() {
     email: string;
     mobile: string;
     address: string;
-    paymentMethod: string;
     latitude?: number;
     longitude?: number;
   }>({
@@ -144,10 +151,16 @@ export default function ProductDetailPage() {
     email: '',
     mobile: '',
     address: '',
-    paymentMethod: 'COD',
     latitude: undefined,
     longitude: undefined
   });
+
+  // Held for the post-order screen, which keeps showing what is owed.
+  const [placedOrder, setPlacedOrder] = useState<{ ref: string; amount: number }>({
+    ref: '',
+    amount: 0,
+  });
+  const storeSettings = useStoreSettings();
 
   // Auth User profile
   const [token, setToken] = useState<string | null>(null);
@@ -331,8 +344,8 @@ export default function ProductDetailPage() {
   const handleLogout = () => {
     setToken(null);
     setUserProfile(null);
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    setCartItemsCount(0);
+    clearSession();
     showToast('Logged out successfully.');
   };
 
@@ -386,23 +399,15 @@ export default function ProductDetailPage() {
     try {
       const productName = product?.title || product?.name || 'Handcrafted Product';
       const productPrice = product?.price || 0;
-      const totalPrice = productPrice * quantity;
       const categoryName = product?.category || 'General';
-      const paymentMethodText = checkoutFormData.paymentMethod === 'COD' ? 'Cash on Delivery (COD)' : 'Prepaid (Online Payment)';
-      
-      const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
-      const productDetailUrl = `${origin}/product/${product?._id || productId}`;
-      const productImageUrl = product?.image_url || '';
+      const origin = typeof window !== 'undefined' ? window.location.origin : '';
 
       const hasSize = product.category?.toUpperCase() === 'GARMENTS' && product.has_sizes;
-      const sizeText = hasSize ? `- *Size:* ${selectedSize}\n` : '';
 
-      // Save order to the database first
       const savedToken = localStorage.getItem('token') || token;
-      console.log('[Checkout] Placing order: sending data to backend...', {
-        url: `${API_URL}/api/orders/`,
-        tokenPresent: !!savedToken
-      });
+      if (!savedToken) {
+        throw new Error('Please sign in again to place this order.');
+      }
 
       const orderData = {
         customer_name: checkoutFormData.name,
@@ -417,76 +422,61 @@ export default function ProductDetailPage() {
             size: hasSize ? selectedSize : undefined
           }
         ],
-        total_amount: totalPrice,
-        payment_method: checkoutFormData.paymentMethod,
+        payment_method: PAYMENT_METHOD,
         shipping_address: checkoutFormData.address,
         latitude: checkoutFormData.latitude,
         longitude: checkoutFormData.longitude
       };
 
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json'
-      };
-      if (savedToken) {
-        headers['Authorization'] = `Bearer ${savedToken}`;
-      }
-
       const orderResponse = await apiFetch(`${API_URL}/api/orders/`, {
         method: 'POST',
-        headers,
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(orderData)
-      });
-
-      console.log('[Checkout] Backend response received:', {
-        status: orderResponse.status,
-        ok: orderResponse.ok
       });
 
       if (!orderResponse.ok) {
         const errData = await orderResponse.json().catch(() => ({}));
-        console.error('[Checkout API Error]', orderResponse.status, errData);
-        throw new Error(errData.detail || 'Failed to record the order on the server.');
+        throw new Error(
+          typeof errData.detail === 'string'
+            ? errData.detail
+            : "We couldn't place your order. Please try again."
+        );
       }
 
       const orderResult = await orderResponse.json();
-      const orderId = orderResult.id || orderResult._id || '';
-      const displayOrderId = orderId ? `ORD-${orderId.slice(-6).toUpperCase()}` : 'PENDING';
-      console.log('[Checkout] Order recorded successfully on server. ID:', orderId);
+      const displayOrderId = formatOrderRef(orderResult.id || orderResult._id || '');
+      // The server re-prices the order; that total is what the buyer owes.
+      const payableTotal = Number(orderResult.total_amount ?? productPrice * quantity);
 
-      const message = `🧶 *New Order Request - Crochet Creation* 🧶\n\n` +
-        `Hello! I would like to place a custom order with the following details:\n\n` +
-        `📦 *Product Details:*\n` +
-        `- *Name:* ${productName}\n` +
-        sizeText +
-        `- *Category:* ${categoryName}\n` +
-        `- *Price:* ₹${productPrice.toFixed(2)}\n` +
-        `- *Quantity:* ${quantity}\n` +
-        `- *Total Amount:* ₹${totalPrice.toFixed(2)}\n` +
-        `- *Product Link:* ${productDetailUrl}\n` +
-        (productImageUrl ? `- *Image Link:* ${productImageUrl}\n` : '') + `\n` +
-        `👤 *Customer Details:*\n` +
-        `- *Name:* ${checkoutFormData.name}\n` +
-        `- *Email:* ${checkoutFormData.email}\n` +
-        `- *Mobile:* ${checkoutFormData.mobile}\n` +
-        `- *Delivery Address:* ${checkoutFormData.address}\n\n` +
-        `💳 *Payment Method:* ${paymentMethodText}\n\n` +
-        `🆔 *Order Reference ID:* ${displayOrderId}\n\n` +
-        `Please confirm this order. Thank you!`;
+      const message = buildWhatsAppOrderMessage({
+        items: [{
+          id: product?._id || productId,
+          name: productName,
+          price: productPrice,
+          quantity,
+          category: categoryName,
+          size: hasSize ? selectedSize : undefined,
+        }],
+        subtotal: payableTotal,
+        customer: {
+          name: checkoutFormData.name,
+          email: checkoutFormData.email,
+          mobile: checkoutFormData.mobile,
+          address: checkoutFormData.address,
+        },
+        orderRef: displayOrderId,
+        upiId: storeSettings.upiId,
+        origin,
+      });
 
-      const formattedPhone = '917551041853';
-      const url = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`;
-      
-      // Open WhatsApp link
-      window.open(url, '_blank');
-      
+      const url = buildWhatsAppUrl(message);
+
+      setPlacedOrder({ ref: displayOrderId, amount: payableTotal });
       setWhatsappUrl(url);
       setCheckoutSuccess(true);
-      setCartItemsCount(0);
-      localStorage.setItem('crochet_cart_count', '0');
-      showToast('Redirecting to WhatsApp... 🧶');
     } catch (err: any) {
       console.error('Checkout error:', err);
-      alert(err.message || 'Failed to place order. Please try again.');
+      showToast(err.message || 'Failed to place order. Please try again.');
     } finally {
       setCheckoutLoading(false);
     }
@@ -585,7 +575,7 @@ export default function ProductDetailPage() {
                 <Link href="/dashboard" className="text-[10px] font-bold uppercase tracking-wider text-stone-300 hover:text-white transition-colors">
                   Hi, {userProfile.first_name}
                 </Link>
-                <button onClick={handleLogout} className="hover:text-[#D9B4B4] transition-colors p-1">
+                <button onClick={handleLogout} aria-label="Log out" className="hover:text-[#D9B4B4] transition-colors p-1">
                   <LogOut className="w-4 h-4" />
                 </button>
               </div>
@@ -601,6 +591,8 @@ export default function ProductDetailPage() {
                 <button
                   key={color}
                   onClick={() => handleThemeChange(color)}
+                  aria-label={`${color.charAt(0).toUpperCase() + color.slice(1)} colour theme`}
+                  aria-pressed={themeColor === color}
                   className={`w-3.5 h-3.5 rounded-full border ${themeColor === color ? 'border-[#FEF9F6] scale-125' : 'border-transparent'} hover:scale-110 transition-transform`}
                   style={{
                     backgroundColor: color === 'rose' ? '#D9B4B4' : color === 'mustard' ? '#E6C17A' : color === 'green' ? '#A8BC98' : '#9CBEC2'
@@ -626,6 +618,8 @@ export default function ProductDetailPage() {
             </div>
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
+              aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
+              aria-expanded={isMenuOpen}
               className="min-w-[44px] min-h-[44px] flex items-center justify-center text-[#FEF9F6] hover:text-[#D9B4B4] transition-colors"
             >
               {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -801,6 +795,8 @@ export default function ProductDetailPage() {
                         key={index}
                         onClick={() => setActiveImageUrl(url)}
                         onMouseEnter={() => setActiveImageUrl(url)}
+                        aria-label={`Show product image ${index + 1}`}
+                        aria-pressed={isActive}
                         className={`relative w-12 h-12 rounded-xl overflow-hidden border-2 transition-all duration-200 bg-white shrink-0 ${
                           isActive 
                             ? 'border-[#6B5656] shadow-sm scale-110' 
@@ -940,6 +936,7 @@ export default function ProductDetailPage() {
                   <button 
                     onClick={() => setQuantity(q => Math.max(1, q - 1))}
                     disabled={product.in_stock === false}
+                    aria-label="Decrease quantity"
                     className="p-1.5 hover:bg-stone-50 text-stone-500 active:scale-90 transition-transform disabled:opacity-40"
                   >
                     <Minus className="w-4 h-4" />
@@ -948,6 +945,7 @@ export default function ProductDetailPage() {
                   <button 
                     onClick={() => setQuantity(q => Math.min(10, q + 1))}
                     disabled={product.in_stock === false}
+                    aria-label="Increase quantity"
                     className="p-1.5 hover:bg-stone-50 text-stone-500 active:scale-90 transition-transform disabled:opacity-40"
                   >
                     <Plus className="w-4 h-4" />
@@ -1289,10 +1287,11 @@ export default function ProductDetailPage() {
             <div className="p-6 border-b border-[#EADBDB] flex items-center justify-between" style={{ backgroundColor: activeTheme.primaryDark }}>
               <div className="text-white">
                 <h3 className="text-base font-black tracking-widest uppercase">ORDER CHECKOUT</h3>
-                <p className="text-[10px] text-stone-300 mt-0.5">Please provide shipping & contact details</p>
+                <p className="text-[10px] text-stone-300 mt-0.5">Prepaid by UPI · pay after placing the order</p>
               </div>
               <button 
                 onClick={() => { setCheckoutOpen(false); setCheckoutSuccess(false); }}
+                aria-label="Close checkout"
                 className="p-1.5 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
               >
                 <X className="w-5 h-5" />
@@ -1302,31 +1301,14 @@ export default function ProductDetailPage() {
             {/* Modal Body */}
             <div className="p-6 overflow-y-auto flex-grow">
               {checkoutSuccess ? (
-                <div className="text-center py-8 space-y-4">
-                  <div className="w-16 h-16 bg-emerald-50 border border-emerald-250 rounded-full flex items-center justify-center text-3xl mx-auto shadow animate-pulse">
-                    💬
-                  </div>
-                  <h4 className="text-lg font-bold text-[#6B5656]">Redirecting to WhatsApp...</h4>
-                  <p className="text-xs text-stone-500 max-w-sm mx-auto leading-relaxed">
-                    We are opening a WhatsApp chat with the admin to place your custom order. If the chat did not open automatically, please click the button below to send your details.
-                  </p>
-                  <div className="pt-4 flex flex-col sm:flex-row justify-center gap-3">
-                    <a
-                      href={whatsappUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="bg-emerald-600 hover:bg-emerald-750 text-white text-xs font-bold py-2.5 px-6 rounded-xl uppercase tracking-wider transition-colors shadow flex items-center justify-center gap-2"
-                    >
-                      Send Message via WhatsApp
-                    </a>
-                    <button
-                      onClick={() => { setCheckoutOpen(false); setCheckoutSuccess(false); router.push('/'); }}
-                      className="bg-[#6B5656] hover:bg-[#D9B4B4] hover:text-[#6B5656] text-white text-xs font-bold py-2.5 px-6 rounded-xl uppercase tracking-wider transition-colors shadow"
-                    >
-                      Return To Home
-                    </button>
-                  </div>
-                </div>
+                <PaymentInstructions
+                  amount={placedOrder.amount}
+                  upiId={storeSettings.upiId}
+                  orderRef={placedOrder.ref}
+                  whatsappUrl={whatsappUrl}
+                  onClose={() => { setCheckoutOpen(false); setCheckoutSuccess(false); router.push('/dashboard'); }}
+                  closeLabel="View my orders"
+                />
               ) : (
                 <form onSubmit={handleCheckoutSubmit} className="space-y-4">
                   
@@ -1345,11 +1327,13 @@ export default function ProductDetailPage() {
 
                   {/* Customer details fields */}
                   <div>
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-[#6B5656] block mb-1">Your Full Name</label>
+                    <label htmlFor="product-checkout-name" className="text-[10px] font-bold uppercase tracking-widest text-[#6B5656] block mb-1">Your Full Name</label>
                     <input
                       type="text"
                       required
-                      placeholder="e.g. John Doe"
+                      id="product-checkout-name"
+                        autoComplete="name"
+                        placeholder="e.g. John Doe"
                       value={checkoutFormData.name}
                       onChange={(e) => setCheckoutFormData({ ...checkoutFormData, name: e.target.value })}
                       className="w-full bg-[#FEF9F6] border border-[#EADBDB] rounded-xl px-4 py-2.5 text-xs focus:ring-1 focus:ring-[#6B5656] focus:outline-none"
@@ -1358,10 +1342,12 @@ export default function ProductDetailPage() {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-[#6B5656] block mb-1">Email Address</label>
+                      <label htmlFor="product-checkout-email" className="text-[10px] font-bold uppercase tracking-widest text-[#6B5656] block mb-1">Email Address</label>
                       <input
                         type="email"
                         required
+                        id="product-checkout-email"
+                        autoComplete="email"
                         placeholder="john@example.com"
                         value={checkoutFormData.email}
                         onChange={(e) => setCheckoutFormData({ ...checkoutFormData, email: e.target.value })}
@@ -1369,10 +1355,12 @@ export default function ProductDetailPage() {
                       />
                     </div>
                     <div>
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-[#6B5656] block mb-1">Mobile Number</label>
+                      <label htmlFor="product-checkout-mobile" className="text-[10px] font-bold uppercase tracking-widest text-[#6B5656] block mb-1">Mobile Number</label>
                       <input
                         type="tel"
                         required
+                        id="product-checkout-mobile"
+                        autoComplete="tel"
                         placeholder="10-digit number"
                         value={checkoutFormData.mobile}
                         onChange={(e) => setCheckoutFormData({ ...checkoutFormData, mobile: e.target.value })}
@@ -1437,30 +1425,10 @@ export default function ProductDetailPage() {
                     />
                   </div>
 
-                  {/* Payment selection */}
-                  <div>
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-[#6B5656] block mb-2">Payment Method</label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {[
-                        { id: 'COD', label: 'COD' },
-                        { id: 'UPI', label: 'UPI App' },
-                        { id: 'CARD', label: 'Debit Card' }
-                      ].map((pay) => (
-                        <button
-                          key={pay.id}
-                          type="button"
-                          onClick={() => setCheckoutFormData({ ...checkoutFormData, paymentMethod: pay.id })}
-                          className={`py-2 px-3 rounded-lg border text-center transition-all text-[10px] font-bold uppercase tracking-wider ${
-                            checkoutFormData.paymentMethod === pay.id
-                              ? 'border-[#6B5656] bg-stone-50 ring-1 ring-[#6B5656] text-[#6B5656]'
-                              : 'border-[#EADBDB] hover:bg-stone-50 text-stone-400'
-                          }`}
-                        >
-                          {pay.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                  <PrepaidNotice
+                    amount={(product?.price || 0) * quantity}
+                    upiId={storeSettings.upiId}
+                  />
 
                   <button
                     type="submit"
