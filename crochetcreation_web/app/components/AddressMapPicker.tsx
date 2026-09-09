@@ -38,11 +38,11 @@ export default function AddressMapPicker({ onAddressSelect, initialAddress }: Ad
   }, [initialAddress]);
 
   return (
-    <div className="space-y-4 font-sans text-stone-800">
+    <div className="space-y-4 font-sans text-ink">
       {/* Editable fields */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
         <div className="space-y-1">
-          <label className="text-[9px] font-bold uppercase tracking-widest text-stone-400">Street / Road Address</label>
+          <label className="text-[9px] font-bold uppercase tracking-widest text-muted">Street / Road Address</label>
           <input
             type="text"
             required
@@ -52,12 +52,12 @@ export default function AddressMapPicker({ onAddressSelect, initialAddress }: Ad
               setStreetAddress(e.target.value);
               handleNotifyParent({ street_address: e.target.value, city, state, postal_code: postalCode });
             }}
-            className="w-full bg-[#FEF9F6] border border-[#EADBDB] rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:border-[#6B5656] focus:bg-white transition-all shadow-2xs text-stone-850"
+            className="w-full bg-parchment border border-line rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:border-teal focus:bg-white transition-all shadow-2xs text-ink"
           />
         </div>
 
         <div className="space-y-1">
-          <label className="text-[9px] font-bold uppercase tracking-widest text-stone-400">City</label>
+          <label className="text-[9px] font-bold uppercase tracking-widest text-muted">City</label>
           <input
             type="text"
             required
@@ -67,12 +67,12 @@ export default function AddressMapPicker({ onAddressSelect, initialAddress }: Ad
               setCity(e.target.value);
               handleNotifyParent({ street_address: streetAddress, city: e.target.value, state, postal_code: postalCode });
             }}
-            className="w-full bg-[#FEF9F6] border border-[#EADBDB] rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:border-[#6B5656] focus:bg-white transition-all shadow-2xs text-stone-850"
+            className="w-full bg-parchment border border-line rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:border-teal focus:bg-white transition-all shadow-2xs text-ink"
           />
         </div>
 
         <div className="space-y-1">
-          <label className="text-[9px] font-bold uppercase tracking-widest text-stone-400">State</label>
+          <label className="text-[9px] font-bold uppercase tracking-widest text-muted">State</label>
           <input
             type="text"
             required
@@ -82,12 +82,12 @@ export default function AddressMapPicker({ onAddressSelect, initialAddress }: Ad
               setState(e.target.value);
               handleNotifyParent({ street_address: streetAddress, city, state: e.target.value, postal_code: postalCode });
             }}
-            className="w-full bg-[#FEF9F6] border border-[#EADBDB] rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:border-[#6B5656] focus:bg-white transition-all shadow-2xs text-stone-850"
+            className="w-full bg-parchment border border-line rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:border-teal focus:bg-white transition-all shadow-2xs text-ink"
           />
         </div>
 
         <div className="space-y-1">
-          <label className="text-[9px] font-bold uppercase tracking-widest text-stone-400">Pincode / ZIP Code</label>
+          <label className="text-[9px] font-bold uppercase tracking-widest text-muted">Pincode / ZIP Code</label>
           <input
             type="text"
             required
@@ -97,7 +97,7 @@ export default function AddressMapPicker({ onAddressSelect, initialAddress }: Ad
               setPostalCode(e.target.value);
               handleNotifyParent({ street_address: streetAddress, city, state, postal_code: e.target.value });
             }}
-            className="w-full bg-[#FEF9F6] border border-[#EADBDB] rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:border-[#6B5656] focus:bg-white transition-all shadow-2xs text-stone-850"
+            className="w-full bg-parchment border border-line rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:border-teal focus:bg-white transition-all shadow-2xs text-ink"
           />
         </div>
       </div>

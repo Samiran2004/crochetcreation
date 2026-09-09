@@ -142,9 +142,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gray-50 dark:bg-slate-950">
+      <div className="flex h-screen items-center justify-center bg-paper dark:bg-teal-deep">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-9 h-9 border-[3px] border-slate-900 dark:border-slate-100 border-t-transparent rounded-full animate-spin"></div>
+          <div className="w-9 h-9 border-[3px] border-teal dark:border-slate-100 border-t-transparent rounded-full animate-spin"></div>
           <span className="text-xs font-semibold tracking-wider text-slate-500 dark:text-slate-400 uppercase">Loading ERP Workspace...</span>
         </div>
       </div>
@@ -207,16 +207,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   }}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold tracking-wide transition-all duration-200 relative group ${
                     isActive
-                      ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-sm font-bold'
-                      : 'text-gray-655 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-gray-100/75 dark:hover:bg-slate-900/60'
+                      ? 'bg-teal text-parchment dark:bg-parchment dark:text-teal shadow-sm font-bold'
+                      : 'text-gray-655 dark:text-slate-400 hover:text-teal dark:hover:text-parchment hover:bg-gray-100/75 dark:hover:bg-slate-900/60'
                   }`}
                 >
-                  <Icon className={`w-4.5 h-4.5 shrink-0 ${isActive ? 'text-white dark:text-slate-900' : 'text-gray-400 dark:text-slate-500 group-hover:text-slate-700 dark:group-hover:text-slate-300'}`} />
+                  <Icon className={`w-4.5 h-4.5 shrink-0 ${isActive ? 'text-parchment dark:text-teal' : 'text-gray-400 dark:text-slate-500 group-hover:text-slate-700 dark:group-hover:text-slate-300'}`} />
                   {(sidebarOpen || mobileSidebarOpen) && <span>{item.name}</span>}
 
                   {/* Tooltip on collapsed desktop view */}
                   {!sidebarOpen && !mobileSidebarOpen && (
-                    <div className="absolute left-full ml-4 px-2.5 py-1.5 bg-slate-900 text-white text-[10px] rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 whitespace-nowrap shadow-md uppercase tracking-widest font-bold">
+                    <div className="absolute left-full ml-4 px-2.5 py-1.5 bg-teal text-parchment text-[10px] rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 whitespace-nowrap shadow-md uppercase tracking-widest font-bold">
                       {item.name}
                     </div>
                   )}
@@ -231,7 +231,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <div className={`h-screen h-[100dvh] flex overflow-hidden ${theme === 'dark' ? 'dark' : ''}`}>
-      <div className="w-full h-full bg-gray-50 dark:bg-slate-950 flex text-slate-800 dark:text-slate-100 font-sans selection:bg-slate-900/10 dark:selection:bg-white/10 transition-colors duration-250 overflow-hidden">
+      <div className="w-full h-full bg-paper dark:bg-teal-deep flex text-slate-800 dark:text-slate-100 font-sans selection:bg-terracotta/15 dark:selection:bg-white/10 transition-colors duration-250 overflow-hidden">
         
         {/* ========================================== */}
         {/* 1. DESKTOP SIDEBAR */}
@@ -244,12 +244,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           {/* Brand Logo header */}
           <div className="h-16 flex items-center justify-between px-5 border-b border-gray-150 dark:border-slate-800">
             <div className="flex items-center gap-2.5 overflow-hidden">
-              <div className="w-8 h-8 rounded-lg bg-slate-900 dark:bg-slate-100 flex items-center justify-center shrink-0 shadow-sm">
-                <ShoppingBag className="w-4 h-4 text-white dark:text-slate-950" />
+              <div className="w-8 h-8 rounded-lg bg-teal dark:bg-parchment flex items-center justify-center shrink-0 shadow-sm">
+                <ShoppingBag className="w-4 h-4 text-parchment dark:text-teal" />
               </div>
               {sidebarOpen && (
                 <div className="flex flex-col">
-                  <span className="font-extrabold text-sm tracking-tight text-slate-900 dark:text-white whitespace-nowrap">
+                  <span className="heading-sm text-sm tracking-tight !text-ink dark:!text-parchment whitespace-nowrap">
                     Crochet ERP
                   </span>
                   <span className="text-[9px] text-gray-400 dark:text-slate-500 font-medium -mt-0.5 tracking-wider uppercase">
@@ -260,7 +260,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="text-gray-400 hover:text-slate-900 dark:hover:text-slate-100 p-1.5 rounded-lg hover:bg-gray-105 dark:hover:bg-slate-800 transition-colors"
+              className="text-gray-400 hover:text-teal dark:hover:text-parchment p-1.5 rounded-lg hover:bg-gray-105 dark:hover:bg-slate-800 transition-colors"
             >
               {sidebarOpen ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
             </button>
@@ -276,7 +276,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   {adminUser?.first_name?.charAt(0) || 'A'}
                 </div>
                 <div className="min-w-0 flex-1 text-left">
-                  <p className="text-[11px] font-bold text-slate-900 dark:text-white truncate">
+                  <p className="text-[11px] font-bold text-ink dark:text-parchment truncate">
                     {adminUser?.first_name} {adminUser?.last_name}
                   </p>
                   <p className="text-[9px] text-gray-400 dark:text-slate-500 truncate mt-0.5">
@@ -294,12 +294,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
             <button
               onClick={handleLogout}
-              className="w-full mt-2 flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold tracking-wide text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 hover:text-red-700 transition-all duration-200 group relative"
+              className="w-full mt-2 flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold tracking-wide text-terracotta hover:bg-terracotta/10 dark:hover:bg-red-950/20 hover:text-red-700 transition-all duration-200 group relative"
             >
               <LogOut className="w-4.5 h-4.5 shrink-0" />
               {sidebarOpen && <span>Logout</span>}
               {!sidebarOpen && (
-                <div className="absolute left-full ml-4 px-2.5 py-1.5 bg-red-650 text-white text-[10px] rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 whitespace-nowrap shadow-md uppercase tracking-wider font-bold">
+                <div className="absolute left-full ml-4 px-2.5 py-1.5 bg-terracotta text-white text-[10px] rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 whitespace-nowrap shadow-md uppercase tracking-wider font-bold">
                   Logout
                 </div>
               )}
@@ -322,11 +322,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <div className="relative flex flex-col w-72 max-w-xs bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-slate-850 h-full animate-in slide-in-from-left duration-300">
               <div className="h-16 flex items-center justify-between px-5 border-b border-gray-150 dark:border-slate-800">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-slate-900 dark:bg-slate-100 flex items-center justify-center shrink-0">
-                    <ShoppingBag className="w-4 h-4 text-white dark:text-slate-950" />
+                  <div className="w-8 h-8 rounded-lg bg-teal dark:bg-parchment flex items-center justify-center shrink-0">
+                    <ShoppingBag className="w-4 h-4 text-parchment dark:text-teal" />
                   </div>
                   <div className="flex flex-col text-left">
-                    <span className="font-extrabold text-sm tracking-tight text-slate-900 dark:text-white">
+                    <span className="font-extrabold text-sm tracking-tight text-ink dark:text-parchment">
                       Crochet ERP
                     </span>
                     <span className="text-[9px] text-gray-400 dark:text-slate-500 font-medium -mt-0.5 tracking-wider uppercase">
@@ -336,7 +336,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 </div>
                 <button
                   onClick={() => setMobileSidebarOpen(false)}
-                  className="text-gray-400 hover:text-slate-900 dark:hover:text-slate-100 p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-850"
+                  className="text-gray-400 hover:text-teal dark:hover:text-parchment p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-850"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -351,7 +351,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     {adminUser?.first_name?.charAt(0) || 'A'}
                   </div>
                   <div className="min-w-0 flex-1 text-left">
-                    <p className="text-[11px] font-bold text-slate-900 dark:text-white truncate">
+                    <p className="text-[11px] font-bold text-ink dark:text-parchment truncate">
                       {adminUser?.first_name} {adminUser?.last_name}
                     </p>
                     <p className="text-[9px] text-gray-400 dark:text-slate-500 truncate mt-0.5">
@@ -362,7 +362,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
                 <button
                   onClick={handleLogout}
-                  className="w-full mt-3 flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold tracking-wide text-red-650 hover:bg-red-50 dark:hover:bg-red-950/20 hover:text-red-700 transition-all duration-200"
+                  className="w-full mt-3 flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold tracking-wide text-terracotta hover:bg-red-50 dark:hover:bg-red-950/20 hover:text-red-700 transition-all duration-200"
                 >
                   <LogOut className="w-4.5 h-4.5 shrink-0" />
                   <span>Logout</span>
@@ -397,7 +397,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   {breadcrumbs.map((crumb, idx) => (
                     <React.Fragment key={crumb.url}>
                       {idx > 0 && <ChevronRight className="w-3 h-3 text-gray-300 dark:text-slate-700 shrink-0" />}
-                      <span className={`font-semibold tracking-wide ${crumb.isLast ? 'text-slate-900 dark:text-white font-extrabold' : 'text-gray-500 dark:text-slate-400'}`}>
+                      <span className={`font-semibold tracking-wide ${crumb.isLast ? 'text-ink dark:text-parchment font-extrabold' : 'text-gray-500 dark:text-slate-400'}`}>
                         {crumb.label}
                       </span>
                     </React.Fragment>
@@ -450,17 +450,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     <div className="fixed inset-0 z-40" onClick={() => setNotificationsOpen(false)}></div>
                     <div className="absolute right-0 mt-2.5 w-80 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl shadow-xl py-3 z-50 animate-in fade-in-50 zoom-in-95 duration-150">
                       <div className="px-4 pb-2.5 border-b border-gray-100 dark:border-slate-800 flex items-center justify-between">
-                        <span className="text-[11px] font-black uppercase tracking-widest text-slate-900 dark:text-white">Notifications</span>
+                        <span className="text-[11px] font-black uppercase tracking-widest text-ink dark:text-parchment">Notifications</span>
                         <span className="text-[9px] bg-slate-100 dark:bg-slate-850 text-slate-700 dark:text-slate-300 px-2 py-0.5 rounded-full font-bold">2 New</span>
                       </div>
                       <div className="max-h-60 overflow-y-auto divide-y divide-gray-50 dark:divide-slate-850">
                         <div className="px-4 py-3 hover:bg-gray-50 dark:hover:bg-slate-850 transition-colors text-left">
-                          <p className="text-xs font-bold text-slate-900 dark:text-white">📦 Low stock alert</p>
+                          <p className="text-xs font-bold text-ink dark:text-parchment">📦 Low stock alert</p>
                           <p className="text-[10px] text-gray-500 dark:text-slate-400 mt-0.5">Amigurumi Bunny Plushie is running out of stock (only 2 left).</p>
                           <span className="text-[8px] text-gray-400 dark:text-slate-500 font-bold block mt-1">10 minutes ago</span>
                         </div>
                         <div className="px-4 py-3 hover:bg-gray-50 dark:hover:bg-slate-850 transition-colors text-left">
-                          <p className="text-xs font-bold text-slate-900 dark:text-white">💰 New order received</p>
+                          <p className="text-xs font-bold text-ink dark:text-parchment">💰 New order received</p>
                           <p className="text-[10px] text-gray-500 dark:text-slate-400 mt-0.5">Order #9403 placed successfully by samiran@creation.com.</p>
                           <span className="text-[8px] text-gray-400 dark:text-slate-500 font-bold block mt-1">1 hour ago</span>
                         </div>
@@ -481,7 +481,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   }}
                   className="flex items-center gap-2 hover:bg-gray-55/70 dark:hover:bg-slate-850 px-2 py-1 rounded-lg border border-transparent hover:border-gray-200 dark:hover:border-slate-800 transition-all animate-none"
                 >
-                  <div className="w-7 h-7 rounded-full bg-slate-900 dark:bg-slate-100 flex items-center justify-center text-white dark:text-slate-900 font-extrabold text-xs uppercase shadow-sm">
+                  <div className="w-7 h-7 rounded-full bg-teal dark:bg-parchment flex items-center justify-center text-parchment dark:text-teal font-extrabold text-xs uppercase shadow-sm">
                     {adminUser?.first_name?.charAt(0) || 'A'}
                   </div>
                   <span className="hidden sm:inline text-xs font-bold text-slate-805 dark:text-slate-205">
@@ -495,7 +495,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     <div className="fixed inset-0 z-40" onClick={() => setProfileDropdownOpen(false)}></div>
                     <div className="absolute right-0 mt-2.5 w-52 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-2xl shadow-xl py-2.5 z-50 animate-in fade-in-50 zoom-in-95 duration-150">
                       <div className="px-4 py-2 border-b border-gray-100 dark:border-slate-800">
-                        <p className="text-xs font-bold text-slate-900 dark:text-white">
+                        <p className="text-xs font-bold text-ink dark:text-parchment">
                           {adminUser?.first_name} {adminUser?.last_name}
                         </p>
                         <p className="text-[10px] text-gray-450 dark:text-slate-500 truncate mt-0.5">
@@ -514,7 +514,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                       </button>
                       <button
                         onClick={handleLogout}
-                        className="w-full text-left px-4 py-2 text-xs text-red-655 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors font-bold flex items-center gap-2 border-t border-gray-100 dark:border-slate-850"
+                        className="w-full text-left px-4 py-2 text-xs text-terracotta hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors font-bold flex items-center gap-2 border-t border-gray-100 dark:border-slate-850"
                       >
                         <LogOut className="w-3.5 h-3.5" />
                         Logout Panel
@@ -540,7 +540,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                       onClick={() => router.push(item.path)}
                       className={`flex flex-col items-center justify-center min-w-[64px] min-h-[44px] rounded-xl transition-all duration-100 active:scale-90 ${
                         isActive 
-                          ? 'text-slate-900 dark:text-white font-extrabold' 
+                          ? 'text-ink dark:text-parchment font-extrabold' 
                           : 'text-gray-450 dark:text-slate-500'
                       }`}
                     >

@@ -74,33 +74,33 @@ export const PaymentInstructions: React.FC<PaymentInstructionsProps> = ({
       </div>
 
       <div className="space-y-1.5">
-        <h3 className="text-lg font-bold text-[#6B5656]">Almost there — pay to confirm</h3>
-        <p className="text-xs text-stone-500">
-          Order <span className="font-bold text-stone-700">{orderRef}</span> is reserved and
+        <h3 className="text-lg font-bold text-teal">Almost there — pay to confirm</h3>
+        <p className="text-xs text-muted">
+          Order <span className="font-bold text-bodytext">{orderRef}</span> is reserved and
           waiting for your payment.
         </p>
       </div>
 
       {/* Amount + UPI id: the two things the buyer needs to act on. */}
-      <div className="w-full rounded-2xl border border-[#EADBDB] bg-[#FDFBF9] p-4 space-y-3">
+      <div className="w-full rounded-2xl border border-line bg-parchment-card p-4 space-y-3">
         <div className="flex items-baseline justify-between gap-3">
-          <span className="text-[10px] font-black uppercase tracking-widest text-stone-500">
+          <span className="text-[10px] font-black uppercase tracking-widest text-muted">
             Amount to pay
           </span>
-          <span className="text-xl font-extrabold text-stone-800 tabular-nums">
+          <span className="text-[22px] font-sans font-extrabold text-ink tabular-nums">
             ₹{amount.toFixed(2)}
           </span>
         </div>
-        <div className="border-t border-[#EADBDB] pt-3 space-y-1.5 text-left">
-          <span className="text-[10px] font-black uppercase tracking-widest text-stone-500">
+        <div className="border-t border-line pt-3 space-y-1.5 text-left">
+          <span className="text-[10px] font-black uppercase tracking-widest text-muted">
             Pay to this UPI ID
           </span>
           <div className="flex items-center gap-2">
-            <code className="flex-1 text-sm font-bold text-stone-800 break-all">{upiId}</code>
+            <code className="flex-1 text-sm font-bold text-ink break-all">{upiId}</code>
             <button
               type="button"
               onClick={copyUpiId}
-              className="shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-[#EADBDB] bg-white text-[10px] font-bold uppercase tracking-wider text-stone-600 hover:border-[#6B5656] hover:text-[#6B5656] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6B5656]"
+              className="shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-line bg-white text-[10px] font-bold uppercase tracking-wider text-bodytext hover:border-teal hover:text-teal transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal"
             >
               {copied ? (
                 <><Check className="w-3 h-3 text-emerald-600" aria-hidden="true" /> Copied</>
@@ -120,10 +120,10 @@ export const PaymentInstructions: React.FC<PaymentInstructionsProps> = ({
           'We verify it and confirm your order — you get an email with the invoice.',
         ].map((step, i) => (
           <li key={i} className="flex gap-3 items-start">
-            <span className="shrink-0 w-5 h-5 rounded-full bg-[#6B5656] text-white text-[10px] font-bold flex items-center justify-center mt-0.5">
+            <span className="shrink-0 w-5 h-5 rounded-full bg-teal text-white text-[10px] font-bold flex items-center justify-center mt-0.5">
               {i + 1}
             </span>
-            <span className="text-xs text-stone-600 leading-relaxed">{step}</span>
+            <span className="text-xs text-bodytext leading-relaxed">{step}</span>
           </li>
         ))}
       </ol>
@@ -142,14 +142,14 @@ export const PaymentInstructions: React.FC<PaymentInstructionsProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="w-full py-3 rounded-xl border border-[#EADBDB] text-[#6B5656] font-bold text-xs uppercase tracking-widest hover:bg-[#FDFBF9] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6B5656]"
+            className="w-full py-3 rounded-xl border border-line text-teal font-bold text-xs uppercase tracking-widest hover:bg-parchment-card transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal"
           >
             {closeLabel}
           </button>
         )}
       </div>
 
-      <p className="text-[10px] text-stone-400 leading-relaxed">
+      <p className="text-[10px] text-muted leading-relaxed">
         Your order stays in <strong>Awaiting payment</strong> until we verify the screenshot.
         You can track it any time from your dashboard.
       </p>

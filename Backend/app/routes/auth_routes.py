@@ -110,6 +110,8 @@ async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends
             "email": user_dict["email"],
             "first_name": user_dict["first_name"],
             "last_name": user_dict["last_name"],
+            "mobile": user_dict.get("mobile", ""),
+            "picture": user_dict.get("picture", ""),
             "is_admin": is_admin_user
         }
     }
@@ -199,6 +201,7 @@ async def google_auth(req: GoogleAuthRequest, background_tasks: BackgroundTasks)
                 "email": user_dict["email"],
                 "first_name": user_dict.get("first_name", ""),
                 "last_name": user_dict.get("last_name", ""),
+                "mobile": user_dict.get("mobile", ""),
                 "is_admin": user_dict.get("is_admin", False),
                 "picture": user_dict.get("picture", "")
             }

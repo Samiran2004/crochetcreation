@@ -1,40 +1,51 @@
 'use client';
-import { apiFetch, getApiUrl, clearSession } from './utils/apiFetch';
 
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Image from 'next/image';
-import { addToCart } from './components/CartDrawer';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
-  Heart,
-  Gift,
-  ShoppingBag,
-  Lightbulb,
-  Send,
-  Scissors,
-  Search,
-  Instagram,
-  Facebook,
-  Twitter,
-  ChevronRight,
   ArrowRight,
-  Menu,
-  X,
-  User,
-  Lock,
-  LogOut,
+  ChevronRight,
+  Gift,
+  Heart,
+  Instagram,
+  Mail,
+  Package,
+  PlayCircle,
+  Quote,
+  ShieldCheck,
+  ShoppingBag,
+  Sparkles,
   Star,
+  User,
   Wand2,
-  Leaf
+  X,
 } from 'lucide-react';
-import { FadeUpWrapper, ScaleInWrapper, StaggerContainer, StaggerItem } from './components/AnimationWrappers';
+
+import { apiFetch, getApiUrl, clearSession } from './utils/apiFetch';
+import { addToCart } from './components/CartDrawer';
 import Navbar from './components/Navbar';
-import type { NavbarTheme } from './components/Navbar';
+import Footer from './components/Footer';
+import OrganicEdge from './components/ui/OrganicEdge';
+import SectionHeading from './components/ui/SectionHeading';
+import { Reveal, Parallax, ParallaxImage, ScrollProgress, Magnetic } from './components/motion/Motion';
+import {
+  Bird,
+  CornerCluster,
+  CrochetHook,
+  Flower,
+  KnitHeart,
+  LeafPair,
+  Mushroom,
+  Spool,
+  Sprig,
+  YarnBall,
+} from './components/decor/Botanicals';
 import { auth, googleProvider } from '../lib/firebase';
 import { signInWithPopup } from 'firebase/auth';
 
-// Local image assets — copied directly into public/assets/
+/* Local image assets — copied directly into public/assets/ */
 const IMAGES = {
   heroYarn: '/assets/marilyn_hero_yarn.png',
   craftingTools: '/assets/marilyn_crafting_tools.png',
@@ -45,170 +56,212 @@ const IMAGES = {
   logo: '/assets/crochet_creation_logo.png',
 };
 
+/* What we make — the four ways to work with the studio. */
+const SERVICES = [
+  {
+    icon: Package,
+    title: 'Ready-Made Pieces',
+    body: 'Finished keychains, hair clips and charms, packed and posted.',
+  },
+  {
+    icon: Wand2,
+    title: 'Custom Orders',
+    body: 'Your colours, your size, your idea — crocheted to your brief.',
+  },
+  {
+    icon: Gift,
+    title: 'Gifts & Hampers',
+    body: 'Wrapped bundles for birthdays, bridesmaids and little ones.',
+  },
+  {
+    icon: PlayCircle,
+    title: 'Tutorials & Videos',
+    body: 'Watch how each piece comes together, stitch by stitch.',
+  },
+];
+
+/* How an order actually travels through the studio. */
+const PROCESS = [
+  { n: 1, icon: Mail, title: 'Tell Us', body: 'Share your idea, colours and the date you need it by.' },
+  { n: 2, icon: Sparkles, title: 'We Sketch', body: 'We map the pattern and pick the yarn together.' },
+  { n: 3, icon: Wand2, title: 'Hook & Stitch', body: 'Every round is worked by hand — no machines.' },
+  { n: 4, icon: Heart, title: 'Finish & Check', body: 'Stuffed, shaped and inspected before it leaves.' },
+  { n: 5, icon: Package, title: 'Wrapped & Sent', body: 'Gift-wrapped and posted with a handwritten note.' },
+];
+
+const TESTIMONIALS = [
+  {
+    quote: 'The jellyfish keychain is even cuter in person. The stitching is so neat and it survived a whole term in my school bag.',
+    name: 'Ananya R.',
+    role: 'Kolkata',
+  },
+  {
+    quote: 'Ordered matching flower clips for my sister and me. They matched the photos exactly and arrived beautifully wrapped.',
+    name: 'Priya S.',
+    role: 'Repeat customer',
+  },
+  {
+    quote: 'I asked for a custom colour and got updates the whole way through. It felt like someone really cared about the order.',
+    name: 'Meghna D.',
+    role: 'Custom order',
+  },
+];
 
 export default function CrochetCreationPage() {
   const API_URL = useMemo(() => getApiUrl(), []);
-
   const router = useRouter();
 
+  /* ── Catalogue ─────────────────────────────────────────────── */
   const [activeFilter, setActiveFilter] = useState<string>('');
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [customRequestModal, setCustomRequestModal] = useState(false);
-  const [policyModal, setPolicyModal] = useState<string | null>(null);
-  const [requestSubmitted, setRequestSubmitted] = useState(false);
-  const [formData, setFormData] = useState({ name: '', email: '', details: '' });
-  const [scrollY, setScrollY] = useState(0);
-  const [scrollProgress, setScrollProgress] = useState(0);
-  const [pathLength, setPathLength] = useState(0);
-  const [pointerPos, setPointerPos] = useState({ x: 20, y: 0 });
-  const pathRef = useRef<SVGPathElement>(null);
-
-  // New interactive feature states
-  const [themeColor, setThemeColor] = useState('rose');
-  const [cartItemsCount, setCartItemsCount] = useState(2);
-  const [cartBouncing, setCartBouncing] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [selectedTexture, setSelectedTexture] = useState<string | null>(null);
+  const [categories, setCategories] = useState<string[]>([]);
   const [productsList, setProductsList] = useState<any[]>([]);
   const [productsLoading, setProductsLoading] = useState(true);
   const [productsError, setProductsError] = useState<string | null>(null);
-  const [categories, setCategories] = useState<string[]>([]);
   const [customImages, setCustomImages] = useState<Record<string, string>>({});
 
-  // Load custom homepage images on mount
-  useEffect(() => {
-    const fetchHomepageImages = async () => {
-      try {
-        const res = await apiFetch(`${API_URL}/api/settings/homepage-images`);
-        if (res.ok) {
-          const data = await res.json();
-          const resolved: Record<string, string> = {};
-          for (const key in data) {
-            if (data[key] && data[key].url) {
-              resolved[key] = data[key].url;
-            }
-          }
-          setCustomImages(resolved);
-        }
-      } catch (err) {
-        console.error("Failed to load custom homepage images:", err);
-      }
-    };
-    fetchHomepageImages();
-  }, [API_URL]);
-
-  // Sync cart items count dynamically
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const syncCartCount = () => {
-        const savedCount = localStorage.getItem('crochet_cart_count');
-        if (savedCount) {
-          setCartItemsCount(parseInt(savedCount, 10));
-        } else {
-          setCartItemsCount(0);
-          localStorage.setItem('crochet_cart_count', '0');
-        }
-      };
-      syncCartCount();
-      window.addEventListener('cart-change', syncCartCount);
-      return () => {
-        window.removeEventListener('cart-change', syncCartCount);
-      };
-    }
-  }, []);
-
-  const getImageSrc = (key: keyof typeof IMAGES) => {
-    return customImages[key] || IMAGES[key];
-  };
-
-  // Auth states
+  /* ── Session ───────────────────────────────────────────────── */
   const [token, setToken] = useState<string | null>(null);
   const [userProfile, setUserProfile] = useState<any | null>(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [authLoading, setAuthLoading] = useState(false);
+  const [cartItemsCount, setCartItemsCount] = useState(0);
+
+  /* ── Profile completion ────────────────────────────────────── */
+  const [showMobilePrompt, setShowMobilePrompt] = useState(false);
+  const [mobilePromptValue, setMobilePromptValue] = useState('');
+  const [mobilePromptLoading, setMobilePromptLoading] = useState(false);
+
+  /* ── Custom request + policies ─────────────────────────────── */
+  const [customRequestModal, setCustomRequestModal] = useState(false);
+  const [requestSubmitted, setRequestSubmitted] = useState(false);
+  const [formData, setFormData] = useState({ name: '', email: '', details: '' });
+  const [policyModal, setPolicyModal] = useState<string | null>(null);
+
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 4000);
   };
-  const [authError, setAuthError] = useState<string | null>(null);
-  const [authSuccessMsg, setAuthSuccessMsg] = useState<string | null>(null);
-  const [authLoading, setAuthLoading] = useState(false);
 
-  // Profile completion states
-  const [showMobilePrompt, setShowMobilePrompt] = useState(false);
-  const [mobilePromptValue, setMobilePromptValue] = useState('');
-  const [mobilePromptLoading, setMobilePromptLoading] = useState(false);
+  const getImageSrc = (key: keyof typeof IMAGES) => customImages[key] || IMAGES[key];
+
+  /* ── Homepage imagery from admin settings ──────────────────── */
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await apiFetch(`${API_URL}/api/settings/homepage-images`);
+        if (!res.ok || cancelled) return;
+        const data = await res.json();
+        if (cancelled) return;
+        const resolved: Record<string, string> = {};
+        for (const key in data) if (data[key]?.url) resolved[key] = data[key].url;
+        setCustomImages(resolved);
+      } catch {
+        /* fall back to the bundled assets */
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [API_URL]);
+
+  /* ── Cart badge ────────────────────────────────────────────── */
+  useEffect(() => {
+    const sync = () => {
+      const saved = localStorage.getItem('crochet_cart_count');
+      setCartItemsCount(saved ? parseInt(saved, 10) || 0 : 0);
+    };
+    sync();
+    window.addEventListener('cart-change', sync);
+    return () => window.removeEventListener('cart-change', sync);
+  }, []);
+
+  /* ── Restore session ───────────────────────────────────────── */
+  useEffect(() => {
+    const savedToken = localStorage.getItem('token');
+    const savedUser = localStorage.getItem('user');
+    if (savedToken) setToken(savedToken);
+    if (savedUser) {
+      try {
+        const parsed = JSON.parse(savedUser);
+        setUserProfile(parsed);
+        if (savedToken && parsed.is_admin) {
+          router.push('/admin/dashboard');
+        } else if (savedToken) {
+          checkMobilePrompt(parsed);
+        }
+      } catch {
+        /* a corrupt cache is not fatal */
+      }
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('login') === 'true') {
+      setAuthError(null);
+      setAuthModalOpen(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router]);
+
+  /* Open the auth sheet when any page asks for it. The acknowledgement lets
+     the cart drawer know the request was handled here, so it does not also
+     navigate away. */
+  useEffect(() => {
+    const open = () => {
+      setAuthError(null);
+      setAuthModalOpen(true);
+      window.dispatchEvent(new Event('auth-modal-opened'));
+    };
+    window.addEventListener('open-auth-modal', open);
+    return () => window.removeEventListener('open-auth-modal', open);
+  }, []);
 
   const checkMobilePrompt = (userObj: any) => {
     if (!userObj?.is_admin && (!userObj?.mobile || userObj.mobile.trim() === '')) {
-      if (!sessionStorage.getItem('mobilePromptDismissed')) {
-        setShowMobilePrompt(true);
-      }
+      if (!sessionStorage.getItem('mobilePromptDismissed')) setShowMobilePrompt(true);
     }
   };
 
-  const handleMobilePromptSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!token) return;
-    setMobilePromptLoading(true);
-    try {
-      const res = await apiFetch(`${API_URL}/api/users/me`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ mobile: mobilePromptValue })
-      });
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.detail || 'Failed to update mobile number');
-      }
-      const data = await res.json();
-      setUserProfile(data);
-      localStorage.setItem('user', JSON.stringify({
-        email: data.email,
-        first_name: data.first_name,
-        last_name: data.last_name,
-        mobile: data.mobile,
-        is_admin: data.is_admin,
-        picture: data.picture
-      }));
-      setShowMobilePrompt(false);
-      showToast("Mobile number added successfully!");
-    } catch (err: any) {
-      showToast(err.message || 'Something went wrong.');
-    } finally {
-      setMobilePromptLoading(false);
-    }
-  };
-
-  // Sync token and user profile on mount
+  /* ── Categories drive the filter chips ─────────────────────── */
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedToken = localStorage.getItem('token');
-      const savedUser = localStorage.getItem('user');
-      if (savedToken) setToken(savedToken);
-      if (savedUser) {
-        try {
-          const parsedUser = JSON.parse(savedUser);
-          setUserProfile(parsedUser);
-          if (savedToken && parsedUser.is_admin) {
-            router.push('/admin/dashboard');
-          } else if (savedToken) {
-            checkMobilePrompt(parsedUser);
-          }
-        } catch (e) {
-          console.error("Failed to parse user profile:", e);
-        }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await apiFetch(`${API_URL}/api/products/categories`);
+        if (!res.ok || cancelled) return;
+        const data = await res.json();
+        if (cancelled || !Array.isArray(data) || data.length === 0) return;
+        setCategories(data);
+        setActiveFilter((cur) => (cur && data.includes(cur) ? cur : data[0]));
+      } catch {
+        /* the grid still renders its own error state */
       }
+    })();
+    return () => { cancelled = true; };
+  }, [API_URL]);
 
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('login') === 'true') {
-        setAuthError(null);
-        setAuthSuccessMsg(null);
-        setAuthModalOpen(true);
-      }
+  const fetchProducts = useCallback(async () => {
+    if (!activeFilter) return;
+    setProductsLoading(true);
+    setProductsError(null);
+    try {
+      const res = await apiFetch(
+        `${API_URL}/api/products?limit=8&category=${encodeURIComponent(activeFilter)}`
+      );
+      if (!res.ok) throw new Error(`Catalog request failed (${res.status})`);
+      const data = await res.json();
+      setProductsList(Array.isArray(data) ? data : data.items || []);
+    } catch (err) {
+      console.error('Failed to fetch products:', err);
+      setProductsError("We couldn't load the catalogue just now.");
+    } finally {
+      setProductsLoading(false);
     }
-  }, [router]);
+  }, [API_URL, activeFilter]);
 
+  useEffect(() => { fetchProducts(); }, [fetchProducts]);
+
+  /* ── Auth ──────────────────────────────────────────────────── */
   const handleLogout = () => {
     setToken(null);
     setUserProfile(null);
@@ -226,43 +279,38 @@ export default function CrochetCreationPage() {
       const res = await apiFetch(`${API_URL}/api/auth/google`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ firebase_id_token: idToken })
+        body: JSON.stringify({ firebase_id_token: idToken }),
       });
-
       if (!res.ok) {
-        const errData = await res.json();
+        const errData = await res.json().catch(() => ({}));
         throw new Error(errData.detail || 'Google sign in failed on server.');
       }
 
       const data = await res.json();
       setToken(data.access_token);
       localStorage.setItem('token', data.access_token);
-      if (data.refresh_token) {
-        localStorage.setItem('refresh_token', data.refresh_token);
-      }
+      if (data.refresh_token) localStorage.setItem('refresh_token', data.refresh_token);
 
       const userObj = {
         ...data.user,
         picture: data.user?.picture || result.user.photoURL,
         email: data.user?.email || result.user.email,
         first_name: data.user?.first_name || result.user.displayName?.split(' ')[0] || 'User',
-        is_admin: data.user?.is_admin || false
+        is_admin: data.user?.is_admin || false,
       };
       setUserProfile(userObj);
       localStorage.setItem('user', JSON.stringify(userObj));
 
       setAuthModalOpen(false);
-      showToast("Successfully logged in with Google!");
+      window.dispatchEvent(new Event('session-change'));
+      showToast('Signed in — welcome back!');
 
       if (userObj.is_admin) {
         router.push('/admin/dashboard');
       } else {
         checkMobilePrompt(userObj);
-        const params = new URLSearchParams(window.location.search);
-        const redirectUrl = params.get('redirect');
-        if (redirectUrl) {
-          router.push(redirectUrl);
-        }
+        const redirectUrl = new URLSearchParams(window.location.search).get('redirect');
+        if (redirectUrl) router.push(redirectUrl);
       }
     } catch (error: any) {
       console.error(error);
@@ -272,1494 +320,818 @@ export default function CrochetCreationPage() {
     }
   };
 
-
-  // The tabs come from the categories that actually have stock. Hardcoding
-  // six of them meant four could only ever show an empty state.
-  useEffect(() => {
-    let cancelled = false;
-    const loadCategories = async () => {
-      try {
-        const res = await apiFetch(`${API_URL}/api/products/categories`);
-        if (!res.ok || cancelled) return;
-        const data = await res.json();
-        if (cancelled || !Array.isArray(data) || data.length === 0) return;
-        setCategories(data);
-        setActiveFilter((current) => (current && data.includes(current) ? current : data[0]));
-      } catch (err) {
-        console.error('Failed to load categories:', err);
-      }
-    };
-    loadCategories();
-    return () => { cancelled = true; };
-  }, [API_URL]);
-
-  // Ask the server for the handful of products this section shows, rather
-  // than downloading the whole catalog and filtering it in the browser.
-  const fetchProducts = useCallback(async () => {
-    if (!activeFilter) return;
-    setProductsLoading(true);
-    setProductsError(null);
+  const handleMobilePromptSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!token) return;
+    setMobilePromptLoading(true);
     try {
-      const res = await apiFetch(
-        `${API_URL}/api/products?limit=6&category=${encodeURIComponent(activeFilter)}`
-      );
+      const res = await apiFetch(`${API_URL}/api/users/me`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mobile: mobilePromptValue }),
+      });
       if (!res.ok) {
-        throw new Error(`Catalog request failed (${res.status})`);
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || 'Failed to update mobile number');
       }
       const data = await res.json();
-      const items = Array.isArray(data) ? data : (data.items || []);
-      setProductsList(items);
+      setUserProfile(data);
+      localStorage.setItem('user', JSON.stringify({
+        email: data.email,
+        first_name: data.first_name,
+        last_name: data.last_name,
+        mobile: data.mobile,
+        is_admin: data.is_admin,
+        picture: data.picture,
+      }));
+      setShowMobilePrompt(false);
+      showToast('Mobile number saved.');
     } catch (err: any) {
-      console.error("Failed to fetch products:", err);
-      setProductsError("We couldn't load the catalog just now.");
+      showToast(err.message || 'Something went wrong.');
     } finally {
-      setProductsLoading(false);
+      setMobilePromptLoading(false);
     }
-  }, [API_URL, activeFilter]);
-
-  useEffect(() => {
-    fetchProducts();
-  }, [fetchProducts]);
-
-  const displayProducts = productsList;
-
-
-  // Theme configuration
-  const THEME_COLORS = useMemo(() => ({
-    rose: {
-      primary: '#D9B4B4',
-      primaryDark: '#6B5656',
-      accent: '#B67E7E',
-      bg: '#FEF9F6',
-      border: '#EADBDB',
-      border30: 'rgba(234, 219, 219, 0.3)',
-      border50: 'rgba(234, 219, 219, 0.5)',
-      border60: 'rgba(234, 219, 219, 0.6)',
-      primary20: 'rgba(217, 180, 180, 0.2)',
-      primary30: 'rgba(217, 180, 180, 0.3)',
-    },
-    mustard: {
-      primary: '#E6C17A',
-      primaryDark: '#5C4A2B',
-      accent: '#C79E50',
-      bg: '#FAF8F2',
-      border: '#EBE2CD',
-      border30: 'rgba(235, 226, 205, 0.3)',
-      border50: 'rgba(235, 226, 205, 0.5)',
-      border60: 'rgba(235, 226, 205, 0.6)',
-      primary20: 'rgba(230, 193, 122, 0.2)',
-      primary30: 'rgba(230, 193, 122, 0.3)',
-    },
-    green: {
-      primary: '#A8BC98',
-      primaryDark: '#3E4C34',
-      accent: '#839E6F',
-      bg: '#F6F8F3',
-      border: '#DFE5D9',
-      border30: 'rgba(223, 229, 217, 0.3)',
-      border50: 'rgba(223, 229, 217, 0.5)',
-      border60: 'rgba(223, 229, 217, 0.6)',
-      primary20: 'rgba(168, 188, 152, 0.2)',
-      primary30: 'rgba(168, 188, 152, 0.3)',
-    },
-    teal: {
-      primary: '#9CBEC2',
-      primaryDark: '#324C4F',
-      accent: '#75A2A7',
-      bg: '#F3F7F8',
-      border: '#D8E5E7',
-      border30: 'rgba(216, 229, 231, 0.3)',
-      border50: 'rgba(216, 229, 231, 0.5)',
-      border60: 'rgba(216, 229, 231, 0.6)',
-      primary20: 'rgba(156, 190, 194, 0.2)',
-      primary30: 'rgba(156, 190, 194, 0.3)',
-    }
-  }), []);
-
-  const activeTheme = useMemo(() => {
-    return THEME_COLORS[themeColor as keyof typeof THEME_COLORS] || THEME_COLORS.rose;
-  }, [themeColor, THEME_COLORS]);
-
-  // Loading timeout
-  useEffect(() => {
-    const loadTimer = setTimeout(() => {
-      setLoading(false);
-    }, 1800);
-
-    return () => {
-      clearTimeout(loadTimer);
-    };
-  }, []);
-
-  // Add to cart animation trigger
-  const handleAddToCart = (product: any, e: React.MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!token && !userProfile) {
-      showToast("Please log in to add items to your cart.");
-      setAuthError(null);
-      setAuthSuccessMsg(null);
-      setAuthModalOpen(true);
-      return;
-    }
-
-    addToCart({
-      id: product._id || product.id,
-      name: product.title || product.name,
-      price: typeof product.price === 'string' ? parseFloat(product.price) : (product.price || 0),
-      image_url: product.image_url || (product.images && product.images[0]) || '',
-      category: product.category || 'General'
-    }, 1);
-
-    setCartBouncing(true);
-    setTimeout(() => setCartBouncing(false), 800);
-
-    const rect = e.currentTarget.getBoundingClientRect();
-    const startX = rect.left + rect.width / 2;
-    const startY = rect.top + rect.height / 2;
-
-    const cartIcon = document.getElementById('header-cart-icon') || document.getElementById('mobile-cart-icon');
-    if (!cartIcon) return;
-    const cartRect = cartIcon.getBoundingClientRect();
-    const endX = cartRect.left + cartRect.width / 2;
-    const endY = cartRect.top + cartRect.height / 2;
-
-    const particle = document.createElement('div');
-    particle.className = 'fixed pointer-events-none z-[9999] flex items-center justify-center';
-    particle.style.left = `${startX}px`;
-    particle.style.top = `${startY}px`;
-    particle.innerHTML = `
-      <div class="w-6 h-6 rounded-full flex items-center justify-center text-xs animate-spin" style="background-color: ${activeTheme.primary}; border: 1px solid rgba(0,0,0,0.1); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
-        🧶
-      </div>
-    `;
-
-    document.body.appendChild(particle);
-
-    const keyframes = [
-      { left: `${startX}px`, top: `${startY}px`, transform: 'scale(1) rotate(0deg)' },
-      { left: `${(startX + endX) / 2}px`, top: `${Math.min(startY, endY) - 100}px`, transform: 'scale(1.3) rotate(180deg)' },
-      { left: `${endX}px`, top: `${endY}px`, transform: 'scale(0.2) rotate(360deg)' }
-    ];
-
-    const animation = particle.animate(keyframes, {
-      duration: 750,
-      easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)'
-    });
-
-    animation.onfinish = () => {
-      particle.remove();
-    };
   };
 
-  const handleBuyNow = (product: any, e: React.MouseEvent<HTMLButtonElement>) => {
+  /* ── Basket ────────────────────────────────────────────────── */
+  const requireSignIn = () => {
+    showToast('Please sign in to continue.');
+    setAuthError(null);
+    setAuthModalOpen(true);
+  };
+
+  const cartPayload = (product: any) => ({
+    id: product._id || product.id,
+    name: product.title || product.name,
+    price: typeof product.price === 'string' ? parseFloat(product.price) : product.price || 0,
+    image_url: product.image_url || (product.images && product.images[0]) || '',
+    category: product.category || 'General',
+  });
+
+  const handleAddToCart = (product: any, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!token && !userProfile) {
-      showToast("Please log in to purchase.");
-      setAuthError(null);
-      setAuthSuccessMsg(null);
-      setAuthModalOpen(true);
-      return;
-    }
+    if (!token && !userProfile) return requireSignIn();
+    // addToCart opens the basket drawer itself, which is the confirmation —
+    // a toast on top of it would be duplicate feedback.
+    addToCart(cartPayload(product), 1);
+  };
 
-    addToCart({
-      id: product._id || product.id,
-      name: product.title || product.name,
-      price: typeof product.price === 'string' ? parseFloat(product.price) : (product.price || 0),
-      image_url: product.image_url || (product.images && product.images[0]) || '',
-      category: product.category || 'General'
-    }, 1);
-    window.dispatchEvent(new Event('cart-change'));
+  const handleBuyNow = (product: any, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!token && !userProfile) return requireSignIn();
+    addToCart(cartPayload(product), 1);
     window.dispatchEvent(new Event('open-cart'));
   };
 
-  // Generates a smooth, flowing crochet chain stitch path (interlocking loops)
-  const crochetPathD = useMemo(() => {
-    let d = "M 20 0";
-    const step = 40;
-    const totalPoints = 140; // 140 * 40 = 5600 height
-    for (let i = 0; i < totalPoints; i++) {
-      const y = i * step;
-      if (i % 2 === 0) {
-        // Loop sweeping right and crossing back to center
-        d += ` C 55 ${(y + 12).toFixed(1)}, -15 ${(y + 28).toFixed(1)}, 20 ${y + step}`;
-      } else {
-        // Loop sweeping left and crossing back to center
-        d += ` C -15 ${(y + 12).toFixed(1)}, 55 ${(y + 28).toFixed(1)}, 20 ${y + step}`;
-      }
-    }
-    return d;
-  }, []);
-
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const handleScroll = () => {
-      setScrollY(window.scrollY);
-      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
-      const progress = docHeight > 0 ? window.scrollY / docHeight : 0;
-      setScrollProgress(progress);
-
-      if (pathRef.current) {
-        const totalLen = pathRef.current.getTotalLength();
-        const currentLen = progress * totalLen;
-        try {
-          const point = pathRef.current.getPointAtLength(currentLen);
-          setPointerPos({ x: point.x, y: point.y });
-        } catch (err) {
-          // Fallback if layout is not fully painted yet
-        }
-      }
-    };
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    const timeout = setTimeout(handleScroll, 100);
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-      clearTimeout(timeout);
-    };
-  }, [pathLength]);
-
-  useEffect(() => {
-    if (pathRef.current) {
-      setPathLength(pathRef.current.getTotalLength());
-    }
-    const handleResize = () => {
-      if (pathRef.current) {
-        setPathLength(pathRef.current.getTotalLength());
-      }
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  /* ── Custom request ────────────────────────────────────────── */
+  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const msg =
+      `🧶 *Custom Order Enquiry — Crochet Creation*\n\n` +
+      `*Name:* ${formData.name}\n*Email:* ${formData.email}\n\n*What I'd love:*\n${formData.details}`;
+    window.open(`https://wa.me/917551041853?text=${encodeURIComponent(msg)}`, '_blank', 'noopener');
     setRequestSubmitted(true);
     setTimeout(() => {
       setCustomRequestModal(false);
       setRequestSubmitted(false);
       setFormData({ name: '', email: '', details: '' });
-    }, 2000);
+    }, 2200);
+  };
+
+  const priceOf = (p: any) => {
+    const selling = p.sellingPrice ?? p.price ?? null;
+    const original = p.originalPrice ?? null;
+    const hasDiscount = original !== null && selling !== null && original > selling;
+    return {
+      selling,
+      original,
+      hasDiscount,
+      percent: hasDiscount ? Math.round(((original - selling) / original) * 100) : 0,
+    };
   };
 
   return (
-    <div className="min-h-screen flex flex-col relative bg-[#FEF9F6] overflow-x-hidden">
+    <div className="min-h-screen flex flex-col bg-paper overflow-x-hidden">
+      <Navbar />
+      <ScrollProgress />
 
-      {/* Dynamic Style Overrides for instant skinning */}
-      <style>{`
-        :root {
-          --primary-color: ${activeTheme.primary};
-          --primary-dark: ${activeTheme.primaryDark};
-          --accent-color: ${activeTheme.accent};
-          --bg-color: ${activeTheme.bg};
-          --border-color: ${activeTheme.border};
-        }
-        .bg-\\[\\#D9B4B4\\] { background-color: var(--primary-color) !important; }
-        .text-\\[\\#6B5656\\] { color: var(--primary-dark) !important; }
-        .bg-\\[\\#6B5656\\] { background-color: var(--primary-dark) !important; }
-        .text-\\[\\#D9B4B4\\] { color: var(--primary-color) !important; }
-        .border-\\[\\#EADBDB\\] { border-color: var(--border-color) !important; }
-        .border-\\[\\#EADBDB\\]\\/30 { border-color: ${activeTheme.border30} !important; }
-        .border-\\[\\#EADBDB\\]\\/50 { border-color: ${activeTheme.border50} !important; }
-        .border-\\[\\#EADBDB\\]\\/60 { border-color: ${activeTheme.border60} !important; }
-        .border-\\[\\#D9B4B4\\]\\/20 { border-color: ${activeTheme.primary20} !important; }
-        .border-\\[\\#D9B4B4\\]\\/30 { border-color: ${activeTheme.primary30} !important; }
-        @keyframes wiggleEar {
-          0%, 100% { transform: rotate(0deg); }
-          50% { transform: rotate(-8deg); }
-        }
-        @keyframes wavePaw {
-          0%, 100% { transform: rotate(0deg); }
-          50% { transform: rotate(-25deg); }
-        }
-      `}</style>
+      {/* ═══════════════ 1 · HERO ═══════════════ */}
+      <section id="home" className="relative bg-paper pt-24 md:pt-32 pb-4 overflow-hidden">
+        <Parallax speed={-34} className="absolute inset-x-0 top-0 pointer-events-none">
+          <CornerCluster side="left" className="w-40 sm:w-56 lg:w-72 opacity-90" />
+          <CornerCluster side="right" className="w-40 sm:w-56 lg:w-72 opacity-90" />
+        </Parallax>
 
-      {/* 0. Fullscreen Knitted Preloader */}
-      {loading && (
-        <div
-          className="fixed inset-0 z-[10000] bg-crochet-charcoal flex flex-col items-center justify-center transition-opacity duration-700 ease-in-out"
-          style={{ opacity: loading ? 1 : 0 }}
-        >
-          <div className="relative flex flex-col items-center">
-            <div className="w-24 h-24 relative text-[#D9B4B4] animate-bounce duration-[2000ms]">
-              <svg
-                viewBox="0 0 100 100"
-                className="w-full h-full fill-none stroke-current"
-                strokeWidth="3"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                {/* Ears */}
-                <path d="M 40 42 C 37 28, 28 12, 33 8 C 38 4, 45 18, 43 38" />
-                <path d="M 45 39 C 47 24, 53 8, 57 10 C 61 12, 55 28, 51 41" />
-                {/* Head & Face */}
-                <path d="M 36 48 C 28 48, 26 56, 32 62 C 36 66, 46 66, 50 62 C 56 56, 54 48, 48 48" />
-                {/* Eyes */}
-                <circle cx="37" cy="53" r="1.5" fill="currentColor" stroke="none" />
-                <circle cx="45" cy="53" r="1.5" fill="currentColor" stroke="none" />
-                {/* Nose/Mouth */}
-                <path d="M 41 57 L 41.5 58 L 42 57" />
-                <path d="M 39 60 C 40.5 61.5, 41.5 60.5, 41.5 60 C 41.5 60.5, 42.5 61.5, 44 60" />
-                {/* Body */}
-                <path d="M 38 64 C 30 68, 25 78, 28 88 C 30 90, 40 90, 45 90" />
-                {/* Waving left arm */}
-                <path
-                  d="M 32 66 C 24 62, 18 50, 22 46 C 26 42, 28 54, 32 60"
-                  className="origin-[32px_66px] animate-[wavePaw_1.6s_infinite_ease-in-out]"
-                />
-                {/* Resting right arm */}
-                <path d="M 44 66 C 48 68, 52 74, 50 78 C 48 82, 44 76, 42 70" />
-                {/* Paws */}
-                <path d="M 36 90 Q 38 84 40 90" />
-                <path d="M 44 90 Q 46 84 48 90" />
-                <path d="M 52 90 Q 54 84 56 90" />
-                {/* Back & Tail */}
-                <path d="M 48 64 C 56 68, 66 74, 66 84 C 66 88, 62 90, 53 90" />
-                <path d="M 66 82 C 70 82, 72 86, 68 88 C 66 89, 65 85, 66 82" />
-              </svg>
-            </div>
-            <span className="text-xl font-bold tracking-widest text-[#FEF9F6] mt-4 uppercase animate-pulse">
-              Crochet Creation
-            </span>
-            <span className="text-[10px] tracking-widest text-[#D9B4B4] uppercase mt-1">
-              Knitting with love...
-            </span>
-          </div>
-        </div>
-      )}
+        <div className="relative max-w-7xl mx-auto px-5 sm:px-6 lg:px-10">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-8 items-center pt-6 md:pt-10">
+            {/* Copy */}
+            <Reveal from="up" duration={0.85} className="lg:col-span-6 xl:col-span-6 text-center lg:text-left order-2 lg:order-1">
+              <span className="eyebrow inline-flex items-center gap-2 justify-center lg:justify-start">
+                <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
+                Handmade in small batches
+              </span>
 
-      {/* 0. Texture Reveal Magnifying Modal */}
-      {selectedTexture && (
-        <div
-          className="fixed inset-0 z-[1000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 cursor-pointer"
-          onClick={() => setSelectedTexture(null)}
-        >
-          <div
-            className="bg-white rounded-3xl p-6 max-w-lg w-full relative shadow-2xl border border-stone-100 flex flex-col items-center text-center cursor-default animate-scale-in"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              aria-label="Close"
-              className="absolute top-4 right-4 text-stone-400 hover:text-stone-600 p-1.5 rounded-full hover:bg-stone-50 transition-colors"
-              onClick={() => setSelectedTexture(null)}
-            >
-              <X className="w-5 h-5" />
-            </button>
-            <span className="text-[10px] font-bold text-[#D9B4B4] uppercase tracking-widest mb-1">Texture Magnifier</span>
-            <h4 className="text-lg font-black text-[#6B5656] mb-4">Detailed Stitch Pattern</h4>
+              <h1 className="mt-4 font-display text-ink leading-[1.05] tracking-[-0.02em]
+                text-[36px] sm:text-[46px] md:text-[56px] lg:text-[58px] xl:text-[66px]">
+                Every stitch tells
+                <br className="hidden sm:block" />
+                {' '}a <span className="text-terracotta italic">little story</span>.
+              </h1>
 
-            {/* The Lens Container */}
-            <div className="relative w-64 h-64 rounded-full overflow-hidden border-4 border-[#D9B4B4] shadow-inner bg-stone-50 group">
-              <Image
-                src={selectedTexture}
-                alt="Zoomed knit texture"
-                fill
-                sizes="256px"
-                className="object-cover"
-              />
-              {/* Realistic glass lens reflection */}
-              <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/20 to-white/40 pointer-events-none"></div>
-              <div className="absolute top-4 left-4 w-12 h-12 rounded-full bg-white/25 blur-sm pointer-events-none"></div>
-            </div>
-
-            <p className="text-xs text-stone-500 max-w-sm mt-6 leading-relaxed">
-              Every loop and stitch is handmade using premium organic yarns. Click to close.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Navbar Component */}
-      <Navbar
-        themeColor={themeColor}
-        themeColors={THEME_COLORS}
-        onThemeChange={setThemeColor}
-        customLogo={getImageSrc('logo')}
-        scrollY={scrollY}
-        token={token}
-        userProfile={userProfile}
-        onLogout={handleLogout}
-        onOpenAuth={() => {
-          setAuthError(null);
-          setAuthSuccessMsg(null);
-          setAuthModalOpen(true);
-        }}
-        cartItemsCount={cartItemsCount}
-        currentPage="Home"
-      />
-
-      {/* 1. Header/Hero Panel (Dark Textured #6B5656) */}
-      <section id="home" className="relative lg:sticky lg:top-0 z-0 bg-crochet-charcoal text-[#FEF9F6] pt-20 md:pt-24 pb-12 md:pb-20 overflow-hidden min-h-[85vh] md:min-h-[90vh] md:h-[90vh] w-full flex flex-col justify-between scroll-mt-28">
-
-        {/* Parallax inner wrapper */}
-        <div
-          className="w-full flex-grow flex flex-col justify-between relative"
-          style={{ transform: `translate3d(0, ${scrollY * 0.3}px, 0)` }}
-        >
-
-          {/* Left Decorative Column (Pink ribbon, spool, buttons) */}
-          <ScaleInWrapper delay={0.2} className="hidden md:flex absolute left-8 top-24 w-36 flex-col items-center gap-6 select-none pointer-events-none z-10">
-            {/* Spool */}
-            <svg className="w-8 h-10 text-amber-100" viewBox="0 0 32 40" fill="currentColor">
-              <rect x="6" y="2" width="20" height="4" rx="1" fill="#D3C1B5" />
-              <rect x="10" y="6" width="12" height="28" fill="#E8D1C5" />
-              <rect x="6" y="34" width="20" height="4" rx="1" fill="#D3C1B5" />
-              <path d="M10,8 L22,12 M10,16 L22,20 M10,24 L22,28" stroke="#D9B4B4" strokeWidth="2" />
-            </svg>
-            {/* Curled Ribbon */}
-            <svg className="w-12 h-44 text-[#D9B4B4]" viewBox="0 0 50 180" fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round">
-              <path d="M10 10 C 35 30, 40 50, 20 70 C 0 90, 5 110, 30 130 C 45 150, 30 170, 15 180" />
-            </svg>
-            {/* Scattered Buttons */}
-            <div className="flex flex-col gap-2 -mt-4">
-              <div className="w-5 h-5 rounded-full bg-[#D9B4B4] border border-stone-200 flex items-center justify-center shadow-sm">
-                <div className="grid grid-cols-2 gap-0.5 w-1.5 h-1.5"><div className="bg-[#6B5656] rounded-full w-0.5 h-0.5"></div><div className="bg-[#6B5656] rounded-full w-0.5 h-0.5"></div><div className="bg-[#6B5656] rounded-full w-0.5 h-0.5"></div><div className="bg-[#6B5656] rounded-full w-0.5 h-0.5"></div></div>
-              </div>
-              <div className="w-4 h-4 rounded-full bg-[#B67E7E] border border-stone-200 flex items-center justify-center translate-x-2 shadow-sm">
-                <div className="grid grid-cols-2 gap-0.5 w-1.5 h-1.5"><div className="bg-[#FEF9F6] rounded-full w-0.5 h-0.5"></div><div className="bg-[#FEF9F6] rounded-full w-0.5 h-0.5"></div><div className="bg-[#FEF9F6] rounded-full w-0.5 h-0.5"></div><div className="bg-[#FEF9F6] rounded-full w-0.5 h-0.5"></div></div>
-              </div>
-              <div className="w-6 h-6 rounded-full bg-[#E8D3D3] border border-stone-200 flex items-center justify-center -translate-x-3 shadow-sm">
-                <div className="grid grid-cols-2 gap-0.5 w-2 h-2"><div className="bg-[#6B5656] rounded-full w-0.5 h-0.5"></div><div className="bg-[#6B5656] rounded-full w-0.5 h-0.5"></div><div className="bg-[#6B5656] rounded-full w-0.5 h-0.5"></div><div className="bg-[#6B5656] rounded-full w-0.5 h-0.5"></div></div>
-              </div>
-            </div>
-          </ScaleInWrapper>
-
-          {/* Right Decorative Column (Yarn Ball & Needles) */}
-          <ScaleInWrapper delay={0.3} className="hidden md:flex absolute right-8 top-24 w-36 flex-col items-center gap-6 select-none pointer-events-none z-10">
-            {/* Yarn Ball */}
-            <div 
-              className="w-16 h-16 mt-4 bg-stone-300"
-              style={{
-                maskImage: 'url(/assets/ball-of-wool.png)',
-                maskSize: 'contain',
-                maskRepeat: 'no-repeat',
-                maskPosition: 'center',
-                WebkitMaskImage: 'url(/assets/ball-of-wool.png)',
-                WebkitMaskSize: 'contain',
-                WebkitMaskRepeat: 'no-repeat',
-                WebkitMaskPosition: 'center'
-              }}
-            />
-            
-            {/* Diagonal Knitting Needles */}
-            <svg className="w-12 h-24 text-stone-300 -mt-2" viewBox="0 0 50 100" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="10" y1="90" x2="40" y2="10" strokeLinecap="round" />
-              <circle cx="40" cy="10" r="3" fill="#D9B4B4" />
-              <line x1="40" y1="90" x2="10" y2="10" strokeLinecap="round" strokeWidth="1.5" />
-              <circle cx="10" cy="10" r="3" fill="#C0B4D9" />
-            </svg>
-          </ScaleInWrapper>
-
-          {/* Center Content */}
-          <StaggerContainer className="max-w-3xl mx-auto text-center mt-8 md:mt-20 px-4 md:px-6 relative z-20 flex flex-col items-center">
-
-            {/* Logo Icon details */}
-            <StaggerItem yOffset={30}>
-              <div className="w-12 h-12 rounded-full border border-[#D9B4B4] flex items-center justify-center mb-6">
-                <Heart className="w-5 h-5 fill-[#D9B4B4] text-[#D9B4B4]" />
-              </div>
-            </StaggerItem>
-
-            <StaggerItem yOffset={30}>
-              <h2 className="text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-serif font-light tracking-wide leading-snug md:leading-relaxed max-w-xl">
-                Find Something You Love
-              </h2>
-            </StaggerItem>
-            
-            <StaggerItem yOffset={30}>
-              <p className="text-xs md:text-sm tracking-widest text-[#D9B4B4] uppercase mt-4 mb-8">
-                and personalize it to be 100% yours
+              <p className="mt-5 text-[15px] md:text-base leading-relaxed text-bodytext max-w-lg mx-auto lg:mx-0">
+                We&apos;re Crochet Creation — a tiny studio hooking cosy keychains, hair
+                clips and charms by hand. Pick a finished piece, or tell us your idea
+                and we&apos;ll make it just for you.
               </p>
-            </StaggerItem>
 
-            <StaggerItem yOffset={20}>
-              <button
-                onClick={() => document.getElementById('shop')?.scrollIntoView({ behavior: 'smooth' })}
-                className="border-2 border-[#D9B4B4] hover:bg-[#D9B4B4] hover:!text-stone-900 text-[#D9B4B4] text-xs font-sans font-semibold uppercase tracking-widest px-6 md:px-8 py-3 md:py-3.5 rounded-full transition-all duration-300 ease-in-out active:scale-95 shadow-lg min-h-[44px]"
-              >
-                View all products
-              </button>
-            </StaggerItem>
-
-            {/* Heart shaped yarn ball */}
-            <ScaleInWrapper delay={0.4} className="mt-8 md:mt-16 w-40 h-40 sm:w-56 sm:h-56 md:w-64 md:h-64 relative">
-              <Image
-                src={getImageSrc('heroYarn')}
-                alt="Marilyn Heart Yarn"
-                fill
-                sizes="(max-width: 768px) 224px, 256px"
-                className="object-contain rounded-full shadow-2xl border-4 border-[#D9B4B4]/20 animate-pulse duration-[3000ms]"
-                priority
-              />
-
-              {/* Cute Animated Outline Rabbit */}
-              <div
-                className="absolute -bottom-6 -right-10 md:-right-14 w-20 h-20 md:w-24 md:h-24 z-30 drop-shadow-md transition-transform duration-300 ease-out"
-                style={{
-                  transform: `translate(${Math.sin(scrollY * 0.006) * 35}px, ${Math.cos(scrollY * 0.006) * 15 - 5}px) rotate(${Math.sin(scrollY * 0.004) * 12}deg)`
-                }}
-              >
-                <svg
-                  viewBox="0 0 100 100"
-                  className="w-full h-full text-[#D9B4B4] fill-none stroke-current"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  {/* Left Ear wiggling dynamically based on scroll */}
-                  <path
-                    d="M 40 42 C 37 28, 28 12, 33 8 C 38 4, 45 18, 43 38"
-                    className="origin-[40px_42px]"
-                    style={{
-                      transform: `rotate(${Math.sin(scrollY * 0.015) * 10}deg)`,
-                      transition: 'transform 0.1s ease-out'
-                    }}
-                  />
-                  {/* Right Ear wiggling dynamically based on scroll */}
-                  <path
-                    d="M 45 39 C 47 24, 53 8, 57 10 C 61 12, 55 28, 51 41"
-                    className="origin-[45px_39px]"
-                    style={{
-                      transform: `rotate(${Math.cos(scrollY * 0.015) * 10}deg)`,
-                      transition: 'transform 0.1s ease-out'
-                    }}
-                  />
-                  {/* Head & Face */}
-                  <path d="M 36 48 C 28 48, 26 56, 32 62 C 36 66, 46 66, 50 62 C 56 56, 54 48, 48 48" />
-                  {/* Cheeks */}
-                  <path d="M 31 56 C 30 56, 29 57, 29 58" strokeWidth="1.5" className="animate-pulse" />
-                  <path d="M 51 56 C 52 56, 53 57, 53 58" strokeWidth="1.5" className="animate-pulse" />
-                  {/* Eyes */}
-                  <circle cx="37" cy="53" r="1.5" fill="currentColor" stroke="none" />
-                  <circle cx="45" cy="53" r="1.5" fill="currentColor" stroke="none" />
-                  {/* Nose/Mouth */}
-                  <path d="M 41 57 L 41.5 58 L 42 57" />
-                  <path d="M 39 60 C 40.5 61.5, 41.5 60.5, 41.5 60 C 41.5 60.5, 42.5 61.5, 44 60" />
-                  {/* Body */}
-                  <path d="M 38 64 C 30 68, 25 78, 28 88 C 30 90, 40 90, 45 90" />
-                  {/* Waving left arm */}
-                  <path
-                    d="M 32 66 C 24 62, 18 50, 22 46 C 26 42, 28 54, 32 60"
-                    className="origin-[32px_66px] animate-[wavePaw_1.6s_infinite_ease-in-out]"
-                  />
-                  {/* Resting right arm */}
-                  <path d="M 44 66 C 48 68, 52 74, 50 78 C 48 82, 44 76, 42 70" />
-                  {/* Paws */}
-                  <path d="M 36 90 Q 38 84 40 90" />
-                  <path d="M 44 90 Q 46 84 48 90" />
-                  <path d="M 52 90 Q 54 84 56 90" />
-                  {/* Back & Tail */}
-                  <path d="M 48 64 C 56 68, 66 74, 66 84 C 66 88, 62 90, 53 90" />
-                  <path d="M 66 82 C 70 82, 72 86, 68 88 C 66 89, 65 85, 66 82" />
-                </svg>
+              <div className="mt-8 flex flex-wrap items-center gap-3 justify-center lg:justify-start">
+                <Magnetic>
+                  <Link href="/shop" className="btn-pill btn-teal group/cta">
+                    Explore our work
+                    <ArrowRight className="w-3.5 h-3.5 transition-transform duration-300 group-hover/cta:translate-x-1" aria-hidden="true" />
+                  </Link>
+                </Magnetic>
+                <button onClick={() => setCustomRequestModal(true)} className="btn-pill btn-outline">
+                  Request a custom piece
+                </button>
               </div>
-            </ScaleInWrapper>
-          </StaggerContainer>
 
-        </div> {/* End of Parallax inner wrapper */}
+              <div className="mt-9 flex items-center gap-6 justify-center lg:justify-start">
+                <div className="flex items-center gap-2">
+                  <div className="flex" aria-hidden="true">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Star key={i} className="w-3.5 h-3.5 fill-gold text-gold" />
+                    ))}
+                  </div>
+                  <span className="text-[12px] font-semibold text-bodytext">Loved by our customers</span>
+                </div>
+                <span className="hidden sm:block w-px h-8 bg-line" aria-hidden="true" />
+                <span className="hidden sm:block text-[12px] font-semibold text-bodytext">
+                  Made to order in 5–7 days
+                </span>
+              </div>
+            </Reveal>
+
+            {/* Hero image in an organic frame */}
+            <div className="lg:col-span-6 xl:col-span-6 order-1 lg:order-2 relative">
+              <Parallax speed={26} className="relative mx-auto w-full max-w-[300px] sm:max-w-[380px] lg:max-w-[460px]">
+                <span
+                  className="absolute -inset-3 md:-inset-5 bg-parchment-deep rounded-[46%_54%_58%_42%/48%_42%_58%_52%] rotate-3"
+                  aria-hidden="true"
+                />
+                <span
+                  className="absolute -inset-1 md:-inset-2 border-2 border-dashed border-terracotta/25 rounded-[52%_48%_42%_58%/44%_56%_44%_56%] -rotate-2"
+                  aria-hidden="true"
+                />
+                <ParallaxImage
+                  amount={6}
+                  className="relative aspect-square rounded-[48%_52%_54%_46%/46%_48%_52%_54%] shadow-lift ring-1 ring-line/60"
+                >
+                  <Image
+                    src={getImageSrc('heroYarn')}
+                    alt="A handmade crochet heart resting in an embroidery hoop"
+                    fill
+                    priority
+                    sizes="(max-width: 640px) 300px, (max-width: 1024px) 380px, 460px"
+                    className="object-cover"
+                  />
+                </ParallaxImage>
+
+                <YarnBall className="absolute -left-6 bottom-6 w-14 md:w-20 h-auto text-olive animate-float-soft" />
+                <CrochetHook className="absolute -right-4 top-8 w-12 md:w-16 h-auto text-terracotta animate-sway" />
+                <Bird className="absolute -top-6 left-10 w-14 md:w-16 h-auto text-teal/70 hidden sm:block" />
+              </Parallax>
+            </div>
+          </div>
+        </div>
       </section>
 
-      {/* 2. Scrollable Content Wrapper with Parallax Cover Effect */}
-      <div className="relative z-10 bg-[#FEF9F6] shadow-[0_-15px_30px_rgba(107,86,86,0.08)]">
-        {/* Wavy transition edge sticking out above the content */}
-        <div className="absolute top-0 left-0 w-full overflow-hidden leading-none z-20 transform -translate-y-[98%] pointer-events-none">
-          <svg className="relative block w-full h-10 text-[#FEF9F6]" viewBox="0 0 1440 40" preserveAspectRatio="none" fill="currentColor">
-            <path d="M0,25 Q15,15 30,25 T60,25 T90,20 T120,30 T150,22 T180,27 T210,18 T240,25 T270,30 T300,20 T330,28 T360,22 T390,27 T420,18 T450,25 T480,30 T510,20 T540,28 T570,22 T600,27 T630,18 T660,25 T690,30 T720,20 T750,28 T780,22 T810,27 T840,18 T870,25 T900,30 T930,20 T960,28 T990,22 T1020,27 T1050,18 T1080,25 T1110,30 T1140,20 T1170,28 T1200,22 T1230,27 T1260,18 T1290,25 T1320,30 T1350,20 T1380,28 T1410,22 T1440,25 L1440,40 L0,40 Z"></path>
-          </svg>
-        </div>
+      <OrganicEdge variant="torn" from="var(--parchment)" fill="var(--parchment-deep)" height={80} />
 
-        {/* Scroll-Triggered SVG Crochet Thread Animation */}
-        <div className="hidden md:absolute left-1 md:left-6 top-0 h-full w-12 md:w-28 pointer-events-none z-30">
-          <svg className="w-full h-full overflow-visible" viewBox="-40 0 120 5600" preserveAspectRatio="none">
-            {/* Delicate template path representing the base crochet lace draft */}
-            <path
-              d={crochetPathD}
-              fill="none"
-              stroke="#EADBDB"
-              strokeWidth="1.2"
-              strokeLinecap="round"
-              strokeDasharray="6 4"
-              opacity="0.35"
-            />
-            {/* Dynamic active glowing path being crocheted on scroll (using mask for dashed yarn texture) */}
-            <path
-              d={crochetPathD}
-              fill="none"
-              stroke="url(#thread-gradient)"
-              strokeWidth="4"
-              strokeLinecap="round"
-              mask="url(#scroll-mask)"
-              style={{
-                filter: 'drop-shadow(0 0 6px rgba(217, 180, 180, 0.95)) drop-shadow(0 0 12px rgba(107, 86, 86, 0.6))',
-              }}
-            />
-            {/* Thread active tip (Yarn Ball / Crochet Needle Core) */}
-            {scrollProgress > 0.01 && scrollProgress < 0.99 && (
-              <g
-                transform={`translate(${pointerPos.x}, ${pointerPos.y})`}
-                style={{ transition: 'transform 0.05s ease-out' }}
-              >
-                {/* Glowing Aura */}
-                <circle r="16" fill="#D9B4B4" className="animate-ping opacity-30" />
+      {/* ═══════════════ 2 · ABOUT + SERVICES ═══════════════ */}
+      <section id="about" className="bg-paper-deep pt-10 md:pt-16 pb-12 md:pb-16 relative overflow-hidden">
+        <Sprig className="absolute top-8 right-4 w-44 h-auto text-olive/20 hidden lg:block" />
 
-                {/* Rotating Yarn Ball Group */}
-                <g style={{ transform: `rotate(${scrollY * 0.7}deg)`, transformOrigin: '0px 0px', transition: 'transform 0.05s ease-out' }}>
-                  {/* Yarn ball body */}
-                  <circle r="10" fill="#6B5656" stroke="#FEF9F6" strokeWidth="1.2" />
-                  {/* Yarn strands overlay to make it look like a real yarn ball */}
-                  <path d="M-8,-5 Q0,-10 8,-5 M-10,0 Q0,-5 10,0 M-8,5 Q0,10 8,5 M-5,-8 Q5,0 -5,8" stroke="#FEF9F6" strokeWidth="0.9" fill="none" opacity="0.8" />
-                  {/* Thread center core */}
-                  <circle r="3.5" fill="#D9B4B4" />
-                </g>
-
-                {/* Crochet hook positioned dynamically at the stitching point */}
-                <g style={{ transform: 'rotate(-15deg) translate(2px, -2px)' }}>
-                  <path d="M-6,-6 L12,12 M10,6 C10,6 14,3 11,-1" stroke="#D9B4B4" strokeWidth="2" strokeLinecap="round" fill="none" />
-                </g>
-
-                {/* Tiny outline rabbit riding the stitching hook */}
-                <g
-                  style={{
-                    transform: `translate(12px, -18px) rotate(${Math.sin(scrollY * 0.02) * 12}deg)`,
-                    transformOrigin: '0px 0px',
-                    transition: 'transform 0.1s ease-out'
-                  }}
-                >
-                  <svg
-                    viewBox="0 0 100 100"
-                    width="20"
-                    height="20"
-                    className="text-[#6B5656] fill-none stroke-current overflow-visible"
-                    strokeWidth="3.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    {/* Ears */}
-                    <path d="M 40 42 C 37 28, 28 12, 33 8 C 38 4, 45 18, 43 38" />
-                    <path d="M 45 39 C 47 24, 53 8, 57 10 C 61 12, 55 28, 51 41" />
-                    {/* Head & Face */}
-                    <path d="M 36 48 C 28 48, 26 56, 32 62 C 36 66, 46 66, 50 62 C 56 56, 54 48, 48 48" />
-                    {/* Eyes */}
-                    <circle cx="37" cy="53" r="1.5" fill="currentColor" stroke="none" />
-                    <circle cx="45" cy="53" r="1.5" fill="currentColor" stroke="none" />
-                    {/* Body */}
-                    <path d="M 38 64 C 30 68, 25 78, 28 88 C 30 90, 40 90, 45 90" />
-                    {/* Waving left arm */}
-                    <path
-                      d="M 32 66 C 24 62, 18 50, 22 46 C 26 42, 28 54, 32 60"
-                      className="origin-[32px_66px] animate-[wavePaw_1.6s_infinite_ease-in-out]"
-                    />
-                    {/* Resting right arm */}
-                    <path d="M 44 66 C 48 68, 52 74, 50 78 C 48 82, 44 76, 42 70" />
-                    <path d="M 48 64 C 56 68, 66 74, 66 84 C 66 88, 62 90, 53 90" />
-                    {/* Tail */}
-                    <circle cx="66" cy="84" r="3" fill="#6B5656" stroke="none" />
-                  </svg>
-                </g>
-              </g>
-            )}
-
-
-            {/* 1. Crochet Flower Motif at y = 800 */}
-            <g
-              style={{
-                transformOrigin: '20px 800px',
-                transform: `scale(${scrollProgress >= 0.14 ? 1.15 : 0.9})`,
-                opacity: scrollProgress >= 0.14 ? 1 : 0.4,
-                transition: 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)'
-              }}
-            >
-              <circle cx="20" cy="800" r="22" fill="#FEF9F6" stroke="#EADBDB" strokeWidth="1" />
-              {/* Petals */}
-              <circle cx="20" cy="788" r="6" fill={scrollProgress >= 0.14 ? '#D9B4B4' : '#EADBDB'} style={{ transition: 'fill 0.4s' }} />
-              <circle cx="30" cy="794" r="6" fill={scrollProgress >= 0.14 ? '#D9B4B4' : '#EADBDB'} style={{ transition: 'fill 0.4s' }} />
-              <circle cx="30" cy="806" r="6" fill={scrollProgress >= 0.14 ? '#D9B4B4' : '#EADBDB'} style={{ transition: 'fill 0.4s' }} />
-              <circle cx="20" cy="812" r="6" fill={scrollProgress >= 0.14 ? '#D9B4B4' : '#EADBDB'} style={{ transition: 'fill 0.4s' }} />
-              <circle cx="10" cy="806" r="6" fill={scrollProgress >= 0.14 ? '#D9B4B4' : '#EADBDB'} style={{ transition: 'fill 0.4s' }} />
-              <circle cx="10" cy="794" r="6" fill={scrollProgress >= 0.14 ? '#D9B4B4' : '#EADBDB'} style={{ transition: 'fill 0.4s' }} />
-              {/* Inner core */}
-              <circle cx="20" cy="800" r="6" fill="#6B5656" />
-              <circle cx="20" cy="800" r="3.5" fill="#FEF9F6" />
-            </g>
-
-            {/* 2. Crochet Heart Motif at y = 2200 */}
-            <g
-              style={{
-                transformOrigin: '20px 2200px',
-                transform: `scale(${scrollProgress >= 0.39 ? 1.15 : 0.9})`,
-                opacity: scrollProgress >= 0.39 ? 1 : 0.4,
-                transition: 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)'
-              }}
-            >
-              <circle cx="20" cy="2200" r="22" fill="#FEF9F6" stroke="#EADBDB" strokeWidth="1" />
-              <path
-                d="M20,2192 C15,2187 8,2187 8,2194 C8,2201 17,2208 20,2211 C23,2208 32,2201 32,2194 C32,2187 25,2187 20,2192 Z"
-                fill={scrollProgress >= 0.39 ? '#D9B4B4' : '#EADBDB'}
-                style={{ transition: 'fill 0.4s' }}
-              />
-              <path
-                d="M20,2195 C17,2191 11,2191 11,2196 C11,2201 18,2206 20,2208 C22,2206 29,2201 29,2196 C29,2191 23,2191 20,2195 Z"
-                fill="#6B5656"
-              />
-            </g>
-
-            {/* 3. Crochet Bow Motif at y = 3600 */}
-            <g
-              style={{
-                transformOrigin: '20px 3600px',
-                transform: `scale(${scrollProgress >= 0.64 ? 1.15 : 0.9})`,
-                opacity: scrollProgress >= 0.64 ? 1 : 0.4,
-                transition: 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)'
-              }}
-            >
-              <circle cx="20" cy="3600" r="22" fill="#FEF9F6" stroke="#EADBDB" strokeWidth="1" />
-              {/* Loops */}
-              <path d="M 20 3600 C 8 3588, 2 3594, 8 3602 C 12 3605, 17 3602, 20 3600" fill={scrollProgress >= 0.64 ? '#D9B4B4' : '#EADBDB'} style={{ transition: 'fill 0.4s' }} />
-              <path d="M 20 3600 C 32 3588, 38 3594, 32 3602 C 28 3605, 23 3602, 20 3600" fill={scrollProgress >= 0.64 ? '#D9B4B4' : '#EADBDB'} style={{ transition: 'fill 0.4s' }} />
-              {/* Tails */}
-              <path d="M 18 3601 L 12 3612 C 11 3614, 13 3615, 14 3613 L 20 3603" stroke="#6B5656" strokeWidth="2" strokeLinecap="round" fill="none" />
-              <path d="M 22 3601 L 28 3612 C 29 3614, 27 3615, 26 3613 L 20 3603" stroke="#6B5656" strokeWidth="2" strokeLinecap="round" fill="none" />
-              {/* Center Knot */}
-              <circle cx="20" cy="3600" r="3" fill="#6B5656" />
-            </g>
-
-            {/* 4. Crochet Ball of Yarn Motif at y = 4800 */}
-            <g
-              style={{
-                transformOrigin: '20px 4800px',
-                transform: `scale(${scrollProgress >= 0.85 ? 1.15 : 0.9})`,
-                opacity: scrollProgress >= 0.85 ? 1 : 0.4,
-                transition: 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)'
-              }}
-            >
-              <circle cx="20" cy="4800" r="22" fill="#FEF9F6" stroke="#EADBDB" strokeWidth="1" />
-              <circle cx="20" cy="4800" r="11" fill={scrollProgress >= 0.85 ? '#D9B4B4' : '#EADBDB'} style={{ transition: 'fill 0.4s' }} />
-              {/* Yarn strands */}
-              <path d="M12,4795 Q20,4790 28,4795 M10,4800 Q20,4795 30,4800 M12,4805 Q20,4810 28,4805 M15,4792 Q25,4800 15,4808" stroke="#6B5656" strokeWidth="1" fill="none" />
-              {/* Crochet Hook */}
-              <path d="M8,4812 L32,4788 M30,4790 C30,4790 33,4787 31,4785" stroke="#6B5656" strokeWidth="2" strokeLinecap="round" fill="none" />
-            </g>
-
-            <defs>
-              {/* Mask that draws a solid white path on scroll */}
-              <mask id="scroll-mask">
-                <path
-                  ref={pathRef}
-                  d={crochetPathD}
-                  fill="none"
-                  stroke="#FFFFFF"
-                  strokeWidth="8"
-                  strokeLinecap="round"
-                  strokeDasharray={pathLength || 1000}
-                  strokeDashoffset={pathLength ? pathLength - (scrollProgress * pathLength) : 1000}
-                  style={{
-                    transition: 'stroke-dashoffset 0.1s ease-out'
-                  }}
+        <div className="relative max-w-7xl mx-auto px-5 sm:px-6 lg:px-10">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
+            {/* Portrait + intro */}
+            <Reveal from="left" className="lg:col-span-5 flex flex-col sm:flex-row lg:flex-col items-center sm:items-start lg:items-start gap-7">
+              <div className="relative shrink-0 mx-auto sm:mx-0">
+                <span
+                  className="absolute -inset-2.5 rounded-full border-2 border-dashed border-olive/30"
+                  aria-hidden="true"
                 />
-              </mask>
-              <linearGradient id="thread-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="#D9B4B4" />
-                <stop offset="50%" stopColor="#6B5656" />
-                <stop offset="100%" stopColor="#D9B4B4" />
-              </linearGradient>
-            </defs>
-          </svg>
-        </div>
-
-        {/* 2. Value Proposition (Cream Background) */}
-        <section id="elements" className="py-12 md:py-28 px-4 md:px-12 bg-[#FEF9F6] border-b border-[#EADBDB]/50 scroll-mt-28">
-          <StaggerContainer className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-y-8 md:gap-y-16 gap-x-4 md:gap-x-12">
-
-            {/* Card 1 */}
-            <StaggerItem className="flex flex-col items-center text-center space-y-4">
-              <div className="w-14 h-14 rounded-full border border-[#D9B4B4] flex items-center justify-center text-[#D9B4B4] hover:bg-[#D9B4B4] group transition-all duration-300">
-                <Heart className="w-6 h-6 text-[#D9B4B4] group-hover:text-[#6B5656] transition-colors duration-300" />
+                <div className="relative w-40 h-40 sm:w-44 sm:h-44 rounded-full overflow-hidden ring-4 ring-parchment-card shadow-soft">
+                  <Image
+                    src={getImageSrc('womanKnitting')}
+                    alt="Working on a crochet piece in the studio"
+                    fill
+                    sizes="176px"
+                    className="object-cover"
+                  />
+                </div>
+                <Flower className="absolute -bottom-2 -left-3 w-11 h-auto text-terracotta/70" />
+                <LeafPair className="absolute -top-2 -right-2 w-9 h-auto text-olive/70" />
               </div>
-              <h4 className="text-sm font-bold uppercase tracking-wider text-[#6B5656]">Find something you love</h4>
-              <p className="text-xs text-stone-500 max-w-xs leading-relaxed">Our store is a world of vintage and beautiful items designed to inspire warmth.</p>
-            </StaggerItem>
 
-            {/* Card 2 */}
-            <StaggerItem className="flex flex-col items-center text-center space-y-4">
-              <div className="w-14 h-14 rounded-full border border-[#D9B4B4] flex items-center justify-center text-[#D9B4B4] hover:bg-[#D9B4B4] group transition-all duration-300">
-                <Gift className="w-6 h-6 text-[#D9B4B4] group-hover:text-[#6B5656] transition-colors duration-300" />
+              <div className="text-center sm:text-left lg:text-left">
+                <span className="eyebrow">Hello there</span>
+                <h2 className="mt-2.5 font-display text-[26px] sm:text-[32px] text-ink leading-tight">
+                  We&apos;re Crochet Creation
+                </h2>
+                <p className="mt-3.5 text-[14px] leading-relaxed text-bodytext max-w-md">
+                  What began as a love for yarn and a single hook has grown into a little
+                  studio full of colour. We believe slow, careful making shows — in the
+                  neatness of a round, the softness of a finished charm, and the smile
+                  when someone opens the parcel.
+                </p>
+                <Magnetic className="inline-block mt-6">
+                  <button
+                    onClick={() => setCustomRequestModal(true)}
+                    className="btn-pill btn-terracotta"
+                  >
+                    Work with us
+                  </button>
+                </Magnetic>
               </div>
-              <h4 className="text-sm font-bold uppercase tracking-wider text-[#6B5656]">If you are looking for a gift</h4>
-              <p className="text-xs text-stone-500 max-w-xs leading-relaxed">The best present is a handmade one that tells a story and lasts a lifetime.</p>
-            </StaggerItem>
+            </Reveal>
 
-            {/* Card 3 */}
-            <StaggerItem className="flex flex-col items-center text-center space-y-4">
-              <div className="w-14 h-14 rounded-full border border-[#D9B4B4] flex items-center justify-center text-[#D9B4B4] hover:bg-[#D9B4B4] group transition-all duration-300">
-                <ShoppingBag className="w-6 h-6 text-[#D9B4B4] group-hover:text-[#6B5656] transition-colors duration-300" />
-              </div>
-              <h4 className="text-sm font-bold uppercase tracking-wider text-[#6B5656]">Buy and sell with confidence</h4>
-              <p className="text-xs text-stone-500 max-w-xs leading-relaxed">It would be easier, faster and safer to buy items from verified organic knits.</p>
-            </StaggerItem>
+            {/* Teal services panel */}
+            <Reveal from="right" delay={0.08} className="lg:col-span-7">
+              <div className="bg-teal-weave rounded-[28px] md:rounded-[40px] p-8 sm:p-10 md:p-14 shadow-panel relative overflow-hidden">
+                <Sprig className="absolute -top-2 -right-6 w-40 h-auto text-ondark/10" />
 
-            {/* Card 4 */}
-            <StaggerItem className="flex flex-col items-center text-center space-y-4">
-              <div className="w-14 h-14 rounded-full border border-[#D9B4B4] flex items-center justify-center text-[#D9B4B4] hover:bg-[#D9B4B4] group transition-all duration-300">
-                <Lightbulb className="w-6 h-6 text-[#D9B4B4] group-hover:text-[#6B5656] transition-colors duration-300" />
-              </div>
-              <h4 className="text-sm font-bold uppercase tracking-wider text-[#6B5656]">Create any idea</h4>
-              <p className="text-xs text-stone-500 max-w-xs leading-relaxed">Models of any complexity in a short time, stitched according to your details.</p>
-            </StaggerItem>
+                <SectionHeading tone="ondark" as="h2" size="panel" className="mb-8 md:mb-10">
+                  Ways We Can Create Together
+                </SectionHeading>
 
-          </StaggerContainer>
-        </section>
-
-        {/* 3. "Buy A Finished Product" Section */}
-        <section id="shop" className="py-12 md:py-20 px-4 md:px-12 max-w-7xl mx-auto w-full scroll-mt-28">
-
-          {/* Title row & Filters */}
-          <FadeUpWrapper className="space-y-6 md:space-y-10">
-            <div className="flex items-center justify-between mb-6 md:mb-8 border-b border-[#EADBDB] pb-3 md:pb-4">
-              <h2 className="text-base sm:text-xl md:text-2xl font-serif font-medium tracking-wide text-[#6B5656]">BUY A FINISHED PRODUCT</h2>
-              <Link href="/shop" className="text-xs font-bold text-[#D9B4B4] hover:text-[#6B5656] uppercase tracking-widest flex items-center gap-1 transition-colors">
-                SEE ALL <ChevronRight className="w-4 h-4" />
-              </Link>
-            </div>
-
-            {/* Filter bar with subtle stripe pattern */}
-            <div className="bg-crochet-stripe h-12 rounded-lg flex items-center px-2 md:px-4 overflow-x-auto gap-2 md:gap-8 justify-between shadow-inner mb-8 md:mb-12 scrollbar-hide snap-x">
-              <div className="flex items-center gap-2 md:gap-8 min-w-max">
-                {categories.length > 0
-                  ? categories.map((filter) => (
-                      <button
-                        key={filter}
-                        onClick={() => setActiveFilter(filter)}
-                        aria-pressed={activeFilter === filter}
-                        className={`text-[9px] md:text-[10px] font-black uppercase tracking-widest transition-all px-2.5 md:px-3 py-1.5 rounded whitespace-nowrap snap-start min-h-[36px] flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6B5656] focus-visible:ring-offset-1 ${activeFilter === filter
-                          ? 'bg-[#6B5656] text-[#FEF9F6] shadow-sm'
-                          : 'text-[#6B5656] hover:text-black'
-                          }`}
-                      >
-                        {filter}
-                      </button>
-                    ))
-                  : Array.from({ length: 3 }).map((_, i) => (
-                      <span
-                        key={`cat-skeleton-${i}`}
-                        className="h-4 w-20 rounded bg-[#6B5656]/10 animate-pulse"
-                        aria-hidden="true"
-                      />
-                    ))}
-              </div>
-              {categories.length > 3 && (
-                <ChevronRight className="w-4 h-4 text-[#6B5656] shrink-0 animate-pulse" aria-hidden="true" />
-              )}
-            </div>
-          </FadeUpWrapper>
-
-          {/* Product Grid - 3 Columns */}
-          <StaggerContainer className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-3 md:gap-6">
-            {displayProducts.length > 0 ? (
-              displayProducts.map((product) => (
-                <StaggerItem key={product._id || product.id} className="h-full">
-                  <div className="flex flex-col h-full bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 group">
-                    <div className="relative aspect-[4/5] w-full bg-stone-50 overflow-hidden group cursor-pointer" onClick={() => router.push(`/product/${product._id || product.id}`)}>
-                      <Image
-                        src={product.image_url || getImageSrc('craftingTools')}
-                        alt={product.title || product.name}
-                        fill
-                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 380px"
-                        className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
-                      />
-                      <span className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm text-[10px] uppercase tracking-wider font-bold px-3 py-1.5 rounded-full shadow-sm text-stone-600 border border-gray-100/50 z-10">
-                        {product.badge || 'HANDMADE'}
-                      </span>
-                      <div className="absolute inset-0 bg-[#6B5656]/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center z-10">
-                        <div className="bg-white/95 backdrop-blur-sm text-[#6B5656] text-[8px] font-black uppercase tracking-widest px-4 py-2 rounded-full shadow-md transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300 flex items-center gap-1.5">
-                          <Search className="w-3.5 h-3.5 text-[#D9B4B4]" />
-                          View Details
-                        </div>
-                      </div>
-                    </div>
-                <div className="p-4 md:p-5 flex-1 flex flex-col">
-                  <div className="flex-1">
-                    <div className="mb-2.5">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[8px] md:text-[10px] font-extrabold bg-[#FDF8F6] text-[#D9B4B4] border border-[#F5E6E6] uppercase tracking-widest shadow-sm">
-                        {product.category}
-                      </span>
-                    </div>
-                    <h4 
-                      onClick={() => router.push(`/product/${product._id || product.id}`)}
-                      className="text-base md:text-lg font-bold text-stone-800 leading-tight group-hover:text-[#6B5656] transition-colors line-clamp-2 cursor-pointer"
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-7 sm:gap-8">
+                  {SERVICES.map(({ icon: Icon, title, body }, i) => (
+                    <Reveal
+                      key={title}
+                      delay={0.12 + i * 0.08}
+                      className="flex flex-col items-center text-center gap-3 group/svc"
                     >
-                      {product.title || product.name}
-                    </h4>
-                    <p className="text-[11px] md:text-[13px] text-stone-500 mt-1.5 md:mt-2 leading-relaxed line-clamp-2 font-medium">
-                      {product.description}
-                    </p>
-                    <div className="flex items-center gap-1.5 text-[10px] md:text-xs font-semibold text-stone-600 mt-3 bg-[#F9F7F7] px-2.5 py-1.5 rounded-lg self-start border border-[#EADBDB]/50 shadow-sm">
-                      <span className="text-sm">🚚</span>
-                      <span>{product.delivery_time || '5-7 working days'}</span>
+                      <span className="badge-round w-16 h-16 sm:w-[72px] sm:h-[72px] !bg-parchment-card shadow-soft transition-transform duration-500 group-hover/svc:-translate-y-2 group-hover/svc:rotate-6">
+                        <Icon className="w-7 h-7 text-teal" aria-hidden="true" />
+                      </span>
+                      <h3 className="heading-sm text-[14px] sm:text-[15px] !text-ondark leading-snug">
+                        {title}
+                      </h3>
+                      <p className="text-[12.5px] sm:text-[13.5px] leading-[1.65] text-ondark-muted/90">
+                        {body}
+                      </p>
+                    </Reveal>
+                  ))}
+                </div>
+
+                <div className="mt-9 flex justify-center">
+                  <Link
+                    href="/shop"
+                    className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-ondark hover:text-white transition-colors"
+                  >
+                    View all products
+                    <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
+                  </Link>
+                </div>
+              </div>
+            </Reveal>
+          </div>
+        </div>
+      </section>
+
+      <OrganicEdge variant="wave" from="var(--parchment-deep)" fill="var(--parchment)" height={70} />
+
+      {/* ═══════════════ 3 · SELECTED WORKS ═══════════════ */}
+      <section id="shop" className="bg-paper pt-12 md:pt-20 pb-16 md:pb-24 relative overflow-hidden scroll-mt-24">
+        <Mushroom className="absolute left-3 top-24 w-12 h-auto text-terracotta/25 hidden xl:block" />
+        <KnitHeart className="absolute right-4 top-16 w-14 h-auto text-blush/40 hidden xl:block" />
+
+        <div className="relative max-w-7xl mx-auto px-5 sm:px-6 lg:px-10">
+          <Reveal>
+            <SectionHeading
+              eyebrow="Made by hand"
+              lede="Each piece is crocheted to order, so tiny variations are part of the charm."
+            >
+              Our Handmade Creations
+            </SectionHeading>
+          </Reveal>
+
+          {/* Filter chips */}
+          <div className="mt-10 md:mt-12 flex justify-start sm:justify-center overflow-x-auto scrollbar-hide -mx-5 px-5 sm:mx-0 sm:px-0">
+            <div className="inline-flex items-center gap-1.5 sm:gap-2 bg-parchment-deep/70 border border-line-soft rounded-full p-1.5">
+              {categories.length > 0
+                ? categories.map((c) => (
+                    <button
+                      key={c}
+                      onClick={() => setActiveFilter(c)}
+                      aria-pressed={activeFilter === c}
+                      className={`chip ${activeFilter === c ? 'chip-active' : ''}`}
+                    >
+                      {c}
+                    </button>
+                  ))
+                : Array.from({ length: 3 }).map((_, i) => (
+                    <span
+                      key={`cat-sk-${i}`}
+                      className="skeleton h-[38px] w-24 rounded-full"
+                      aria-hidden="true"
+                    />
+                  ))}
+            </div>
+          </div>
+
+          {/* Product grid */}
+          <div className="mt-12 md:mt-16 grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-7">
+            {productsLoading
+              ? Array.from({ length: 4 }).map((_, i) => (
+                  <div key={`sk-${i}`} className="card-soft overflow-hidden">
+                    <div className="skeleton aspect-[4/5] w-full" />
+                    <div className="p-4 space-y-2.5">
+                      <div className="skeleton h-3 w-16 rounded" />
+                      <div className="skeleton h-4 w-3/4 rounded" />
+                      <div className="skeleton h-8 w-full rounded-lg" />
                     </div>
                   </div>
-                  <div className="flex flex-wrap items-end justify-between mt-auto pt-4 md:pt-5 gap-3">
-                    {(() => {
-                      const originalPrice = product.originalPrice ?? null;
-                      const sellingPrice = product.sellingPrice ?? product.price ?? null;
-                      
-                      if (sellingPrice === null) return null;
-                      
-                      const hasDiscount = originalPrice !== null && originalPrice > sellingPrice;
-                      const discountPercent = hasDiscount ? Math.round(((originalPrice - sellingPrice) / originalPrice) * 100) : 0;
-                      
-                      return (
-                        <div className="flex flex-col">
-                          <div className="flex items-baseline gap-1.5 flex-wrap">
-                            <span className="text-lg md:text-xl font-extrabold text-stone-800 whitespace-nowrap tracking-tight">
-                              ₹{typeof sellingPrice === 'number' ? sellingPrice.toFixed(2) : parseFloat(sellingPrice).toFixed(2)}
+                ))
+              : productsError
+              ? (
+                <div className="col-span-full card-soft py-14 flex flex-col items-center text-center gap-4">
+                  <YarnBall className="w-12 h-auto text-terracotta-ink/70" />
+                  <p className="font-display text-lg text-ink">{productsError}</p>
+                  <button onClick={fetchProducts} className="btn-pill btn-terracotta">
+                    Try again
+                  </button>
+                </div>
+              )
+              : productsList.length === 0
+              ? (
+                <div className="col-span-full card-soft py-14 flex flex-col items-center text-center gap-3">
+                  <YarnBall className="w-12 h-auto text-olive/50" />
+                  <p className="font-display text-lg text-ink">Nothing in this basket yet</p>
+                  <p className="text-sm text-muted">Try another category, or browse the full shop.</p>
+                  <Link href="/shop" className="btn-pill btn-outline mt-2">Browse the shop</Link>
+                </div>
+              )
+              : productsList.map((product, i) => {
+                  const id = product._id || product.id;
+                  const { selling, original, hasDiscount, percent } = priceOf(product);
+                  return (
+                    <Reveal key={id} delay={(i % 4) * 0.07} className="h-full">
+                    <article
+                      className="card-soft overflow-hidden group flex flex-col h-full hover:shadow-lift hover:-translate-y-2 transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]"
+                    >
+                      <Link
+                        href={`/product/${id}`}
+                        className="relative block aspect-[4/5] overflow-hidden bg-parchment-deep"
+                      >
+                        <Image
+                          src={product.image_url || getImageSrc('craftingTools')}
+                          alt={product.title || product.name || 'Crochet product'}
+                          fill
+                          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                          className="object-cover group-hover:scale-[1.08] transition-transform duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)]"
+                        />
+                        {hasDiscount && percent > 0 && (
+                          <span className="absolute top-3 left-3 bg-terracotta-deep text-[#FFF7EC] text-[9px] font-black uppercase tracking-[0.12em] px-2.5 py-1 rounded-full">
+                            {percent}% off
+                          </span>
+                        )}
+                      </Link>
+
+                      <div className="p-5 sm:p-6 flex flex-col flex-1 gap-3">
+                        <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-olive">
+                          {product.category}
+                        </span>
+
+                        <h3 className="heading-sm text-[15px] sm:text-[16px] leading-snug line-clamp-2">
+                          <Link href={`/product/${id}`} className="hover:text-terracotta-ink transition-colors">
+                            {product.title || product.name}
+                          </Link>
+                        </h3>
+
+                        <div className="flex items-baseline gap-2 mt-auto pt-1.5">
+                          {selling !== null && (
+                            <span className="font-sans text-[22px] font-extrabold text-ink tabular-nums tracking-[-0.01em]">
+                              ₹{Number(selling).toFixed(0)}
                             </span>
-                            {hasDiscount && (
-                              <span className="text-[11px] font-medium text-stone-400 line-through whitespace-nowrap decoration-stone-300">
-                                ₹{typeof originalPrice === 'number' ? originalPrice.toFixed(2) : parseFloat(originalPrice).toFixed(2)}
-                              </span>
-                            )}
-                          </div>
-                          {hasDiscount && discountPercent > 0 && (
-                            <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100/50 px-2 py-0.5 rounded-full mt-1 self-start whitespace-nowrap tracking-wide shadow-sm">
-                              {discountPercent}% OFF
+                          )}
+                          {hasDiscount && (
+                            <span className="text-[11px] text-muted line-through tabular-nums">
+                              ₹{Number(original).toFixed(0)}
                             </span>
                           )}
                         </div>
-                      );
-                    })()}
-                    <div className="flex items-center gap-2 shrink-0 ml-auto">
-                      <button
-                        onClick={(e) => handleAddToCart(product, e)}
-                        title="Add to Basket"
-                        className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center border-2 border-stone-100 bg-white rounded-full text-stone-600 hover:text-[#6B5656] hover:border-[#6B5656] hover:bg-stone-50 transition-all active:scale-95 shadow-sm"
-                      >
-                        <ShoppingBag className="w-4 h-4 md:w-5 md:h-5" />
-                      </button>
-                      <button
-                        onClick={(e) => handleBuyNow(product, e)}
-                        className="px-4 py-2 md:px-5 md:py-2.5 bg-[#6B5656] hover:bg-[#5C4949] text-white text-[10px] md:text-xs font-bold rounded-full transition-all active:scale-95 shadow-md shadow-[#6B5656]/20 whitespace-nowrap flex-shrink-0 tracking-wide"
-                      >
-                        Buy Now
-                      </button>
+
+                        <div className="flex items-center gap-2 pt-1">
+                          <button
+                            onClick={(e) => handleAddToCart(product, e)}
+                            aria-label={`Add ${product.title || product.name} to basket`}
+                            className="w-10 h-10 shrink-0 rounded-full border border-line flex items-center justify-center text-ink hover:border-terracotta hover:text-terracotta-ink transition-colors"
+                          >
+                            <ShoppingBag className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={(e) => handleBuyNow(product, e)}
+                            className="btn-pill btn-teal flex-1 !px-4 !py-2.5 !text-[10px]"
+                          >
+                            Buy now
+                          </button>
+                        </div>
+                      </div>
+                    </article>
+                    </Reveal>
+                  );
+                })}
+          </div>
+
+          <div className="mt-10 flex justify-center">
+            <Link
+              href="/shop"
+              className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-terracotta-ink hover:text-terracotta-deep transition-colors"
+            >
+              See all creations
+              <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <OrganicEdge variant="torn" from="var(--parchment)" fill="var(--olive)" height={80} />
+
+      {/* ═══════════════ 4 · PROCESS ═══════════════ */}
+      <section id="process" className="bg-olive-weave pt-10 md:pt-16 pb-14 md:pb-20 relative overflow-hidden scroll-mt-24">
+        <Spool className="absolute left-4 bottom-6 w-16 h-auto text-ondark/15 hidden lg:block" />
+        <YarnBall className="absolute right-5 top-8 w-20 h-auto text-ondark/12 hidden lg:block" />
+
+        <div className="relative max-w-7xl mx-auto px-5 sm:px-6 lg:px-10 py-4">
+          <Reveal>
+            <SectionHeading tone="ondark" eyebrow="From idea to doorstep">
+              How Your Piece Is Made
+            </SectionHeading>
+          </Reveal>
+
+          <div className="mt-14 md:mt-20 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-x-5 gap-y-12 md:gap-8">
+            {PROCESS.map(({ n, icon: Icon, title, body }, i) => (
+              <Reveal key={n} delay={i * 0.09} className="relative flex flex-col items-center text-center gap-3 group/step">
+                {/* Dashed connector, desktop only */}
+                {i < PROCESS.length - 1 && (
+                  <span
+                    className="hidden lg:block absolute top-11 left-[calc(50%+3.2rem)] right-[calc(-50%+3.2rem)] border-t-2 border-dashed border-ondark/30"
+                    aria-hidden="true"
+                  />
+                )}
+
+                <span className="relative badge-round w-[76px] h-[76px] md:w-[88px] md:h-[88px] !bg-parchment-card z-10 shadow-lift transition-transform duration-500 group-hover/step:-translate-y-2 group-hover/step:scale-105">
+                  <Icon className="w-7 h-7 md:w-8 md:h-8 text-olive" aria-hidden="true" />
+                  <span className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-terracotta-deep text-[#FFF7EC] text-[11px] font-black flex items-center justify-center ring-4 ring-olive">
+                    {n}
+                  </span>
+                </span>
+
+                <h3 className="heading-sm text-[15px] md:text-[16px] !text-ondark">{title}</h3>
+                <p className="text-[13px] md:text-[14px] leading-[1.65] text-ondark-muted/90 max-w-[200px]">{body}</p>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <OrganicEdge variant="wave" from="var(--olive)" fill="var(--parchment)" height={70} />
+
+      {/* ═══════════════ 5 · TESTIMONIALS ═══════════════ */}
+      <section className="bg-paper pt-12 md:pt-20 pb-10 md:pb-14 relative overflow-hidden">
+        <Bird className="absolute right-6 top-10 w-20 h-auto text-olive/25 hidden lg:block" />
+        <LeafPair className="absolute left-6 bottom-10 w-12 h-auto text-terracotta/25 hidden lg:block" />
+
+        <div className="relative max-w-7xl mx-auto px-5 sm:px-6 lg:px-10">
+          <Reveal>
+            <SectionHeading eyebrow="Kind words">What Our Customers Say</SectionHeading>
+          </Reveal>
+
+          <div className="mt-12 md:mt-16 grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-7">
+            {TESTIMONIALS.map((t, i) => (
+              <Reveal key={t.name} delay={i * 0.1} className="h-full">
+              <figure className="card-soft p-7 md:p-9 flex flex-col gap-5 h-full hover:shadow-lift hover:-translate-y-1.5 transition-all duration-500">
+                <Quote className="w-7 h-7 text-terracotta/40 shrink-0" aria-hidden="true" />
+                <blockquote className="text-[15px] md:text-[16px] leading-[1.75] text-bodytext flex-1">
+                  “{t.quote}”
+                </blockquote>
+                <span className="block w-12 h-[2px] rounded-full bg-terracotta/35" aria-hidden="true" />
+                <figcaption className="flex items-center gap-3">
+                  <span className="w-11 h-11 rounded-full bg-olive/15 text-olive font-display text-base flex items-center justify-center shrink-0">
+                    {t.name.charAt(0)}
+                  </span>
+                  <span className="flex flex-col leading-tight">
+                    <span className="heading-sm text-[14px]">{t.name}</span>
+                    <span className="text-[11px] text-muted">{t.role}</span>
+                  </span>
+                </figcaption>
+              </figure>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════ 6 · LITTLE THINGS ═══════════════ */}
+      <section id="custom" className="bg-paper pb-16 md:pb-28 relative scroll-mt-24">
+        <div className="max-w-7xl mx-auto px-5 sm:px-6 lg:px-10">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-7 items-stretch">
+            {/* Label block */}
+            <Reveal from="left" className="lg:col-span-3 flex flex-col justify-center gap-4 card-soft p-7 !bg-parchment-deep">
+              <Flower className="w-11 h-auto text-terracotta/70" />
+              <h2 className="font-display text-[24px] md:text-[27px] text-ink leading-tight">
+                Little Things
+                <br />
+                for Your World
+              </h2>
+              <p className="text-[13px] leading-relaxed text-bodytext">
+                Small handmade pieces that make an ordinary day feel a bit softer.
+              </p>
+              <Magnetic className="self-start mt-1">
+                <Link href="/shop" className="btn-pill btn-terracotta">
+                  Visit the shop
+                </Link>
+              </Magnetic>
+            </Reveal>
+
+            {/* Teasers */}
+            {[
+              {
+                img: getImageSrc('stackedSweaters'),
+                eyebrow: 'New in the shop',
+                title: 'Fresh Off the Hook',
+                body: 'The latest keychains, clips and charms, ready to post today.',
+                cta: 'Shop now',
+                href: '/shop',
+              },
+              {
+                img: getImageSrc('craftingTools'),
+                eyebrow: 'In the studio',
+                title: 'Watch It Come Together',
+                body: 'Short videos of the hooks, yarn and rounds behind each piece.',
+                cta: 'Watch videos',
+                href: '/videos',
+              },
+              {
+                img: getImageSrc('knitTexture'),
+                eyebrow: 'Made for you',
+                title: 'Your Idea, Our Hook',
+                body: 'Tell us the colours and the occasion — we crochet the rest.',
+                cta: 'Start a request',
+                href: '#',
+                onClick: () => setCustomRequestModal(true),
+              },
+            ].map((c, i) => (
+              <Reveal key={c.title} delay={0.08 + i * 0.09} className="lg:col-span-3">
+              <article className="card-soft overflow-hidden flex flex-col group h-full hover:shadow-lift hover:-translate-y-2 transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]">
+                <div className="relative aspect-[16/10] overflow-hidden bg-parchment-deep">
+                  <Image
+                    src={c.img}
+                    alt=""
+                    fill
+                    sizes="(max-width: 1024px) 100vw, 25vw"
+                    className="object-cover group-hover:scale-[1.08] transition-transform duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)]"
+                  />
+                </div>
+                <div className="p-5 sm:p-6 flex flex-col gap-2.5 flex-1">
+                  <span className="eyebrow !text-olive">{c.eyebrow}</span>
+                  <h3 className="heading-sm text-[16px] leading-snug">{c.title}</h3>
+                  <p className="text-[13px] leading-relaxed text-bodytext flex-1">{c.body}</p>
+                  {c.onClick ? (
+                    <button
+                      onClick={c.onClick}
+                      className="inline-flex items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-[0.16em] text-terracotta-ink hover:text-terracotta-deep transition-colors self-start mt-1"
+                    >
+                      {c.cta}
+                      <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
+                    </button>
+                  ) : (
+                    <Link
+                      href={c.href}
+                      className="inline-flex items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-[0.16em] text-terracotta-ink hover:text-terracotta-deep transition-colors self-start mt-1"
+                    >
+                      {c.cta}
+                      <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
+                    </Link>
+                  )}
+                </div>
+              </article>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <OrganicEdge variant="torn" from="var(--parchment)" fill="var(--terracotta-deep)" height={72} />
+
+      {/* ═══════════════ 7 · CTA BAND ═══════════════ */}
+      <section className="bg-terracotta-weave pt-12 md:pt-20 pb-10 md:pb-14 relative overflow-hidden">
+        {/* Quiet marks, kept off the text columns. */}
+        <Sprig className="absolute -left-8 bottom-0 w-56 h-auto opacity-[0.13] hidden xl:block" color="#FFF7EC" />
+        <YarnBall className="absolute right-8 bottom-2 w-24 h-auto opacity-[0.12] hidden xl:block" color="#FFF7EC" />
+
+        <div className="relative max-w-7xl mx-auto px-5 sm:px-6 lg:px-10">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-center">
+            {/* Pitch */}
+            <Reveal from="left" className="lg:col-span-6 text-center lg:text-left">
+              <span className="eyebrow !text-[#FFF7EC]/75">Custom orders</span>
+              <h2 className="mt-3 font-display text-[32px] sm:text-[42px] md:text-[52px] text-[#FFF7EC] leading-[1.05] tracking-[-0.022em]">
+                Let&apos;s Make Something Together
+              </h2>
+              <p className="mt-4 text-[15px] md:text-[16px] leading-[1.7] text-[#FFF7EC]/85 max-w-[44ch] mx-auto lg:mx-0">
+                Have a colour, a character or an occasion in mind? Tell us about it —
+                we&apos;d love to hook it for you.
+              </p>
+              <Magnetic className="inline-block mt-8">
+                <button
+                  onClick={() => setCustomRequestModal(true)}
+                  className="btn-pill btn-cream group/cta2 !px-9 !py-4"
+                >
+                  Start your custom order
+                  <ArrowRight className="w-3.5 h-3.5 transition-transform duration-300 group-hover/cta2:translate-x-1" aria-hidden="true" />
+                </button>
+              </Magnetic>
+            </Reveal>
+
+            {/* Contact panel — a full card rather than a floating chip row, so
+                the right column carries the same weight as the headline. */}
+            <Reveal from="right" delay={0.1} className="lg:col-span-6">
+              <div className="card-soft overflow-hidden">
+                <div className="p-6 sm:p-8 flex flex-col gap-5">
+                  <div className="flex items-center gap-3">
+                    <span className="badge-round w-11 h-11 !bg-parchment-deep shrink-0">
+                      <KnitHeart className="w-6 h-auto text-terracotta-ink" />
+                    </span>
+                    <div className="flex flex-col leading-tight">
+                      <h3 className="heading-sm text-[17px]">
+                        Talk to us directly
+                      </h3>
+                      <span className="text-[12px] text-muted">Usually replies within a few hours</span>
                     </div>
                   </div>
-                </div>      </div>
-                </StaggerItem>
-              ))
-            ) : productsLoading ? (
-              // Skeletons: the API can be slow to wake (free-tier cold start),
-              // so never show "no products" until we actually know.
-              Array.from({ length: 3 }).map((_, i) => (
-                <div key={`skeleton-${i}`} className="flex flex-col h-full bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
-                  <div className="aspect-[4/5] w-full bg-stone-100 animate-pulse" />
-                  <div className="p-4 md:p-5 space-y-3">
-                    <div className="h-3 w-16 bg-stone-100 rounded animate-pulse" />
-                    <div className="h-4 w-3/4 bg-stone-100 rounded animate-pulse" />
-                    <div className="h-3 w-full bg-stone-100 rounded animate-pulse" />
-                    <div className="h-8 w-full bg-stone-100 rounded-lg animate-pulse" />
+
+                  <div className="flex flex-col divide-y divide-line-soft border-y border-line-soft">
+                    {[
+                      { icon: Mail, label: 'WhatsApp', value: '+91 75510 41853',
+                        href: 'https://wa.me/917551041853', external: true },
+                      { icon: Instagram, label: 'Instagram', value: '@crochet__creation__',
+                        href: 'https://www.instagram.com/crochet__creation__/', external: true },
+                      { icon: PlayCircle, label: 'Watch', value: 'Behind the scenes',
+                        href: '/videos', external: false },
+                    ].map(({ icon: Icon, label, value, href, external }) => {
+                      const inner = (
+                        <>
+                          <span className="w-9 h-9 rounded-full bg-parchment-deep flex items-center justify-center shrink-0 group-hover/row:bg-terracotta/12 transition-colors">
+                            <Icon className="w-4 h-4 text-terracotta-ink" aria-hidden="true" />
+                          </span>
+                          <span className="flex flex-col leading-tight min-w-0 flex-1">
+                            <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted">{label}</span>
+                            <span className="text-[14px] font-semibold text-ink truncate">{value}</span>
+                          </span>
+                          <ChevronRight className="w-4 h-4 text-muted shrink-0 transition-transform duration-300 group-hover/row:translate-x-1" aria-hidden="true" />
+                        </>
+                      );
+                      const cls = 'group/row flex items-center gap-3.5 py-3.5 transition-colors';
+                      return external ? (
+                        <a key={label} href={href} target="_blank" rel="noopener noreferrer" className={cls}>{inner}</a>
+                      ) : (
+                        <Link key={label} href={href} className={cls}>{inner}</Link>
+                      );
+                    })}
                   </div>
-                </div>
-              ))
-            ) : productsError ? (
-              <div className="col-span-full py-12 flex flex-col items-center justify-center bg-white border border-dashed border-[#EADBDB] rounded-2xl text-center">
-                <Scissors className="w-8 h-8 text-[#D9B4B4] mb-3" />
-                <h4 className="text-base font-bold text-[#6B5656] mb-1">{productsError}</h4>
-                <button
-                  onClick={() => fetchProducts()}
-                  className="mt-3 px-5 py-2 bg-[#6B5656] hover:bg-[#5C4949] text-white text-[10px] font-bold rounded-full transition-all active:scale-95 uppercase tracking-widest"
-                >
-                  Try again
-                </button>
-              </div>
-            ) : (
-              <div className="col-span-full py-12 flex flex-col items-center justify-center bg-white border border-dashed border-[#EADBDB] rounded-2xl text-center">
-                <Scissors className="w-8 h-8 text-[#D9B4B4] mb-3 animate-bounce" />
-                <h4 className="text-base font-bold text-[#6B5656] mb-1">No products found in this category</h4>
-                <p className="text-xs text-stone-500">Try another category, or browse the full shop.</p>
-              </div>
-            )}
-          </StaggerContainer>
-        </section>
 
-        {/* 4. "Do It Yourself" (DIY) Section */}
-        <section id="blog" className="py-12 bg-stone-100/30 border-y border-[#EADBDB]/30 scroll-mt-28">
-          <FadeUpWrapper className="max-w-7xl mx-auto px-4 md:px-12 grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
-
-            {/* Left Column Block */}
-            <div className="flex flex-col h-full rounded-2xl overflow-hidden border border-[#EADBDB] shadow-sm">
-              {/* Top: Crafting Tools Image */}
-              <div className="h-56 relative">
-                <Image
-                  src={getImageSrc('craftingTools')}
-                  alt="Crafting Tools"
-                  fill
-                  sizes="(max-width: 768px) 100vw, 50vw"
-                  className="object-cover"
-                />
-              </div>
-              {/* Middle: Dark Textured Sub-block */}
-              <div className="bg-crochet-charcoal text-[#FEF9F6] p-8 flex-grow flex flex-col justify-center items-center text-center space-y-4">
-                <span className="text-[10px] font-black tracking-widest text-[#D9B4B4] uppercase">HANDMADE WITH LOVE</span>
-                <h3 className="text-lg font-serif font-medium tracking-wide leading-snug">
-                  CUSTOM ORDERS MADE SPECIFICALLY FOR YOU
-                </h3>
-                <p className="text-xs text-stone-300 italic">
-                  “UNIQUE CREATIONS, CRAFTED TO PERFECTION”
-                </p>
-                <button
-                  onClick={() => setCustomRequestModal(true)}
-                  className="bg-[#D9B4B4] hover:bg-[#FEF9F6] text-[#6B5656] hover:text-gray-900 text-[10px] uppercase font-black tracking-widest px-6 py-3.5 rounded-full transition-all duration-300 ease-in-out shadow mt-2"
-                >
-                  REQUEST CUSTOM ORDER
-                </button>
-              </div>
-              {/* Bottom: Wood textured decorative bar */}
-              <div className="bg-crochet-wood h-14 flex items-center justify-center border-t border-stone-800">
-                <span className="text-[10px] uppercase font-bold tracking-widest text-amber-200/50">Crochet Creation WORKSHOP</span>
-              </div>
-            </div>
-
-            {/* Right Column Block */}
-            <div className="flex flex-col h-full rounded-2xl overflow-hidden border border-[#EADBDB] shadow-sm relative group min-h-[500px]">
-              {/* Main Photo of Woman Knitting */}
-              <Image
-                src={getImageSrc('womanKnitting')}
-                alt="Marilyn Knitting"
-                fill
-                sizes="(max-width: 768px) 100vw, 50vw"
-                className="object-cover"
-              />
-              {/* Hover Dark Text Overlay at Bottom */}
-              <div className="absolute bottom-0 left-0 w-full bg-crochet-charcoal/95 text-[#FEF9F6] p-6 border-t border-[#D9B4B4]/20 flex items-center justify-between">
-                <div className="space-y-1">
-                  <span className="text-[8px] font-black tracking-wider uppercase text-[#D9B4B4]">DISCOVER CROCHET CREATION</span>
-                  <p className="text-xs text-stone-300">Explore our catalog of ready-made products.</p>
-                </div>
-                <a href="#about" className="text-xs font-black uppercase tracking-widest text-[#D9B4B4] hover:text-[#FEF9F6] flex items-center gap-1 transition-colors">
-                  SEE MORE <ChevronRight className="w-4 h-4" />
-                </a>
-              </div>
-            </div>
-
-          </FadeUpWrapper>
-        </section>
-
-        {/* 5. "Crochet and Hand Knitting" Section */}
-        <section id="about" className="py-12 md:py-24 px-4 md:px-12 max-w-7xl mx-auto w-full scroll-mt-28">
-          <FadeUpWrapper className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
-
-            {/* Left Column (Text & Buttons) */}
-            <div className="lg:col-span-5 space-y-8 lg:sticky lg:top-24">
-              <div className="space-y-4">
-                <h2 className="text-3xl md:text-5xl font-serif font-medium tracking-wide text-[#6B5656] leading-tight">
-                  CROCHET AND HAND KNITTING
-                </h2>
-                <p className="text-xs font-black tracking-widest text-[#D9B4B4] uppercase">
-                  CLOTHES FOR KIDS, ADULTS ACCORDING TO INDIVIDUAL SIZES!
-                </p>
-              </div>
-
-              {/* Vertical Button Stack */}
-              <div className="flex flex-col gap-4 max-w-sm">
-                <button
-                  onClick={() => setCustomRequestModal(true)}
-                  className="w-full text-left border border-[#D9B4B4] hover:bg-[#D9B4B4]/10 text-[#6B5656] text-[10px] uppercase font-black tracking-widest px-6 py-4 rounded-lg flex items-center justify-between transition-all"
-                >
-                  <span>HOW TO MAKE AN ORDER</span>
-                  <ChevronRight className="w-4 h-4 text-[#D9B4B4]" />
-                </button>
-
-                <button
-                  onClick={() => setCustomRequestModal(true)}
-                  className="w-full text-left border border-[#D9B4B4] hover:bg-[#D9B4B4]/10 text-[#6B5656] text-[10px] uppercase font-black tracking-widest px-6 py-4 rounded-lg flex items-center justify-between transition-all"
-                >
-                  <span>CALCULATE THE COST</span>
-                  <ChevronRight className="w-4 h-4 text-[#D9B4B4]" />
-                </button>
-
-                <button
-                  onClick={() => setCustomRequestModal(true)}
-                  className="w-full bg-[#D9B4B4] hover:bg-[#6B5656] hover:text-[#FEF9F6] text-[#6B5656] text-[10px] uppercase font-black tracking-widest px-6 py-4 rounded-lg flex items-center justify-between transition-all shadow-sm"
-                >
-                  <span>MAKE AN ORDER</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-
-            {/* Right Column (Images & Text) */}
-            <div className="lg:col-span-7 space-y-12">
-              {/* Stacked Sweaters Image */}
-              <div className="h-56 md:h-96 relative rounded-2xl overflow-hidden border border-[#EADBDB] shadow-md">
-                <Image
-                  src={getImageSrc('stackedSweaters')}
-                  alt="Stacked Sweaters"
-                  fill
-                  sizes="(max-width: 1024px) 100vw, 58vw"
-                  className="object-cover"
-                />
-              </div>
-
-              {/* Verbatim Texts */}
-              <div className="space-y-6 md:space-y-8 bg-white p-4 md:p-8 rounded-2xl border border-[#EADBDB]/60 shadow-sm leading-relaxed text-stone-600">
-                <div className="space-y-4">
-                  <h4 className="text-lg font-bold text-[#6B5656] flex items-center gap-2">
-                    <span className="w-6 h-0.5 bg-[#D9B4B4]"></span> Hi, Welcome to Crochet Creation
-                  </h4>
-                  <p className="text-sm">
-                    At Crochet Creation, we believe that true elegance lies in the details. Every piece we create is born from a passion for handcrafted artistry, blending traditional crochet techniques with modern aesthetics. What started as a simple love for yarn and needles has blossomed into a premium studio dedicated to bringing warmth and beauty into your everyday life.
-                  </p>
-                </div>
-
-                <div className="space-y-4 pt-6 border-t border-stone-100">
-                  <p className="text-sm">
-                    We carefully select the finest wool and cotton threads to ensure that each product is not only visually stunning but also luxuriously soft and durable. Whether it's a cozy winter accessory, an intricate home decor piece, or a customized gift, our creations are woven with boundless dedication, love, and a desire to deliver nothing short of perfection.
+                  <p className="flex items-start gap-2 text-[12px] text-muted leading-relaxed">
+                    <ShieldCheck className="w-3.5 h-3.5 text-olive shrink-0 mt-0.5" aria-hidden="true" />
+                    Orders are prepaid by UPI and confirmed once we verify your payment
+                    screenshot on WhatsApp.
                   </p>
                 </div>
               </div>
-            </div>
-
-          </FadeUpWrapper>
-        </section>
-
-        {/* 6. Our Promises / Features Section */}
-        <section id="features" className="relative py-16 md:py-24 overflow-hidden text-center scroll-mt-28">
-          {/* Knit Background to maintain consistency */}
-          <div className="absolute inset-0 z-0">
-            <Image
-              src={getImageSrc('knitTexture')}
-              alt="Knit background"
-              fill
-              sizes="100vw"
-              className="object-cover opacity-20 filter grayscale"
-            />
-            <div className="absolute inset-0 bg-[#FEF9F6]/95 mix-blend-overlay" />
+            </Reveal>
           </div>
+        </div>
+      </section>
 
-          <FadeUpWrapper className="max-w-7xl mx-auto px-4 md:px-12 relative z-10 space-y-12">
-            <div className="space-y-4">
-              <span className="text-[10px] font-black tracking-widest text-[#D9B4B4] uppercase block">THE CROCHET PROMISE</span>
-              <h2 className="text-2xl md:text-4xl font-serif font-medium text-[#6B5656]">Crafted With Care</h2>
-            </div>
+      {/* The footer brings its own hill edge, so the terracotta band flows
+          straight into it without a dead strip between. */}
+      <Footer />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-12 pt-8">
-              {/* Feature 1 */}
-              <div className="flex flex-col items-center space-y-4 group">
-                <div className="w-16 h-16 rounded-full bg-[#FDF8F6] border border-[#F5E6E6] shadow-sm flex items-center justify-center text-[#D9B4B4] group-hover:scale-110 group-hover:bg-[#D9B4B4] group-hover:text-white transition-all duration-300">
-                  <Heart className="w-7 h-7" />
-                </div>
-                <h3 className="text-lg font-bold text-stone-800">100% Handmade</h3>
-                <p className="text-sm text-stone-500 leading-relaxed max-w-[250px]">Every piece is uniquely crafted with love and precision by our expert artisans.</p>
-              </div>
+      {/* ═══════════════ OVERLAYS ═══════════════ */}
 
-              {/* Feature 2 */}
-              <div className="flex flex-col items-center space-y-4 group">
-                <div className="w-16 h-16 rounded-full bg-[#FDF8F6] border border-[#F5E6E6] shadow-sm flex items-center justify-center text-[#D9B4B4] group-hover:scale-110 group-hover:bg-[#D9B4B4] group-hover:text-white transition-all duration-300">
-                  <Star className="w-7 h-7" />
-                </div>
-                <h3 className="text-lg font-bold text-stone-800">Premium Yarn</h3>
-                <p className="text-sm text-stone-500 leading-relaxed max-w-[250px]">We use only the finest, softest wool and cotton threads for maximum comfort.</p>
-              </div>
-
-              {/* Feature 3 */}
-              <div className="flex flex-col items-center space-y-4 group">
-                <div className="w-16 h-16 rounded-full bg-[#FDF8F6] border border-[#F5E6E6] shadow-sm flex items-center justify-center text-[#D9B4B4] group-hover:scale-110 group-hover:bg-[#D9B4B4] group-hover:text-white transition-all duration-300">
-                  <Wand2 className="w-7 h-7" />
-                </div>
-                <h3 className="text-lg font-bold text-stone-800">Custom Designs</h3>
-                <p className="text-sm text-stone-500 leading-relaxed max-w-[250px]">Bring your ideas to life with our bespoke, personalized crochet creations.</p>
-              </div>
-
-              {/* Feature 4 */}
-              <div className="flex flex-col items-center space-y-4 group">
-                <div className="w-16 h-16 rounded-full bg-[#FDF8F6] border border-[#F5E6E6] shadow-sm flex items-center justify-center text-[#D9B4B4] group-hover:scale-110 group-hover:bg-[#D9B4B4] group-hover:text-white transition-all duration-300">
-                  <Leaf className="w-7 h-7" />
-                </div>
-                <h3 className="text-lg font-bold text-stone-800">Eco-Friendly</h3>
-                <p className="text-sm text-stone-500 leading-relaxed max-w-[250px]">We believe in sustainable practices and materials that care for our planet.</p>
-              </div>
-            </div>
-          </FadeUpWrapper>
-        </section>
-
-        {/* 7. Footer Panel (Dark Textured #6B5656) */}
-        <footer id="contact" className="relative bg-crochet-charcoal text-[#FEF9F6] pt-16 pb-12 overflow-hidden border-t border-[#FEF9F6]/10">
-
-          {/* Torn paper edge top (pointing down/inverted) */}
-          <div className="absolute top-0 left-0 w-full overflow-hidden leading-none z-10 rotate-180">
-            <svg className="relative block w-full h-4 text-[#FEF9F6]" viewBox="0 0 1440 40" preserveAspectRatio="none" fill="currentColor">
-              <path d="M0,25 Q15,15 30,25 T60,25 T90,20 T120,30 T150,22 T180,27 T210,18 T240,25 T270,30 T300,20 T330,28 T360,22 T390,27 T420,18 T450,25 T480,30 T510,20 T540,28 T570,22 T600,27 T630,18 T660,25 T690,30 T720,20 T750,28 T780,22 T810,27 T840,18 T870,25 T900,30 T930,20 T960,28 T990,22 T1020,27 T1050,18 T1080,25 T1110,30 T1140,20 T1170,28 T1200,22 T1230,27 T1260,18 T1290,25 T1320,30 T1350,20 T1380,28 T1410,22 T1440,25 L1440,40 L0,40 Z"></path>
-            </svg>
-          </div>
-
-          <FadeUpWrapper className="max-w-7xl mx-auto px-4 md:px-12 grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-12 relative z-20">
-
-            {/* Left Side: Logo & Question */}
-            <div className="lg:col-span-7 space-y-6">
-              <div className="flex items-center gap-2.5">
-                <div className="relative w-8 h-8 rounded-full overflow-hidden border border-[#D9B4B4]/30 shadow-sm bg-white flex-shrink-0">
-                  <Image
-                    src={getImageSrc('logo')}
-                    alt="Crochet Creation Logo"
-                    fill
-                    sizes="32px"
-                    className="object-cover"
-                  />
-                </div>
-                <span className="text-xl font-bold tracking-widest text-[#FEF9F6]">
-                  Crochet Creation
-                </span>
-              </div>
-              <p className="text-sm font-light text-stone-300 max-w-xl leading-relaxed">
-                HAVE QUESTIONS OR WANT TO DISCUSS A CUSTOM ORDER? FEEL FREE TO REACH OUT TO US!
-              </p>
-
-              {/* Scattered pink/purple buttons visual representation */}
-              <div className="flex flex-wrap gap-2 pt-4">
-                <button onClick={() => setCustomRequestModal(true)} aria-label="Request a custom creation" className="w-6 h-6 rounded-full bg-[#D9B4B4] border border-[#FEF9F6]/20 flex items-center justify-center hover:scale-110 transition-transform"><div className="grid grid-cols-2 gap-0.5 w-1.5 h-1.5"><div className="bg-[#6B5656] rounded-full w-0.5 h-0.5"></div><div className="bg-[#6B5656] rounded-full w-0.5 h-0.5"></div><div className="bg-[#6B5656] rounded-full w-0.5 h-0.5"></div><div className="bg-[#6B5656] rounded-full w-0.5 h-0.5"></div></div></button>
-                <button onClick={() => setCustomRequestModal(true)} aria-label="Request a custom creation" className="w-5 h-5 rounded-full bg-[#B67E7E] border border-[#FEF9F6]/20 flex items-center justify-center hover:scale-110 transition-transform"><div className="grid grid-cols-2 gap-0.5 w-1.5 h-1.5"><div className="bg-[#FEF9F6] rounded-full w-0.5 h-0.5"></div><div className="bg-[#FEF9F6] rounded-full w-0.5 h-0.5"></div><div className="bg-[#FEF9F6] rounded-full w-0.5 h-0.5"></div><div className="bg-[#FEF9F6] rounded-full w-0.5 h-0.5"></div></div></button>
-                <button onClick={() => setCustomRequestModal(true)} aria-label="Request a custom creation" className="w-7 h-7 rounded-full bg-[#E8D3D3] border border-[#FEF9F6]/20 flex items-center justify-center hover:scale-110 transition-transform"><div className="grid grid-cols-2 gap-0.5 w-2 h-2"><div className="bg-[#6B5656] rounded-full w-0.5 h-0.5"></div><div className="bg-[#6B5656] rounded-full w-0.5 h-0.5"></div><div className="bg-[#6B5656] rounded-full w-0.5 h-0.5"></div><div className="bg-[#6B5656] rounded-full w-0.5 h-0.5"></div></div></button>
-                <button onClick={() => setCustomRequestModal(true)} aria-label="Request a custom creation" className="w-6 h-6 rounded-full bg-[#C89696] border border-[#FEF9F6]/20 flex items-center justify-center hover:scale-110 transition-transform"><div className="grid grid-cols-2 gap-0.5 w-1.5 h-1.5"><div className="bg-[#FEF9F6] rounded-full w-0.5 h-0.5"></div><div className="bg-[#FEF9F6] rounded-full w-0.5 h-0.5"></div><div className="bg-[#FEF9F6] rounded-full w-0.5 h-0.5"></div><div className="bg-[#FEF9F6] rounded-full w-0.5 h-0.5"></div></div></button>
-              </div>
-            </div>
-
-            {/* Right Side: Social links & Rose pink yarn ball */}
-            <div className="lg:col-span-5 flex flex-col justify-between items-start lg:items-end gap-8">
-
-              {/* Removed dead social links */}
-
-              {/* Yarn Ball and Needles */}
-              <div className="flex items-center gap-4 relative">
-                <div className="w-24 h-24 relative rounded-full overflow-hidden border border-[#D9B4B4]/20 shadow-md">
-                  <Image
-                    src={getImageSrc('heroYarn')}
-                    alt="Marilyn Footer Yarn"
-                    fill
-                    sizes="96px"
-                    className="object-cover"
-                  />
-                </div>
-                <span className="text-[10px] font-black tracking-widest text-[#D9B4B4] uppercase">Crochet Creation HANDMADE</span>
-              </div>
-
-            </div>
-          </FadeUpWrapper>
-
-          {/* Footer legal bar */}
-          <div className="max-w-7xl mx-auto px-4 md:px-12 border-t border-[#FEF9F6]/10 mt-8 md:mt-12 pt-6 md:pt-8 flex flex-col md:flex-row items-center justify-between text-[9px] md:text-[10px] text-stone-400 font-bold uppercase tracking-wider gap-3 md:gap-4">
-            <span>© 2026 Crochet Creation Studio. All Rights Reserved.</span>
-            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
-              <button onClick={() => setPolicyModal('privacy')} className="hover:text-[#D9B4B4] transition-colors uppercase font-bold">Privacy Policy</button>
-              <span className="text-stone-600">|</span>
-              <button onClick={() => setPolicyModal('terms')} className="hover:text-[#D9B4B4] transition-colors uppercase font-bold">Terms of Service</button>
-              <span className="text-stone-600">|</span>
-              <button onClick={() => setPolicyModal('refund')} className="hover:text-[#D9B4B4] transition-colors uppercase font-bold">Refund Policy</button>
-              <span className="text-stone-600">|</span>
-              <a href="#contact" className="hover:text-[#D9B4B4] transition-colors uppercase font-bold">Customer Support</a>
-            </div>
-            <div className="flex items-center gap-2">
-              <span>THANK YOU FOR WATCHING</span>
-              <span className="text-rose-400">❤</span>
-            </div>
-          </div>
-        </footer>
-      </div> {/* End of Scrollable Content Wrapper */}
-
-      {/* Interactive Custom Order/Request Modal */}
-      {customRequestModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-950/70 backdrop-blur-sm">
-          <div className="bg-[#FEF9F6] border border-[#EADBDB] rounded-3xl max-w-md w-full p-8 shadow-2xl relative">
-            <button
-              onClick={() => setCustomRequestModal(false)}
-              className="absolute top-4 right-4 text-stone-500 hover:text-stone-800 p-1"
-            >
-              ✕
-            </button>
-            <div className="text-center space-y-2 mb-6">
-              <span className="text-3xl">🎨</span>
-              <h3 className="text-xl font-bold text-[#6B5656]">Request Custom Knits</h3>
-              <p className="text-xs text-stone-500">Provide details and Crochet Creation will contact you directly.</p>
-            </div>
-
-            {requestSubmitted ? (
-              <div className="py-8 text-center space-y-3 text-emerald-600 font-bold">
-                <div className="text-5xl">✨</div>
-                <p>Request Submitted Successfully!</p>
-                <p className="text-xs text-stone-400 font-normal">We will respond within 24 hours.</p>
-              </div>
-            ) : (
-              <form onSubmit={handleFormSubmit} className="space-y-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-stone-500 uppercase tracking-wider">Your Name</label>
-                  <input
-                    type="text"
-                    name="name"
-                    required
-                    value={formData.name}
-                    onChange={handleFormChange}
-                    placeholder="Enter your name"
-                    className="w-full bg-stone-50 border border-stone-200 px-4 py-2.5 rounded-xl text-sm focus:outline-none focus:border-[#D9B4B4] text-stone-850"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-stone-500 uppercase tracking-wider">Your Email</label>
-                  <input
-                    type="email"
-                    name="email"
-                    required
-                    value={formData.email}
-                    onChange={handleFormChange}
-                    placeholder="Enter your email"
-                    className="w-full bg-stone-50 border border-stone-200 px-4 py-2.5 rounded-xl text-sm focus:outline-none focus:border-[#D9B4B4] text-stone-850"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-stone-500 uppercase tracking-wider">Request Details</label>
-                  <textarea
-                    name="details"
-                    required
-                    rows={3}
-                    value={formData.details}
-                    onChange={handleFormChange}
-                    placeholder="E.g., Pastel sweater in sizing M..."
-                    className="w-full bg-stone-50 border border-stone-200 px-4 py-2.5 rounded-xl text-sm focus:outline-none focus:border-[#D9B4B4] text-stone-850"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  className="w-full bg-[#6B5656] hover:bg-[#D9B4B4] hover:text-[#6B5656] text-white font-bold py-3.5 rounded-xl text-xs tracking-widest uppercase mt-4 transition-all duration-350 active:scale-95 shadow-md"
-                >
-                  Send Inquiry
-                </button>
-              </form>
-            )}
-          </div>
+      {toastMessage && (
+        <div
+          role="status"
+          className="fixed bottom-5 left-1/2 -translate-x-1/2 sm:left-auto sm:right-6 sm:translate-x-0 z-[999]
+            card-soft px-5 py-3.5 flex items-center gap-3 max-w-[92vw] sm:max-w-sm shadow-lift"
+        >
+          <span className="w-8 h-8 rounded-full bg-terracotta/12 flex items-center justify-center text-base shrink-0">
+            🧶
+          </span>
+          <p className="text-[13px] font-medium text-ink">{toastMessage}</p>
         </div>
       )}
 
-      {/* Interactive Login/Registration Modal */}
+      {/* Sign-in */}
       {authModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-md transition-opacity animate-in fade-in duration-300">
-          <div className="bg-white/95 backdrop-blur-xl border border-white/50 rounded-3xl max-w-sm w-full shadow-2xl relative animate-in zoom-in-95 duration-300 overflow-hidden">
-            {/* Decorative Top Gradient */}
-            <div className="absolute top-0 left-0 right-0 h-3 bg-gradient-to-r from-[#D9B4B4] via-[#EADBDB] to-[#D9B4B4] opacity-80" />
-            
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-teal-deep/55 backdrop-blur-sm"
+          onClick={() => setAuthModalOpen(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="auth-title"
+            className="card-soft w-full max-w-sm relative overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
               onClick={() => setAuthModalOpen(false)}
-              className="absolute top-5 right-5 text-stone-400 hover:text-stone-700 bg-stone-100 hover:bg-stone-200 rounded-full p-2 transition-all"
+              aria-label="Close"
+              className="absolute top-4 right-4 w-9 h-9 rounded-full flex items-center justify-center text-muted hover:text-ink hover:bg-parchment-deep transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
 
-            <div className="px-8 pt-10 pb-8 text-center space-y-3">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#FEF9F6] to-[#EADBDB] flex items-center justify-center mx-auto shadow-sm border border-white">
-                <User className="w-8 h-8 text-[#6B5656]" strokeWidth={1.5} />
-              </div>
-              <h3 className="text-2xl font-serif font-bold text-[#6B5656] tracking-tight">
-                Welcome Back
+            <div className="px-7 pt-9 pb-7 text-center">
+              <span className="w-16 h-16 rounded-full bg-parchment-deep flex items-center justify-center mx-auto">
+                <YarnBall className="w-9 h-auto text-olive" />
+              </span>
+              <h3 id="auth-title" className="mt-4 font-display text-[24px] text-ink">
+                Welcome back
               </h3>
-              <p className="text-xs text-stone-500 leading-relaxed max-w-[260px] mx-auto">
-                Sign in to seamlessly access your custom orders, tracking, and exclusive crochet patterns.
+              <p className="mt-2 text-[13px] text-bodytext leading-relaxed">
+                Sign in to track your orders, save addresses and check out faster.
               </p>
-            </div>
 
-            <div className="px-8 pb-10">
               {authError && (
-                <div className="mb-5 p-3 bg-rose-50 border border-rose-100 text-rose-700 text-xs rounded-xl font-medium flex items-start gap-2">
-                  <span className="shrink-0 mt-0.5">⚠️</span>
-                  <span>{authError}</span>
-                </div>
-              )}
-
-              {authSuccessMsg && (
-                <div className="mb-5 p-3 bg-emerald-50 border border-emerald-100 text-emerald-700 text-xs rounded-xl font-medium flex items-start gap-2">
-                  <span className="shrink-0 mt-0.5">✨</span>
-                  <span>{authSuccessMsg}</span>
-                </div>
+                <p className="mt-4 text-[12px] text-terracotta-ink bg-terracotta/10 border border-terracotta/20 rounded-xl px-3 py-2.5">
+                  {authError}
+                </p>
               )}
 
               <button
-                type="button"
                 onClick={handleGoogleLogin}
                 disabled={authLoading}
-                className="group relative w-full bg-white border border-stone-200 hover:border-[#D9B4B4] hover:shadow-[0_4px_12px_rgba(217,180,180,0.2)] text-stone-700 font-bold py-4 rounded-2xl text-[11px] tracking-[0.15em] uppercase transition-all duration-300 active:scale-[0.98] flex items-center justify-center gap-3 overflow-hidden"
+                className="btn-pill btn-cream w-full mt-6 disabled:opacity-60"
               >
-                {/* Button Hover Glow */}
-                <div className="absolute inset-0 bg-gradient-to-r from-[#D9B4B4]/0 via-[#D9B4B4]/10 to-[#D9B4B4]/0 translate-x-[-100%] group-hover:animate-[shimmer_1.5s_infinite]" />
-                
                 {authLoading ? (
                   <>
-                    <span className="w-4 h-4 border-2 border-stone-300 border-t-[#6B5656] rounded-full animate-spin"></span>
-                    Authenticating...
+                    <span className="w-4 h-4 border-2 border-line border-t-terracotta rounded-full animate-spin" />
+                    Signing in…
                   </>
                 ) : (
                   <>
-                    <svg className="w-5 h-5 relative z-10 transition-transform group-hover:scale-110 duration-300" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+                      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
                     </svg>
-                    <span className="relative z-10">Continue with Google</span>
+                    Continue with Google
                   </>
                 )}
               </button>
             </div>
-            
-            {/* Subtle Footer */}
-            <div className="bg-stone-50 border-t border-stone-100 py-4 text-center">
-              <p className="text-[9px] uppercase tracking-widest text-stone-400 font-bold">
-                Secure Authentication
-              </p>
-            </div>
+
+            <p className="bg-parchment-deep py-3.5 text-center text-[9px] font-bold uppercase tracking-[0.2em] text-muted">
+              Secure sign-in
+            </p>
           </div>
         </div>
       )}
 
-      {/* Toast Notification */}
-      {toastMessage && (
-        <div className="fixed bottom-6 right-6 bg-white border border-[#EADBDB] px-5 py-4 rounded-xl shadow-xl z-50 animate-in fade-in slide-in-from-bottom-5 duration-300 flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-[#EADBDB]/30 flex items-center justify-center text-stone-600">
-            🧶
-          </div>
-          <div>
-            <p className="text-xs font-bold text-stone-800">Crochet Creation</p>
-            <p className="text-xs text-stone-600 mt-0.5">{toastMessage}</p>
-          </div>
-        </div>
-      )}
-
-      {/* Complete Profile Mobile Number Prompt */}
+      {/* Mobile number prompt */}
       {showMobilePrompt && (
-        <div className="fixed inset-0 z-[110] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#FEF9F6] rounded-[24px] max-w-sm w-full p-8 shadow-2xl animate-scale-in relative border border-stone-100">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-teal-deep/55 backdrop-blur-sm">
+          <div role="dialog" aria-modal="true" aria-labelledby="mobile-title" className="card-soft w-full max-w-sm p-7 relative">
             <button
               onClick={() => {
-                sessionStorage.setItem('mobilePromptDismissed', 'true');
+                sessionStorage.setItem('mobilePromptDismissed', '1');
                 setShowMobilePrompt(false);
               }}
               aria-label="Close"
-              className="absolute top-4 right-4 text-stone-400 hover:text-stone-600 transition-colors p-1"
+              className="absolute top-4 right-4 w-9 h-9 rounded-full flex items-center justify-center text-muted hover:text-ink"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
-            <div className="flex justify-center mb-6">
-              <div className="w-14 h-14 bg-rose-100 rounded-full flex items-center justify-center border border-rose-200">
-                <Send className="w-6 h-6 text-rose-500" />
-              </div>
-            </div>
-            <h3 className="font-serif text-2xl text-center text-[#4A3E3E] mb-2 font-bold">Complete Your Profile</h3>
-            <p className="text-stone-500 text-xs text-center leading-relaxed mb-6">
-              Please provide your mobile number so we can seamlessly deliver your custom crochet creations and reach out for delivery updates.
+            <h3 id="mobile-title" className="font-display text-[21px] text-ink">
+              One last thing
+            </h3>
+            <p className="mt-2 text-[13px] text-bodytext leading-relaxed">
+              Add a mobile number so we can reach you about your orders.
             </p>
-            <form onSubmit={handleMobilePromptSubmit} className="space-y-4">
+            <form onSubmit={handleMobilePromptSubmit} className="mt-5 space-y-4">
               <div>
-                <label htmlFor="mobile-prompt" className="text-[10px] font-bold text-stone-500 uppercase tracking-wider block mb-1">Mobile Number</label>
+                <label htmlFor="mobile-prompt" className="block text-[10px] font-bold uppercase tracking-[0.16em] text-muted mb-1.5">
+                  Mobile number
+                </label>
                 <input
                   id="mobile-prompt"
                   type="tel"
@@ -1767,91 +1139,148 @@ export default function CrochetCreationPage() {
                   required
                   value={mobilePromptValue}
                   onChange={(e) => setMobilePromptValue(e.target.value)}
-                  placeholder="e.g. +15550000000"
-                  className="w-full bg-white border border-stone-200 px-4 py-3 rounded-xl text-sm focus:outline-none focus:border-[#D9B4B4] transition-colors"
+                  placeholder="e.g. 9876543210"
+                  className="w-full bg-parchment border border-line rounded-xl px-4 py-3 text-sm text-ink outline-none focus:border-terracotta transition-colors"
                 />
               </div>
-              <button
-                type="submit"
-                disabled={mobilePromptLoading}
-                className="w-full bg-[#6B5656] hover:bg-[#4A3E3E] text-white font-bold py-3.5 rounded-xl text-xs tracking-widest uppercase transition-all duration-300 flex items-center justify-center gap-2 mt-4"
-              >
-                {mobilePromptLoading ? (
-                  <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                ) : (
-                  'Save Mobile Number'
-                )}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  sessionStorage.setItem('mobilePromptDismissed', 'true');
-                  setShowMobilePrompt(false);
-                }}
-                className="w-full text-center text-stone-400 hover:text-stone-600 text-[10px] font-bold uppercase tracking-wider pt-2 block transition-colors"
-              >
-                Skip for now
+              <button type="submit" disabled={mobilePromptLoading} className="btn-pill btn-teal w-full disabled:opacity-60">
+                {mobilePromptLoading ? 'Saving…' : 'Save number'}
               </button>
             </form>
           </div>
         </div>
       )}
 
-
-      {/* Policy Dialog Modal */}
-      {policyModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-950/70 backdrop-blur-sm">
-          <div className="bg-[#FEF9F6] border border-[#EADBDB] rounded-3xl max-w-lg w-full p-8 shadow-2xl relative">
+      {/* Custom request */}
+      {customRequestModal && (
+        <div
+          data-lenis-prevent
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-teal-deep/55 backdrop-blur-sm overflow-y-auto"
+          onClick={() => setCustomRequestModal(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="custom-title"
+            className="card-soft w-full max-w-md relative my-8"
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
-              onClick={() => setPolicyModal(null)}
-              className="absolute top-6 right-6 text-stone-400 hover:text-stone-700 transition-colors"
+              onClick={() => setCustomRequestModal(false)}
+              aria-label="Close"
+              className="absolute top-4 right-4 w-9 h-9 rounded-full flex items-center justify-center text-muted hover:text-ink z-10"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
-            
-            <div className="space-y-6">
-              <div className="text-center">
-                <span className="text-[10px] font-black tracking-widest text-[#D9B4B4] uppercase">Legal Policy</span>
-                <h3 className="text-2xl font-normal text-[#6B5656] mt-2 font-display uppercase tracking-wider">
-                  {policyModal === 'privacy' && 'Privacy Policy'}
-                  {policyModal === 'terms' && 'Terms of Service'}
-                  {policyModal === 'refund' && 'Refund Policy'}
+
+            {requestSubmitted ? (
+              <div className="p-10 text-center flex flex-col items-center gap-3">
+                <KnitHeart className="w-14 h-auto text-terracotta" />
+                <h3 className="font-display text-[22px] text-ink">Off it goes!</h3>
+                <p className="text-[13px] text-bodytext">
+                  We&apos;ve opened WhatsApp with your idea. We&apos;ll reply shortly.
+                </p>
+              </div>
+            ) : (
+              <div className="p-7">
+                <span className="eyebrow">Made for you</span>
+                <h3 id="custom-title" className="mt-2 font-display text-[23px] text-ink">
+                  Request a custom piece
                 </h3>
-              </div>
+                <p className="mt-2 text-[13px] text-bodytext leading-relaxed">
+                  Tell us what you have in mind and we&apos;ll come back with a price and a timeline.
+                </p>
 
-              <div className="text-xs text-stone-600 space-y-4 max-h-[300px] overflow-y-auto pr-2 leading-relaxed">
-                {policyModal === 'privacy' && (
-                  <>
-                    <p>Your privacy is important to us. It is Crochet Creation Studio's policy to respect your privacy regarding any information we may collect from you across our website.</p>
-                    <p>We only ask for personal information when we truly need it to provide a service to you. We collect it by fair and lawful means, with your knowledge and consent. We also let you know why we're collecting it and how it will be used.</p>
-                    <p>We only retain collected information for as long as necessary to provide you with your requested service. What data we store, we'll protect within commercially acceptable means to prevent loss and theft, as well as unauthorized access, disclosure, copying, use, or modification.</p>
-                    <p>We don't share any personally identifying information publicly or with third-parties, except when required to by law.</p>
-                  </>
-                )}
-                {policyModal === 'terms' && (
-                  <>
-                    <p>Welcome to Crochet Creation. By accessing this website, you agree to be bound by these terms of service, all applicable laws and regulations, and agree that you are responsible for compliance with any applicable local laws.</p>
-                    <p>The materials contained in this website are protected by applicable copyright and trademark law. Permission is granted to temporarily download one copy of the materials (information or software) on Crochet Creation Studio's website for personal, non-commercial transitory viewing only.</p>
-                    <p>Under this license you may not modify or copy the materials, use the materials for any commercial purpose, or attempt to decompile or reverse engineer any software contained on the website.</p>
-                  </>
-                )}
-                {policyModal === 'refund' && (
-                  <>
-                    <p>We want you to be completely satisfied with your handmade purchases. Since each item is crafted by hand, small variations are natural and are a testament to the authentic crafting process.</p>
-                    <p>If you are not satisfied with your purchase, you may request a return or exchange within 14 days of delivery. The item must be unused, unwashed, and in its original packaging.</p>
-                    <p>Custom-made items stitched according to individual sizes are eligible for refunds only in the event of a manufacturing defect or shipping error.</p>
-                  </>
-                )}
+                <form onSubmit={handleFormSubmit} className="mt-5 space-y-4">
+                  <div>
+                    <label htmlFor="cr-name" className="block text-[10px] font-bold uppercase tracking-[0.16em] text-muted mb-1.5">
+                      Your name
+                    </label>
+                    <input
+                      id="cr-name" name="name" required autoComplete="name"
+                      value={formData.name} onChange={handleFormChange}
+                      className="w-full bg-parchment border border-line rounded-xl px-4 py-3 text-sm text-ink outline-none focus:border-terracotta transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="cr-email" className="block text-[10px] font-bold uppercase tracking-[0.16em] text-muted mb-1.5">
+                      Email
+                    </label>
+                    <input
+                      id="cr-email" name="email" type="email" required autoComplete="email"
+                      value={formData.email} onChange={handleFormChange}
+                      className="w-full bg-parchment border border-line rounded-xl px-4 py-3 text-sm text-ink outline-none focus:border-terracotta transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="cr-details" className="block text-[10px] font-bold uppercase tracking-[0.16em] text-muted mb-1.5">
+                      What would you love?
+                    </label>
+                    <textarea
+                      id="cr-details" name="details" required rows={4}
+                      value={formData.details} onChange={handleFormChange}
+                      placeholder="Colours, size, the occasion, when you need it…"
+                      className="w-full bg-parchment border border-line rounded-xl px-4 py-3 text-sm text-ink outline-none focus:border-terracotta transition-colors resize-none"
+                    />
+                  </div>
+                  <button type="submit" className="btn-pill btn-terracotta w-full">
+                    Send on WhatsApp
+                  </button>
+                </form>
               </div>
+            )}
+          </div>
+        </div>
+      )}
 
-              <div className="pt-4 border-t border-[#EADBDB]">
-                <button
-                  onClick={() => setPolicyModal(null)}
-                  className="w-full bg-[#6B5656] hover:bg-[#5C4949] text-white text-xs font-semibold py-3.5 rounded-full transition-all active:scale-95 shadow-sm uppercase tracking-widest"
-                >
-                  Close Window
-                </button>
-              </div>
+      {/* Policies */}
+      {policyModal && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-teal-deep/55 backdrop-blur-sm"
+          onClick={() => setPolicyModal(null)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="card-soft w-full max-w-lg max-h-[80vh] flex flex-col relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-7 py-5 border-b border-line-soft shrink-0">
+              <h3 className="font-display text-[19px] text-ink capitalize">
+                {policyModal === 'privacy' && 'Privacy Policy'}
+                {policyModal === 'terms' && 'Terms of Service'}
+                {policyModal === 'refund' && 'Refund Policy'}
+              </h3>
+              <button
+                onClick={() => setPolicyModal(null)}
+                aria-label="Close"
+                className="w-9 h-9 rounded-full flex items-center justify-center text-muted hover:text-ink"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div data-lenis-prevent className="px-7 py-6 overflow-y-auto text-[13px] leading-relaxed text-bodytext space-y-3">
+              {policyModal === 'privacy' && (
+                <p>
+                  We only collect what we need to fulfil your order — your name, contact
+                  details and delivery address. We never sell your data, and payment
+                  screenshots are used solely to verify your order.
+                </p>
+              )}
+              {policyModal === 'terms' && (
+                <p>
+                  Every item is crocheted to order. Because each piece is handmade, small
+                  variations in size and shade are normal and are part of the character of
+                  the work. Orders are confirmed once payment has been verified.
+                </p>
+              )}
+              {policyModal === 'refund' && (
+                <p>
+                  If a piece arrives damaged or is not what you ordered, message us within
+                  48 hours with photos and we&apos;ll remake or refund it. Custom-made items
+                  cannot be returned unless they are faulty.
+                </p>
+              )}
             </div>
           </div>
         </div>

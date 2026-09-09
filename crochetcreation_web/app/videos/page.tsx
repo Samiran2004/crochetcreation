@@ -18,6 +18,10 @@ import {
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import OrganicEdge from '../components/ui/OrganicEdge';
+import SectionHeading from '../components/ui/SectionHeading';
+import { Sprig, Spool } from '../components/decor/Botanicals';
+import { Reveal, ScrollProgress } from '../components/motion/Motion';
 
 const API_URL = getApiUrl();
 
@@ -171,28 +175,35 @@ export default function VideosPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#FEF9F6]">
+    <div className="min-h-screen bg-paper">
       {/* Navbar */}
-      <Navbar
-        themeColor={themeColor}
-        themeColors={DEFAULT_THEME_COLORS}
-        onThemeChange={(c) => { setThemeColor(c); localStorage.setItem('crochet_theme', c); }}
-        token={token}
-        userProfile={userProfile}
-        onLogout={handleLogout}
-        onOpenAuth={() => router.push('/')}
-        cartItemsCount={cartItemsCount}
-        alwaysOpaque
-        currentPage="videos"
-      />
+      <Navbar alwaysOpaque />
+      <ScrollProgress />
+
+      {/* Page header */}
+      <section className="relative bg-paper-deep pt-24 md:pt-32 pb-10 md:pb-14 overflow-hidden">
+        <Sprig className="absolute top-16 right-4 w-44 h-auto text-olive/20 hidden lg:block" />
+        <Spool className="absolute bottom-3 left-6 w-14 h-auto text-terracotta/20 hidden lg:block" />
+        <div className="relative max-w-7xl mx-auto px-5 sm:px-6 lg:px-10">
+          <Reveal>
+          <SectionHeading
+            eyebrow="From the studio"
+            lede="Short films of the hooks, yarn and rounds behind each handmade piece."
+          >
+            Watch It Come Together
+          </SectionHeading>
+          </Reveal>
+        </div>
+      </section>
+      <OrganicEdge variant="wave" fill="var(--parchment)" height={64} />
 
       {/* Page Content */}
-      <main className="pt-24 pb-16">
+      <main className="pt-8 pb-16">
 
         {/* Hero Section - Latest Video */}
         {!loading && latestVideo && (
           <section className="max-w-6xl mx-auto px-4 md:px-6 mb-12">
-            <div className="relative rounded-3xl overflow-hidden shadow-2xl shadow-stone-300/30 bg-stone-900 group">
+            <div className="relative rounded-3xl overflow-hidden shadow-2xl shadow-line/30 bg-ink group">
               {/* Embedded YouTube Player - Autoplay */}
               <div className="relative w-full" style={{ paddingBottom: latestVideo.video_type === 'shorts' ? '56.25%' : '56.25%' }}>
                 <iframe
@@ -209,14 +220,14 @@ export default function VideosPage() {
               </div>
 
               {/* Overlay Info Bar */}
-              <div className="absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-stone-900/90 via-stone-900/50 to-transparent p-6 md:p-8 pointer-events-none">
+              <div className="absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-ink/90 via-ink/50 to-transparent p-6 md:p-8 pointer-events-none">
                 <div className="flex items-end justify-between gap-4">
                   <div className="pointer-events-auto">
                     <span className="inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-amber-300 bg-amber-400/15 px-2.5 py-1 rounded-full mb-3">
                       <Sparkles className="w-3 h-3" /> Latest Video
                     </span>
                     <h2 className="text-white text-lg md:text-2xl font-bold leading-tight line-clamp-2">{latestVideo.title}</h2>
-                    <p className="text-stone-400 text-xs mt-1.5 font-medium">{formatDate(latestVideo.created_at)}</p>
+                    <p className="text-ondark-muted text-xs mt-1.5 font-medium">{formatDate(latestVideo.created_at)}</p>
                   </div>
                   <div className="shrink-0 flex items-center gap-3 pointer-events-auto">
                     <button
@@ -248,22 +259,22 @@ export default function VideosPage() {
                 <div className="w-8 h-8 bg-red-50 rounded-lg flex items-center justify-center">
                   <Youtube className="w-4 h-4 text-red-500" />
                 </div>
-                <span className="text-[10px] font-black uppercase tracking-widest text-[#6B5656]/60">Creative Canvas</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-teal/60">Creative Canvas</span>
               </div>
-              <h1 className="text-2xl md:text-3xl font-serif font-bold text-stone-800 tracking-tight">Video Gallery</h1>
-              <p className="text-xs text-stone-500 mt-1 max-w-md">Explore tutorials, behind-the-scenes, and creative inspiration from our YouTube channel @Creativecanvas002</p>
+              <h2 className="font-display text-2xl md:text-3xl text-ink">Video Gallery</h2>
+              <p className="text-xs text-muted mt-1 max-w-md">Explore tutorials, behind-the-scenes, and creative inspiration from our YouTube channel @Creativecanvas002</p>
             </div>
 
             {/* Filter Tabs - Pill style */}
-            <div className="flex bg-white border border-[#EADBDB] p-1 rounded-2xl shadow-sm">
+            <div className="flex bg-white border border-line p-1 rounded-2xl shadow-sm">
               {filterTabs.map(tab => (
                 <button
                   key={tab.key}
                   onClick={() => setActiveFilter(tab.key)}
                   className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all ${
                     activeFilter === tab.key 
-                      ? 'bg-[#6B5656] text-white shadow-sm' 
-                      : 'text-stone-500 hover:text-[#6B5656] hover:bg-stone-50'
+                      ? 'bg-teal text-white shadow-sm' 
+                      : 'text-muted hover:text-teal hover:bg-parchment-deep'
                   }`}
                 >
                   <tab.icon className="w-3.5 h-3.5" />
@@ -277,8 +288,8 @@ export default function VideosPage() {
         {/* Loading State */}
         {loading && (
           <div className="flex flex-col items-center justify-center py-24">
-            <div className="w-12 h-12 border-4 border-stone-200 border-t-[#D9B4B4] rounded-full animate-spin mb-4" />
-            <p className="text-xs font-bold uppercase tracking-widest text-[#6B5656] animate-pulse">Loading Videos...</p>
+            <div className="w-12 h-12 border-4 border-line border-t-terracotta rounded-full animate-spin mb-4" />
+            <p className="text-xs font-bold uppercase tracking-widest text-teal animate-pulse">Loading Videos...</p>
           </div>
         )}
 
@@ -296,12 +307,12 @@ export default function VideosPage() {
         {/* Empty State */}
         {!loading && !error && videos.length === 0 && (
           <div className="max-w-6xl mx-auto px-4 md:px-6">
-            <div className="text-center py-20 bg-white border border-dashed border-[#EADBDB] rounded-3xl p-8 space-y-4">
+            <div className="text-center py-20 bg-white border border-dashed border-line rounded-3xl p-8 space-y-4">
               <div className="w-16 h-16 bg-red-50 border border-red-100 rounded-full flex items-center justify-center text-2xl mx-auto">
                 🎬
               </div>
-              <h3 className="text-base font-bold text-stone-800">No Videos Yet</h3>
-              <p className="text-xs text-stone-500 max-w-sm mx-auto">Videos from our YouTube channel will appear here soon. Stay tuned!</p>
+              <h3 className="text-base font-bold text-ink">No Videos Yet</h3>
+              <p className="text-xs text-muted max-w-sm mx-auto">Videos from our YouTube channel will appear here soon. Stay tuned!</p>
               <a 
                 href="https://www.youtube.com/@Creativecanvas002" 
                 target="_blank" 
@@ -327,7 +338,7 @@ export default function VideosPage() {
                   rel="noopener noreferrer"
                   className="block break-inside-avoid group cursor-pointer mb-6"
                 >
-                  <div className="relative rounded-3xl overflow-hidden mb-2 shadow-sm bg-stone-100">
+                  <div className="relative rounded-3xl overflow-hidden mb-2 shadow-sm bg-line-soft">
                     <img 
                       src={getThumbnail(video)} 
                       alt={video.title}
@@ -338,13 +349,13 @@ export default function VideosPage() {
                     {/* Play Button Overlay */}
                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 flex items-center justify-center">
                       <div className="w-12 h-12 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transform scale-75 group-hover:scale-100 transition-all duration-300 shadow-xl">
-                        <Play className="w-5 h-5 text-stone-900 fill-stone-900 ml-0.5" />
+                        <Play className="w-5 h-5 text-ink fill-ink ml-0.5" />
                       </div>
                     </div>
 
                     {/* Video Type Badge */}
                     <div className="absolute top-3 left-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest bg-stone-900/70 text-white backdrop-blur-md">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest bg-ink/70 text-white backdrop-blur-md">
                         {video.video_type === 'shorts' ? (
                           <><Clapperboard className="w-3 h-3" /> Short</>
                         ) : (
@@ -356,14 +367,14 @@ export default function VideosPage() {
 
                   {/* Text below image like Pinterest */}
                   <div className="px-1">
-                    <h3 className="text-sm font-bold text-stone-800 leading-snug line-clamp-2 group-hover:text-black transition-colors">
+                    <h3 className="text-sm font-bold text-ink leading-snug line-clamp-2 group-hover:text-black transition-colors">
                       {video.title}
                     </h3>
                     <div className="flex items-center gap-1.5 mt-1">
                       <div className="w-4 h-4 bg-red-50 rounded-full flex items-center justify-center">
                         <Youtube className="w-2.5 h-2.5 text-red-500" />
                       </div>
-                      <span className="text-[11px] text-stone-500 font-semibold">Creative Canvas</span>
+                      <span className="text-[11px] text-muted font-semibold">Creative Canvas</span>
                     </div>
                   </div>
                 </a>
@@ -371,7 +382,7 @@ export default function VideosPage() {
             </div>
 
             {/* Subscribe Banner */}
-            <div className="mt-16 bg-gradient-to-br from-stone-900 via-stone-800 to-stone-900 rounded-3xl p-8 md:p-12 text-center relative overflow-hidden">
+            <div className="mt-16 bg-teal-weave rounded-3xl p-8 md:p-12 text-center relative overflow-hidden">
               {/* Decorative */}
               <div className="absolute top-0 right-0 w-64 h-64 bg-red-500/5 rounded-full blur-3xl" />
               <div className="absolute bottom-0 left-0 w-48 h-48 bg-amber-500/5 rounded-full blur-3xl" />
@@ -380,8 +391,8 @@ export default function VideosPage() {
                 <div className="w-16 h-16 bg-red-600/20 border border-red-500/20 rounded-2xl flex items-center justify-center mx-auto mb-5">
                   <Youtube className="w-8 h-8 text-red-500" />
                 </div>
-                <h3 className="text-white text-xl md:text-2xl font-bold mb-2">Subscribe to Creative Canvas</h3>
-                <p className="text-stone-400 text-sm max-w-md mx-auto mb-6">Don't miss any new tutorial or creative inspiration. Join 21K+ subscribers on our YouTube channel!</p>
+                <h3 className="font-display text-ondark text-[26px] md:text-[32px] mb-2">Subscribe to Creative Canvas</h3>
+                <p className="text-ondark-muted text-sm max-w-md mx-auto mb-6">Don&apos;t miss any new tutorial or creative inspiration. Join 21K+ subscribers on our YouTube channel!</p>
                 <a 
                   href="https://www.youtube.com/@Creativecanvas002?sub_confirmation=1" 
                   target="_blank" 

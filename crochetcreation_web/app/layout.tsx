@@ -1,6 +1,36 @@
 import './globals.css';
 import type { Metadata, Viewport } from 'next';
+import { Instrument_Serif, Instrument_Sans } from 'next/font/google';
 import CartDrawer from './components/CartDrawer';
+import SmoothScroll from './components/motion/SmoothScroll';
+
+/**
+ * Typography is a two-role system from one matched family.
+ *
+ * Instrument Serif carries the large editorial moments — hero, section titles,
+ * band headings. It ships a single weight, which at display sizes is exactly
+ * the point: a high-contrast serif set in regular reads far more expensive
+ * than a bolded one. Anything small (card titles, labels, UI) uses Instrument
+ * Sans instead, where a 400-weight serif would look thin.
+ *
+ * Both are self-hosted by next/font, so there is no render-blocking request and
+ * no flash of fallback type.
+ */
+const display = Instrument_Serif({
+  subsets: ['latin'],
+  display: 'swap',
+  weight: '400',
+  style: ['normal', 'italic'],
+  variable: '--font-display',
+  fallback: ['Georgia', 'Times New Roman', 'serif'],
+});
+
+const body = Instrument_Sans({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-body',
+  fallback: ['ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'Helvetica Neue', 'Arial', 'sans-serif'],
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://crochetcreation.vercel.app'),
@@ -10,8 +40,6 @@ export const metadata: Metadata = {
   },
   description: 'Discover aesthetic, handmade crochet plushies, cozy apparel, and DIY masterclasses crafted with love.',
   manifest: '/manifest.json',
-  // Without these the browser falls back to /favicon.ico, which did not exist —
-  // a 404 on every page load and a blank tab icon.
   icons: {
     icon: [
       { url: '/favicon.ico', sizes: 'any' },
@@ -50,7 +78,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#ffffff',
+  themeColor: '#F4EADA',
   width: 'device-width',
   initialScale: 1,
 };
@@ -61,13 +89,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="scroll-smooth">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Quicksand:wght@300..700&display=swap" rel="stylesheet" />
-      </head>
-      <body className="antialiased min-h-screen bg-[#FEF9F6] text-[#2D2525] font-sans">
+    <html lang="en" className={`${display.variable} ${body.variable} scroll-smooth`}>
+      <body className="antialiased min-h-screen bg-paper text-bodytext font-sans">
+        <SmoothScroll />
         {children}
         <CartDrawer />
       </body>

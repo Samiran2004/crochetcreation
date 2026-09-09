@@ -93,7 +93,7 @@ export default function ReviewDrawer({
             animate={{ opacity: 0.5 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-stone-900/50 backdrop-blur-sm z-50 transition-opacity"
+            className="fixed inset-0 bg-ink/50 backdrop-blur-sm z-50 transition-opacity"
           />
 
           {/* Drawer / Modal Shell */}
@@ -102,28 +102,28 @@ export default function ReviewDrawer({
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: '100%', opacity: 1 }}
             transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-            className="fixed bottom-0 md:bottom-auto md:top-1/2 md:-translate-y-1/2 left-0 md:left-1/2 md:-translate-x-1/2 w-full md:max-w-md bg-white border border-[#EADBDB] md:rounded-3xl rounded-t-3xl shadow-2xl z-50 flex flex-col max-h-[85vh] overflow-hidden"
+            className="fixed bottom-0 md:bottom-auto md:top-1/2 md:-translate-y-1/2 left-0 md:left-1/2 md:-translate-x-1/2 w-full md:max-w-md bg-white border border-line md:rounded-3xl rounded-t-3xl shadow-2xl z-50 flex flex-col max-h-[85vh] overflow-hidden"
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-5 border-b border-stone-100 shrink-0">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-line-soft shrink-0">
               <div>
-                <span className="text-[9px] font-black tracking-widest text-[#D9B4B4] uppercase block">
+                <span className="text-[9px] font-black tracking-widest text-terracotta uppercase block">
                   Write a Review
                 </span>
-                <h3 className="text-sm font-bold text-[#6B5656] line-clamp-1 pr-6 mt-0.5">
+                <h3 className="text-sm font-bold text-teal line-clamp-1 pr-6 mt-0.5">
                   {productTitle}
                 </h3>
               </div>
               <button
                 onClick={onClose}
-                className="w-9 h-9 flex items-center justify-center rounded-xl bg-stone-50 text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-all select-none active:scale-95 duration-100"
+                className="w-9 h-9 flex items-center justify-center rounded-xl bg-parchment-deep text-muted hover:text-bodytext hover:bg-line-soft transition-all select-none active:scale-95 duration-100"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Form Content */}
-            <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-6">
+            <form onSubmit={handleSubmit} data-lenis-prevent className="p-6 overflow-y-auto space-y-6">
               {errorMessage && (
                 <div className="bg-rose-50 border border-rose-200/50 text-rose-700 text-xs font-semibold px-4 py-3 rounded-2xl">
                   {errorMessage}
@@ -132,7 +132,7 @@ export default function ReviewDrawer({
 
               {/* Rating row (Fat-finger friendly touch targets) */}
               <div className="space-y-2 text-center">
-                <span className="block text-[10px] font-black tracking-widest text-stone-400 uppercase">
+                <span className="block text-[10px] font-black tracking-widest text-muted uppercase">
                   Your Rating
                 </span>
                 <div className="flex justify-center items-center gap-2 py-2">
@@ -145,11 +145,11 @@ export default function ReviewDrawer({
                         onClick={() => setRating(starValue)}
                         onMouseEnter={() => setHoverRating(starValue)}
                         onMouseLeave={() => setHoverRating(0)}
-                        className="w-12 h-12 flex items-center justify-center text-stone-300 hover:text-amber-400 transition-colors select-none active:scale-90 duration-75"
+                        className="w-12 h-12 flex items-center justify-center text-line hover:text-amber-400 transition-colors select-none active:scale-90 duration-75"
                       >
                         <Star
                           className={`w-8 h-8 transition-transform ${
-                            filled ? 'fill-amber-400 text-amber-400 scale-110' : 'text-stone-300 scale-100'
+                            filled ? 'fill-amber-400 text-amber-400 scale-110' : 'text-line scale-100'
                           }`}
                         />
                       </button>
@@ -160,7 +160,7 @@ export default function ReviewDrawer({
 
               {/* Comment text area */}
               <div className="space-y-2">
-                <label className="block text-[10px] font-black tracking-widest text-stone-400 uppercase">
+                <label className="block text-[10px] font-black tracking-widest text-muted uppercase">
                   Your Review
                 </label>
                 <textarea
@@ -168,7 +168,7 @@ export default function ReviewDrawer({
                   onChange={(e) => setComment(e.target.value)}
                   placeholder="Tell us what you loved about this creation..."
                   rows={4}
-                  className="w-full border border-stone-200 focus:border-[#6B5656] focus:ring-1 focus:ring-[#6B5656] rounded-2xl p-4 text-xs font-medium text-stone-800 placeholder-stone-400 bg-stone-50/50 focus:bg-white outline-none resize-none transition-colors"
+                  className="w-full border border-line focus:border-teal focus:ring-1 focus:ring-teal rounded-2xl p-4 text-xs font-medium text-ink placeholder-muted bg-parchment-deep/50 focus:bg-white outline-none resize-none transition-colors"
                 />
               </div>
 
@@ -176,7 +176,7 @@ export default function ReviewDrawer({
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full min-h-[48px] bg-[#6B5656] text-white hover:bg-[#4A3E3E] disabled:bg-[#8D7F7F] disabled:cursor-not-allowed text-xs font-bold uppercase tracking-widest py-3 px-6 rounded-2xl flex items-center justify-center gap-2 transition-all select-none active:scale-95 duration-100 shadow-md shadow-[#6B5656]/10"
+                className="w-full min-h-[48px] bg-teal text-white hover:bg-bodytext disabled:bg-[#8D7F7F] disabled:cursor-not-allowed text-xs font-bold uppercase tracking-widest py-3 px-6 rounded-2xl flex items-center justify-center gap-2 transition-all select-none active:scale-95 duration-100 shadow-md shadow-teal/10"
               >
                 {submitting ? (
                   <>

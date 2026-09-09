@@ -20,12 +20,17 @@ import {
   ChevronRight, 
   Sparkles,
   ShoppingBag as CartIcon,
+  Truck,
   CheckCircle,
   AlertCircle,
   X
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import OrganicEdge from '../components/ui/OrganicEdge';
+import SectionHeading from '../components/ui/SectionHeading';
+import { Sprig, YarnBall } from '../components/decor/Botanicals';
+import { Reveal, ScrollProgress, Parallax } from '../components/motion/Motion';
 
 const API_URL = getApiUrl();
 
@@ -106,7 +111,7 @@ export default function ShopPage() {
   const storeSettings = useStoreSettings();
 
   const activeTheme = {
-    rose: { primary: '#D9B4B4', primaryDark: '#6B5656', bgGrad: 'from-[#6B5656] to-[#4A3E3E]', textDark: '#4A3E3E' },
+    rose: { primary: '#D9B4B4', primaryDark: '#6B5656', bgGrad: 'from-teal to-bodytext', textDark: '#4A3E3E' },
     mustard: { primary: '#E6C17A', primaryDark: '#5C4A2E', bgGrad: 'from-[#5C4A2E] to-[#3B2F1D]', textDark: '#3B2F1D' },
     green: { primary: '#A8BC98', primaryDark: '#3E4D36', bgGrad: 'from-[#3E4D36] to-[#253020]', textDark: '#253020' },
     teal: { primary: '#9CBEC2', primaryDark: '#3A4E52', bgGrad: 'from-[#3A4E52] to-[#243235]', textDark: '#243235' }
@@ -453,57 +458,44 @@ export default function ShopPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#FEF9F6] text-[#4A3E3E] font-sans selection:bg-[#D9B4B4]/30">
+    <div className="min-h-screen bg-parchment text-bodytext font-sans selection:bg-terracotta/25">
       
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-[999] bg-white border-l-4 border-[#6B5656] shadow-2xl p-4 rounded-lg flex items-center gap-3 animate-in fade-in slide-in-from-bottom-5 duration-300 max-w-sm">
-          <div className="w-8 h-8 rounded-full bg-[#FEF9F6] flex items-center justify-center text-sm shadow-inner animate-pulse">
+        <div className="fixed bottom-6 right-6 z-[999] bg-white border-l-4 border-teal shadow-2xl p-4 rounded-lg flex items-center gap-3 animate-in fade-in slide-in-from-bottom-5 duration-300 max-w-sm">
+          <div className="w-8 h-8 rounded-full bg-parchment flex items-center justify-center text-sm shadow-inner animate-pulse">
             🧶
           </div>
           <div>
-            <p className="text-xs font-bold text-[#6B5656] uppercase tracking-wider">Shopping Basket</p>
-            <p className="text-xs text-stone-600 mt-0.5">{toastMessage}</p>
+            <p className="text-xs font-bold text-teal uppercase tracking-wider">Shopping Basket</p>
+            <p className="text-xs text-bodytext mt-0.5">{toastMessage}</p>
           </div>
         </div>
       )}
 
       {/* Navbar Component */}
-      <Navbar
-        themeColor={themeColor}
-        themeColors={{
-          rose: { primary: '#D9B4B4', primaryDark: '#6B5656' },
-          mustard: { primary: '#E6C17A', primaryDark: '#5C4A2E' },
-          green: { primary: '#A8BC98', primaryDark: '#3E4D36' },
-          teal: { primary: '#9CBEC2', primaryDark: '#3A4E52' }
-        }}
-        onThemeChange={handleThemeChange}
-        customLogo={customImages['logo'] || '/assets/crochet_creation_logo.png'}
-        token={token}
-        userProfile={userProfile}
-        onLogout={handleLogout}
-        cartItemsCount={cartItemsCount}
-        currentPage="Shop"
-        alwaysOpaque={true}
-      />
+      <Navbar alwaysOpaque />
+      <ScrollProgress />
+
+      {/* Catalogue hero */}
+      <section className="relative bg-paper-deep pt-24 md:pt-32 pb-10 md:pb-14 overflow-hidden">
+        <Sprig className="absolute top-16 right-4 w-44 h-auto text-olive/20 hidden lg:block" />
+        <YarnBall className="absolute bottom-4 left-5 w-16 h-auto text-terracotta/20 hidden lg:block" />
+        <div className="relative max-w-7xl mx-auto px-5 sm:px-6 lg:px-10">
+          <Reveal>
+          <SectionHeading
+            eyebrow="Handcrafted catalogue"
+            lede="Every piece is crocheted to order, so tiny variations in shade and shape are part of the charm."
+          >
+            Our Finished Creations
+          </SectionHeading>
+          </Reveal>
+        </div>
+      </section>
+      <OrganicEdge variant="wave" fill="var(--parchment)" height={64} />
 
       {/* Main Container */}
-      <main className="max-w-7xl mx-auto px-6 pt-28 pb-20">
-        
-        {/* Title Section */}
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 border-b border-[#EADBDB] pb-6 mb-10">
-          <div>
-            <span className="text-[10px] font-black tracking-widest uppercase text-[#D9B4B4] flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4 text-[#D9B4B4]" /> Handcrafted Catalog
-            </span>
-            <h1 className="text-3xl md:text-4xl font-extrabold text-[#6B5656] mt-2 tracking-tight">
-              Finished Products
-            </h1>
-          </div>
-          <p className="text-xs text-stone-500 max-w-sm md:text-right">
-            Browse our collection of hand-stitched creations. Since each piece is carefully crocheted to order, minor custom details may vary.
-          </p>
-        </div>
+      <main className="max-w-7xl mx-auto px-5 sm:px-6 lg:px-10 pt-2 pb-20">
 
         {/* Filter & Search Bar */}
         <div className="flex flex-col lg:flex-row gap-6 items-stretch lg:items-center justify-between mb-12">
@@ -516,13 +508,14 @@ export default function ShopPage() {
               placeholder="Search crochet products..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-white border border-[#EADBDB] rounded-xl pl-10 pr-4 py-3 text-xs focus:ring-1 focus:ring-[#6B5656] focus:outline-none placeholder-stone-400 font-medium shadow-sm transition-all"
+              className="w-full bg-parchment-card border border-line rounded-full pl-11 pr-4 py-3.5 text-[13px] text-ink placeholder-muted outline-none focus:border-terracotta transition-colors shadow-soft"
             />
-            <Search className="w-4 h-4 text-stone-400 absolute left-3.5 top-3.5" />
+            <Search className="w-4 h-4 text-muted absolute left-4 top-1/2 -translate-y-1/2" aria-hidden="true" />
             {searchQuery && (
               <button 
                 onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-3.5 text-stone-400 hover:text-stone-600 transition-colors"
+                aria-label="Clear search"
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-muted hover:text-terracotta-ink transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -530,29 +523,36 @@ export default function ShopPage() {
           </div>
 
           {/* Category Tabs */}
-          <div className="flex items-center overflow-x-auto scrollbar-hide whitespace-nowrap gap-2 pb-2 lg:pb-0">
-            {dynamicCategories.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setActiveFilter(cat)}
-                className={`text-[10px] font-bold uppercase tracking-widest px-4 py-2.5 rounded-xl transition-all whitespace-nowrap border ${
-                  activeFilter === cat
-                    ? 'bg-[#6B5656] border-[#6B5656] text-[#FEF9F6] shadow-sm'
-                    : 'bg-white border-[#EADBDB] hover:border-[#6B5656] text-[#6B5656]'
-                }`}
-              >
-                {cat === 'ALL' ? 'All Creations' : cat}
-              </button>
-            ))}
+          <div className="flex items-center overflow-x-auto scrollbar-hide -mx-5 px-5 lg:mx-0 lg:px-0">
+            <div className="inline-flex items-center gap-1.5 bg-parchment-deep/70 border border-line-soft rounded-full p-1.5">
+              {dynamicCategories.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setActiveFilter(cat)}
+                  aria-pressed={activeFilter === cat}
+                  className={`chip ${activeFilter === cat ? 'chip-active' : ''}`}
+                >
+                  {cat === 'ALL' ? 'All Creations' : cat}
+                </button>
+              ))}
+            </div>
           </div>
 
         </div>
 
         {/* Catalog Grid View */}
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-24 bg-white border border-[#EADBDB] rounded-3xl shadow-sm">
-            <div className="w-12 h-12 border-4 border-stone-200 border-t-[#D9B4B4] rounded-full animate-spin mb-4" />
-            <p className="text-xs font-bold uppercase tracking-widest text-[#6B5656] animate-pulse">Loading Catalog Items...</p>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={`sk-${i}`} className="card-soft overflow-hidden">
+                <div className="skeleton aspect-[4/5] w-full" />
+                <div className="p-4 space-y-2.5">
+                  <div className="skeleton h-3 w-16 rounded" />
+                  <div className="skeleton h-4 w-3/4 rounded" />
+                  <div className="skeleton h-8 w-full rounded-lg" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : error ? (
           <div className="text-center py-16 bg-red-50 border border-red-200 rounded-3xl p-8 space-y-4">
@@ -569,13 +569,13 @@ export default function ShopPage() {
             </button>
           </div>
         ) : products.length === 0 ? (
-          <div className="text-center py-20 bg-white border border-[#EADBDB] border-dashed rounded-3xl p-8 space-y-4">
-            <div className="w-12 h-12 bg-[#FEF9F6] border border-[#D9B4B4] rounded-full flex items-center justify-center text-xl mx-auto">
+          <div className="text-center py-20 bg-white border border-line border-dashed rounded-3xl p-8 space-y-4">
+            <div className="w-12 h-12 bg-parchment border border-terracotta rounded-full flex items-center justify-center text-xl mx-auto">
               🧶
             </div>
             <div>
-              <h3 className="text-sm font-bold text-[#6B5656] uppercase tracking-wider">No Catalog Products Found</h3>
-              <p className="text-xs text-stone-500 mt-1">We couldn't find any items matching your category or search query.</p>
+              <h3 className="text-sm font-bold text-teal uppercase tracking-wider">No Catalog Products Found</h3>
+              <p className="text-xs text-muted mt-1">We couldn't find any items matching your category or search query.</p>
             </div>
           </div>
         ) : (
@@ -585,43 +585,37 @@ export default function ShopPage() {
                 <div
                   key={p._id || p.id}
                   onClick={() => router.push(`/product/${p._id || p.id}`)}
-                  className="flex flex-col h-full bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 group cursor-pointer"
+                  className="card-soft flex flex-col h-full overflow-hidden group cursor-pointer hover:shadow-lift hover:-translate-y-2 transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]"
                 >
                 
                 {/* Product Image */}
-                <div className="relative aspect-[4/5] w-full bg-stone-50 overflow-hidden">
+                <div className="relative aspect-[4/5] w-full bg-parchment-deep overflow-hidden">
                   <Image 
                     src={p.image_url} 
                     alt={p.title || p.name} 
                     fill 
                     sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 380px"
-                    className="w-full h-full object-cover object-center group-hover:scale-103 transition-transform duration-500" 
+                    className="w-full h-full object-cover object-center group-hover:scale-[1.08] transition-transform duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)]" 
                   />
-                  <div className="absolute top-3 left-3">
-                    <span className="bg-white/90 backdrop-blur-sm text-[10px] uppercase tracking-wider font-bold px-3 py-1.5 rounded-full shadow-sm text-stone-600 border border-gray-100/50">
-                      {p.category}
-                    </span>
-                  </div>
+
                 </div>
 
                 {/* Product Info */}
                 <div className="p-4 md:p-5 flex-1 flex flex-col">
                   <div className="flex-1">
-                    <div className="mb-2.5">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[8px] md:text-[10px] font-extrabold bg-[#FDF8F6] text-[#D9B4B4] border border-[#F5E6E6] uppercase tracking-widest shadow-sm">
-                        {p.category}
-                      </span>
-                    </div>
-                    <h3 className="text-base md:text-lg font-bold text-stone-800 leading-tight group-hover:text-[#6B5656] transition-colors line-clamp-2">
+                    <span className="block text-[9px] font-bold uppercase tracking-[0.16em] text-olive mb-2">
+                      {p.category}
+                    </span>
+                    <h3 className="heading-sm text-[15px] md:text-[16px] group-hover:!text-terracotta-ink transition-colors line-clamp-2">
                       {p.title || p.name}
                     </h3>
-                    <p className="text-[11px] md:text-[13px] text-stone-500 mt-1.5 md:mt-2 leading-relaxed line-clamp-2 font-medium">
+                    <p className="text-[11px] md:text-[13px] text-muted mt-1.5 md:mt-2 leading-relaxed line-clamp-2 font-medium">
                       {p.description}
                     </p>
-                    <div className="flex items-center gap-1.5 text-[10px] md:text-xs font-semibold text-stone-600 mt-3 bg-[#F9F7F7] px-2.5 py-1.5 rounded-lg self-start border border-[#EADBDB]/50 shadow-sm">
-                      <span className="text-sm">🚚</span>
-                      <span>{p.delivery_time || '5-7 working days'}</span>
-                    </div>
+                    <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-bodytext mt-3 bg-parchment-deep px-2.5 py-1.5 rounded-full border border-line-soft">
+                      <Truck className="w-3 h-3 text-olive" aria-hidden="true" />
+                      {p.delivery_time || '5-7 working days'}
+                    </span>
                   </div>
 
                   {/* Actions & Price */}
@@ -638,18 +632,18 @@ export default function ShopPage() {
                       return (
                         <div className="flex flex-col">
                           <div className="flex items-baseline gap-1.5 flex-wrap">
-                            <span className="text-lg md:text-xl font-extrabold text-stone-800 whitespace-nowrap tracking-tight">
+                            <span className="font-sans text-[20px] md:text-[22px] font-extrabold text-ink whitespace-nowrap tabular-nums tracking-[-0.01em]">
                               ₹{typeof sellingPrice === 'number' ? sellingPrice.toFixed(2) : parseFloat(sellingPrice).toFixed(2)}
                             </span>
                             {hasDiscount && (
-                              <span className="text-[11px] font-medium text-stone-400 line-through whitespace-nowrap decoration-stone-300">
+                              <span className="text-[11px] font-medium text-muted line-through whitespace-nowrap decoration-line">
                                 ₹{typeof originalPrice === 'number' ? originalPrice.toFixed(2) : parseFloat(originalPrice).toFixed(2)}
                               </span>
                             )}
                           </div>
                           {hasDiscount && discountPercent > 0 && (
-                            <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100/50 px-2 py-0.5 rounded-full mt-1 self-start whitespace-nowrap tracking-wide shadow-sm">
-                              {discountPercent}% OFF
+                            <span className="text-[9px] font-black uppercase tracking-[0.12em] text-terracotta-ink bg-terracotta/10 border border-terracotta/20 px-2 py-0.5 rounded-full mt-1 self-start whitespace-nowrap">
+                              {discountPercent}% off
                             </span>
                           )}
                         </div>
@@ -658,16 +652,16 @@ export default function ShopPage() {
                     <div className="flex items-center gap-2 shrink-0 ml-auto">
                       <button
                         onClick={(e) => handleAddToCart(p, e)}
-                        title="Add to Basket"
-                        className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center border-2 border-stone-100 bg-white rounded-full text-stone-600 hover:text-[#6B5656] hover:border-[#6B5656] hover:bg-stone-50 transition-all active:scale-95 shadow-sm"
+                        aria-label="Add to basket"
+                        className="w-10 h-10 shrink-0 flex items-center justify-center border border-line rounded-full text-ink hover:text-terracotta hover:border-terracotta transition-colors active:scale-95"
                       >
                         <CartIcon className="w-4 h-4 md:w-5 md:h-5" />
                       </button>
                       <button
                         onClick={(e) => handleBuyNow(p, e)}
-                        className="px-4 py-2 md:px-5 md:py-2.5 bg-[#6B5656] hover:bg-[#5C4949] text-white text-[10px] md:text-xs font-bold rounded-full transition-all active:scale-95 shadow-md shadow-[#6B5656]/20 whitespace-nowrap flex-shrink-0 tracking-wide"
+                        className="btn-pill btn-teal !px-5 !py-2.5 !text-[10px]"
                       >
-                        Buy Now
+                        Buy now
                       </button>
                     </div>
                   </div>
@@ -681,12 +675,12 @@ export default function ShopPage() {
           <div ref={lastElementRef} className="w-full flex flex-col items-center justify-center py-12 mt-4">
             {isFetchingMore && (
               <div className="flex flex-col items-center gap-3">
-                <div className="w-8 h-8 border-2 border-stone-200 border-t-[#D9B4B4] rounded-full animate-spin" />
-                <span className="text-[10px] font-bold tracking-widest text-[#6B5656] uppercase animate-pulse">Loading more...</span>
+                <div className="w-8 h-8 border-2 border-line border-t-terracotta rounded-full animate-spin" />
+                <span className="text-[10px] font-bold tracking-[0.18em] text-teal uppercase">Loading more&hellip;</span>
               </div>
             )}
             {!hasMore && products.length > 0 && (
-              <span className="text-[10px] font-bold tracking-widest text-stone-400 uppercase">You've reached the end</span>
+              <span className="text-[10px] font-bold tracking-[0.18em] text-muted uppercase">You&rsquo;ve reached the end</span>
             )}
           </div>
           </>
@@ -697,13 +691,13 @@ export default function ShopPage() {
       {/* Direct Buy Checkout Modal */}
       {checkoutOpen && selectedProduct && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-white rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl relative border border-[#EADBDB] flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-300">
+          <div className="bg-white rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl relative border border-line flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-300">
             
             {/* Modal Header */}
-            <div className="p-6 border-b border-[#EADBDB] flex items-center justify-between" style={{ backgroundColor: activeTheme.primaryDark }}>
+            <div className="p-6 border-b border-line flex items-center justify-between" style={{ backgroundColor: activeTheme.primaryDark }}>
               <div className="text-white">
-                <h3 className="text-base font-black tracking-widest uppercase">ORDER CHECKOUT</h3>
-                <p className="text-[10px] text-stone-300 mt-0.5">Prepaid by UPI · pay after placing the order</p>
+                <h3 className="text-base font-bold tracking-[0.18em] uppercase">ORDER CHECKOUT</h3>
+                <p className="text-[10px] text-line mt-0.5">Prepaid by UPI · pay after placing the order</p>
               </div>
               <button 
                 onClick={() => { setCheckoutOpen(false); setCheckoutSuccess(false); }}
@@ -715,7 +709,7 @@ export default function ShopPage() {
             </div>
 
             {/* Modal Body */}
-            <div className="p-6 overflow-y-auto flex-grow">
+            <div data-lenis-prevent className="p-6 overflow-y-auto flex-grow">
               {checkoutSuccess ? (
                 <PaymentInstructions
                   amount={placedOrder.amount}
@@ -729,36 +723,36 @@ export default function ShopPage() {
                 <form onSubmit={handleCheckoutSubmit} className="space-y-4">
                   
                   {/* Order Summary box */}
-                  <div className="p-4 bg-stone-50 border border-[#EADBDB] rounded-2xl">
-                    <span className="text-[9px] font-black text-[#D9B4B4] uppercase tracking-widest block mb-2">Order Summary</span>
-                    <div className="flex justify-between items-center text-xs font-bold text-[#6B5656]">
+                  <div className="p-4 bg-parchment-deep border border-line rounded-2xl">
+                    <span className="text-[9px] font-black text-terracotta uppercase tracking-widest block mb-2">Order Summary</span>
+                    <div className="flex justify-between items-center text-xs font-bold text-teal">
                       <span>{selectedProduct.title || selectedProduct.name}</span>
                       <span>₹{((selectedProduct.price || 0) * checkoutQuantity).toFixed(2)}</span>
                     </div>
                     
                     {/* Quantity selectors inside modal */}
-                    <div className="flex items-center justify-between mt-3 pt-3 border-t border-stone-200/50">
-                      <span className="text-[10px] text-stone-450 uppercase tracking-widest font-black">Quantity</span>
-                      <div className="flex items-center border border-[#EADBDB] rounded-lg overflow-hidden bg-white shadow-inner scale-90">
+                    <div className="flex items-center justify-between mt-3 pt-3 border-t border-line/50">
+                      <span className="text-[10px] text-muted uppercase tracking-widest font-black">Quantity</span>
+                      <div className="flex items-center border border-line rounded-lg overflow-hidden bg-white shadow-inner scale-90">
                         <button 
                           type="button"
                           onClick={() => setCheckoutQuantity(q => Math.max(1, q - 1))}
-                          className="px-2 py-1 hover:bg-stone-50 text-stone-500"
+                          className="px-2 py-1 hover:bg-parchment-deep text-muted"
                         >
                           -
                         </button>
-                        <span className="px-4 text-xs font-bold text-[#6B5656] min-w-8 text-center">{checkoutQuantity}</span>
+                        <span className="px-4 text-xs font-bold text-teal min-w-8 text-center">{checkoutQuantity}</span>
                         <button 
                           type="button"
                           onClick={() => setCheckoutQuantity(q => Math.min(10, q + 1))}
-                          className="px-2 py-1 hover:bg-stone-50 text-stone-500"
+                          className="px-2 py-1 hover:bg-parchment-deep text-muted"
                         >
                           +
                         </button>
                       </div>
                     </div>
                     
-                    <div className="flex justify-between items-center text-[10px] text-stone-400 mt-2 border-t border-stone-200/50 pt-2">
+                    <div className="flex justify-between items-center text-[10px] text-muted mt-2 border-t border-line/50 pt-2">
                       <span>Shipping Method</span>
                       <span className="text-emerald-600 font-bold uppercase tracking-wider">Free Delivery</span>
                     </div>
@@ -766,7 +760,7 @@ export default function ShopPage() {
 
                   {/* Customer details fields */}
                   <div>
-                    <label htmlFor="shop-checkout-name" className="text-[10px] font-bold uppercase tracking-widest text-[#6B5656] block mb-1">Your Full Name</label>
+                    <label htmlFor="shop-checkout-name" className="text-[10px] font-bold uppercase tracking-widest text-teal block mb-1">Your Full Name</label>
                     <input
                       type="text"
                       required
@@ -775,13 +769,13 @@ export default function ShopPage() {
                         placeholder="e.g. John Doe"
                       value={checkoutFormData.name}
                       onChange={(e) => setCheckoutFormData({ ...checkoutFormData, name: e.target.value })}
-                      className="w-full bg-[#FEF9F6] border border-[#EADBDB] rounded-xl px-4 py-2.5 text-xs focus:ring-1 focus:ring-[#6B5656] focus:outline-none"
+                      className="w-full bg-parchment border border-line rounded-xl px-4 py-2.5 text-xs focus:ring-1 focus:ring-teal focus:outline-none"
                     />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label htmlFor="shop-checkout-email" className="text-[10px] font-bold uppercase tracking-widest text-[#6B5656] block mb-1">Email Address</label>
+                      <label htmlFor="shop-checkout-email" className="text-[10px] font-bold uppercase tracking-widest text-teal block mb-1">Email Address</label>
                       <input
                         type="email"
                         required
@@ -790,11 +784,11 @@ export default function ShopPage() {
                         placeholder="john@example.com"
                         value={checkoutFormData.email}
                         onChange={(e) => setCheckoutFormData({ ...checkoutFormData, email: e.target.value })}
-                        className="w-full bg-[#FEF9F6] border border-[#EADBDB] rounded-xl px-4 py-2.5 text-xs focus:ring-1 focus:ring-[#6B5656] focus:outline-none"
+                        className="w-full bg-parchment border border-line rounded-xl px-4 py-2.5 text-xs focus:ring-1 focus:ring-teal focus:outline-none"
                       />
                     </div>
                     <div>
-                      <label htmlFor="shop-checkout-mobile" className="text-[10px] font-bold uppercase tracking-widest text-[#6B5656] block mb-1">Mobile Number</label>
+                      <label htmlFor="shop-checkout-mobile" className="text-[10px] font-bold uppercase tracking-widest text-teal block mb-1">Mobile Number</label>
                       <input
                         type="tel"
                         required
@@ -803,14 +797,14 @@ export default function ShopPage() {
                         placeholder="10-digit number"
                         value={checkoutFormData.mobile}
                         onChange={(e) => setCheckoutFormData({ ...checkoutFormData, mobile: e.target.value })}
-                        className="w-full bg-[#FEF9F6] border border-[#EADBDB] rounded-xl px-4 py-2.5 text-xs focus:ring-1 focus:ring-[#6B5656] focus:outline-none"
+                        className="w-full bg-parchment border border-line rounded-xl px-4 py-2.5 text-xs focus:ring-1 focus:ring-teal focus:outline-none"
                       />
                     </div>
                   </div>
 
                   {userProfile?.addresses && userProfile.addresses.length > 0 && (
                     <div>
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-[#6B5656] block mb-1">Select Saved Address</label>
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-teal block mb-1">Select Saved Address</label>
                       <select
                         onChange={(e) => {
                           const selectedId = e.target.value;
@@ -828,7 +822,7 @@ export default function ShopPage() {
                             }));
                           }
                         }}
-                        className="w-full bg-[#FEF9F6] border border-[#EADBDB] rounded-xl px-4 py-2.5 text-xs focus:ring-1 focus:ring-[#6B5656] focus:outline-none text-[#6B5656] font-medium"
+                        className="w-full bg-parchment border border-line rounded-xl px-4 py-2.5 text-xs focus:ring-1 focus:ring-teal focus:outline-none text-teal font-medium"
                         defaultValue=""
                       >
                         <option value="" disabled>-- Choose from your saved addresses --</option>
@@ -842,7 +836,7 @@ export default function ShopPage() {
                   )}
 
                   <div>
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-[#6B5656] block mb-1.5">Shipping Address</label>
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-teal block mb-1.5">Shipping Address</label>
                     <AddressMapPicker
                       onAddressSelect={(addr) => {
                         const combinedAddress = `${addr.street_address}, ${addr.city}, ${addr.state} - ${addr.postal_code}`;
@@ -872,7 +866,7 @@ export default function ShopPage() {
                   <button
                     type="submit"
                     disabled={checkoutLoading}
-                    className="w-full bg-[#6B5656] hover:bg-[#D9B4B4] hover:text-[#6B5656] text-white font-bold py-3.5 px-6 rounded-xl transition-all disabled:opacity-50 text-xs uppercase tracking-widest mt-6 shadow"
+                    className="w-full btn-pill btn-teal !rounded-xl mt-6 disabled:opacity-50"
                   >
                     {checkoutLoading ? 'Processing Placement...' : `Place Custom Order - ₹${((selectedProduct.price || 0) * checkoutQuantity).toFixed(2)}`}
                   </button>

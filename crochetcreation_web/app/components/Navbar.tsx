@@ -1,527 +1,450 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter, usePathname } from 'next/navigation';
-import { ShoppingBag, User, LogOut, Menu, X, Search, Home, Instagram, PlayCircle } from 'lucide-react';
+import { ShoppingBag, User, LogOut, Menu, X, Instagram, LayoutDashboard, ChevronRight } from 'lucide-react';
+import { apiFetch, getApiUrl, clearSession } from '../utils/apiFetch';
 
+/**
+ * The single site-wide navigation bar.
+ *
+ * It owns everything it displays — session, cart count and the studio logo —
+ * rather than taking them as props. Previously each page passed its own
+ * subset (the videos page passed no logo at all, so it rendered a different
+ * mark), which made the header visibly different from screen to screen.
+ * Now every page renders `<Navbar />` and they are guaranteed identical.
+ */
+
+/* Kept exported: other modules still import this type. */
 export interface NavbarTheme {
   primary: string;
   primaryDark: string;
 }
 
+interface NavbarProps {
+  /** Force the solid bar on pages with no light hero behind the header. */
+  alwaysOpaque?: boolean;
+  className?: string;
+}
+
 interface NavLink {
   label: string;
   href: string;
-  isActive?: boolean;
   isNew?: boolean;
 }
 
-interface NavbarProps {
-  themeColor: string;
-  themeColors: Record<string, NavbarTheme>;
-  onThemeChange: (color: string) => void;
-  customLogo?: string;
-  scrollY?: number;
-  isScrolled?: boolean;
-  showScrollEffect?: boolean;
-
-  hideLinks?: boolean;
-  currentPage?: string;
-  // Auth state - null means logged out
-  token?: string | null;
-  userProfile?: { first_name?: string; last_name?: string; email?: string; is_admin?: boolean; picture?: string } | null;
-  onLogout?: () => void;
-  onOpenAuth?: () => void;
-  // Cart
-  cartItemsCount?: number;
-  // Search
-  searchQuery?: string;
-  onSearchChange?: (query: string) => void;
-  showSearch?: boolean;
-  // Override classes
-  className?: string;
-  // Force opaque background (for shop, dashboard, product pages)
-  alwaysOpaque?: boolean;
-}
-
-const THEME_COLORS_MAP: Record<string, { bg: string; hoverBg?: string; border: string }> = {
-  rose: { bg: '#D9B4B4', border: '#FEF9F6' },
-  mustard: { bg: '#E6C17A', border: '#FEF9F6' },
-  green: { bg: '#A8BC98', border: '#FEF9F6' },
-  teal: { bg: '#9CBEC2', border: '#FEF9F6' },
-};
-
 const NAV_LINKS: NavLink[] = [
-  { label: 'Home', href: '/#home', isActive: false },
-  { label: 'Shop', href: '/shop', isActive: false, isNew: true },
-  { label: 'Videos', href: '/videos', isActive: false },
+  { label: 'Home', href: '/' },
+  { label: 'Shop', href: '/shop', isNew: true },
+  { label: 'Videos', href: '/videos' },
 ];
 
-export default function Navbar({
-  themeColor,
-  themeColors,
-  onThemeChange,
-  customLogo,
-  scrollY = 0,
-  isScrolled: controlledScrolled,
-  showScrollEffect = true,
+const INSTAGRAM_URL = 'https://www.instagram.com/crochet__creation__/';
+const LOGO_FALLBACK = '/assets/crochet_creation_logo.png';
 
-  hideLinks = false,
-  currentPage,
-  token,
-  userProfile,
-  onLogout,
-  onOpenAuth,
-  cartItemsCount = 0,
-  className = '',
-  alwaysOpaque = false,
-}: NavbarProps) {
+/* The logo is identical on every route, so resolve it once per page load and
+   remember it across visits — otherwise the first page painted shows the
+   bundled mark and visibly swaps once the settings request lands. */
+const LOGO_STORAGE_KEY = 'cc_logo_url';
+let logoCache: string | null = null;
+
+const readStoredLogo = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  try {
+    return localStorage.getItem(LOGO_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+};
+
+export default function Navbar({ alwaysOpaque = false, className = '' }: NavbarProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [localCartCount, setLocalCartCount] = useState(cartItemsCount);
-  const [cartBouncing, setCartBouncing] = useState(false);
-  const [localScrolled, setLocalScrolled] = useState(0);
 
-  // Get active theme colors
-  const activeTheme = themeColors[themeColor] || themeColors.rose || { primary: '#D9B4B4', primaryDark: '#6B5656' };
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const [cartCount, setCartCount] = useState(0);
+  const [logo, setLogo] = useState<string>(logoCache ?? LOGO_FALLBACK);
+  const [session, setSession] = useState<{ token: string | null; user: any | null }>({
+    token: null,
+    user: null,
+  });
 
-  // Determine if scrolled - support both controlled and uncontrolled
-  const isScrolled = controlledScrolled !== undefined 
-    ? controlledScrolled 
-    : (showScrollEffect ? localScrolled > 20 : false);
+  const solid = alwaysOpaque || scrolled;
 
-  // Always show opaque background for pages that need it
-  const bgColor = alwaysOpaque 
-    ? `${activeTheme.primaryDark}E6` 
-    : (isScrolled ? `${activeTheme.primaryDark}E6` : 'transparent');
-
-  // Sync local cart count with global
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const syncCartCount = () => {
-        const savedCount = localStorage.getItem('crochet_cart_count');
-        if (savedCount !== null) {
-          setLocalCartCount(parseInt(savedCount, 10));
-        } else {
-          setLocalCartCount(0);
-        }
-      };
-      syncCartCount();
-      window.addEventListener('cart-change', syncCartCount);
-      return () => window.removeEventListener('cart-change', syncCartCount);
+  /* ── Session, read from storage and kept in sync ─────────────── */
+  const readSession = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    const token = localStorage.getItem('token');
+    let user: any = null;
+    try {
+      const raw = localStorage.getItem('user');
+      if (raw) user = JSON.parse(raw);
+    } catch {
+      /* a corrupt cache just reads as "signed out" for the header */
     }
+    setSession({ token, user });
   }, []);
 
-  // Update when prop changes only if explicitly provided (ignoring defaults of 0 if local storage has more)
   useEffect(() => {
-    if (cartItemsCount > 0) {
-      setLocalCartCount(cartItemsCount);
-    }
-  }, [cartItemsCount]);
-
-  // Local scroll tracking when not controlled
-  useEffect(() => {
-    if (!controlledScrolled && showScrollEffect) {
-      const handleScroll = () => setLocalScrolled(window.scrollY);
-      window.addEventListener('scroll', handleScroll, { passive: true });
-      return () => window.removeEventListener('scroll', handleScroll);
-    }
-  }, [controlledScrolled, showScrollEffect]);
-
-  const openCart = () => {
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new Event('open-cart'));
-    }
-  };
-
-  useEffect(() => {
-    const handleOpenAuth = () => {
-      if (onOpenAuth) {
-        onOpenAuth();
-      } else {
-        window.location.href = '/?login=true&redirect=' + encodeURIComponent(window.location.pathname);
-      }
+    readSession();
+    // `storage` covers other tabs; the custom event covers this one.
+    window.addEventListener('storage', readSession);
+    window.addEventListener('session-change', readSession);
+    return () => {
+      window.removeEventListener('storage', readSession);
+      window.removeEventListener('session-change', readSession);
     };
-    window.addEventListener('open-auth-modal', handleOpenAuth);
-    return () => window.removeEventListener('open-auth-modal', handleOpenAuth);
-  }, [onOpenAuth]);
+  }, [readSession]);
+
+  /* Re-read on navigation so signing in on one page updates the header. */
+  useEffect(() => { readSession(); }, [pathname, readSession]);
+
+  /* ── Cart badge ──────────────────────────────────────────────── */
+  useEffect(() => {
+    const sync = () => {
+      const saved = localStorage.getItem('crochet_cart_count');
+      setCartCount(saved ? parseInt(saved, 10) || 0 : 0);
+    };
+    sync();
+    window.addEventListener('cart-change', sync);
+    window.addEventListener('storage', sync);
+    return () => {
+      window.removeEventListener('cart-change', sync);
+      window.removeEventListener('storage', sync);
+    };
+  }, []);
+
+  /* ── Studio logo ─────────────────────────────────────────────── */
+  useEffect(() => {
+    // Paint the last known logo immediately, then confirm it in the background.
+    const stored = logoCache ?? readStoredLogo();
+    if (stored) { logoCache = stored; setLogo(stored); }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await apiFetch(`${getApiUrl()}/api/settings/homepage-images`);
+        if (!res.ok || cancelled) return;
+        const data = await res.json();
+        const url = data?.logo?.url;
+        if (!url || cancelled || url === logoCache) return;
+        logoCache = url;
+        setLogo(url);
+        try { localStorage.setItem(LOGO_STORAGE_KEY, url); } catch { /* private mode */ }
+      } catch {
+        /* the bundled mark is a perfectly good fallback */
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  /* ── Scroll state ────────────────────────────────────────────── */
+  useEffect(() => {
+    if (alwaysOpaque) return;
+    const onScroll = () => setScrolled(window.scrollY > 24);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [alwaysOpaque]);
+
+  /* ── Mobile sheet ────────────────────────────────────────────── */
+  useEffect(() => {
+    document.body.style.overflow = menuOpen ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [menuOpen]);
+
+  useEffect(() => { setMenuOpen(false); }, [pathname]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenuOpen(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [menuOpen]);
+
+  /* ── Actions ─────────────────────────────────────────────────── */
+  const isActive = (href: string) =>
+    href === '/' ? pathname === '/' : pathname.startsWith(href);
+
+  const openCart = () => window.dispatchEvent(new Event('open-cart'));
 
   const handleLogout = () => {
-    if (onLogout) onLogout();
-    setIsMenuOpen(false);
+    clearSession();
+    setSession({ token: null, user: null });
+    setCartCount(0);
+    window.dispatchEvent(new Event('session-change'));
+    setMenuOpen(false);
+    router.replace('/');
   };
 
-  // Determine active page for nav highlighting
-  const getActiveLabel = () => {
-    if (currentPage) return currentPage;
-    const p = pathname || '';
-    if (p === '/' || p.startsWith('/#')) return 'Home';
-    if (p.startsWith('/shop') || p.startsWith('/product')) return 'Shop';
-    if (p.startsWith('/dashboard')) return 'Dashboard';
-    if (p.startsWith('/admin')) return 'Admin';
-    if (p.startsWith('/masterclass')) return 'Masterclass';
-    if (p.startsWith('/about')) return 'About';
-    return '';
+  const openAuth = () => {
+    setMenuOpen(false);
+    // The sign-in sheet lives on the home page; ask for it, and navigate there
+    // if this route has no listener.
+    let handled = false;
+    const mark = () => { handled = true; };
+    window.addEventListener('auth-modal-opened', mark);
+    window.dispatchEvent(new Event('open-auth-modal'));
+    window.setTimeout(() => {
+      window.removeEventListener('auth-modal-opened', mark);
+      if (!handled) {
+        const back = window.location.pathname + window.location.search;
+        router.push(`/?login=true&redirect=${encodeURIComponent(back)}`);
+      }
+    }, 0);
   };
 
-  const activeLabel = getActiveLabel();
+  const { token, user } = session;
+  const signedIn = Boolean(token && user);
+
+  const linkTone = solid ? 'text-ondark-muted hover:text-ondark' : 'text-ink/75 hover:text-ink';
+  const iconTone = solid ? 'text-ondark-muted hover:text-ondark' : 'text-ink/70 hover:text-terracotta-ink';
 
   return (
     <>
       <header
-        className={`fixed top-0 left-0 w-full z-50 transition-all duration-300 ${
-          isScrolled
-            ? 'backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.08)] border-b border-[#FEF9F6]/10 py-3'
-            : 'bg-transparent py-5'
+        className={`fixed top-0 inset-x-0 z-50 transition-[background-color,box-shadow] duration-500 ${
+          solid ? 'bg-teal-weave shadow-panel' : 'bg-transparent'
         } ${className}`}
-        style={{
-          backgroundColor: bgColor
-        }}
       >
-        <div className="max-w-7xl mx-auto px-4 md:px-6 flex items-center justify-between">
-          {/* Logo */}
-          <Link
-            href="/"
-            className="flex items-center gap-2.5 group cursor-pointer select-none"
-            onClick={(e) => {
-              if (window.location.pathname === '/' && window.location.hash === '') {
-                e.preventDefault();
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }
-            }}
-          >
-            <div className="relative w-9 h-9 md:w-10 md:h-10 rounded-full md:rounded-xl overflow-hidden border border-[#D9B4B4]/30 md:border-2 md:border-[#D9B4B4]/40 shadow-sm bg-white flex-shrink-0 group-hover:rotate-6 group-hover:scale-105 transition-all duration-300">
-              <img
-                src={customLogo || '/assets/crochet_creation_logo.png'}
-                alt="Crochet Creation Logo"
-                className="w-full h-full object-cover"
+        <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 h-16 md:h-20 flex items-center justify-between gap-4">
+          {/* Brand */}
+          <Link href="/" className="flex items-center gap-2.5 shrink-0 group" aria-label="Crochet Creation — home">
+            <span className="relative w-9 h-9 md:w-11 md:h-11 rounded-full overflow-hidden ring-1 ring-line/60 bg-parchment-card shrink-0 transition-transform duration-500 group-hover:rotate-[8deg]">
+              {/* Crossfade rather than a hard swap: on a first visit the studio
+                  logo arrives from settings a moment after the bundled mark. */}
+              <Image
+                key={logo}
+                src={logo}
+                alt=""
+                fill
+                sizes="44px"
+                priority
+                className="object-cover animate-fade-in"
               />
-            </div>
-            <span className="hidden sm:block">
-              <span className="text-base md:text-xl font-serif font-bold tracking-tight text-[#FEF9F6] block leading-tight">
+            </span>
+            <span className="flex flex-col leading-none">
+              <span
+                className={`font-display text-[17px] md:text-[22px] tracking-[-0.018em] transition-colors duration-500 ${
+                  solid ? 'text-ondark' : 'text-ink'
+                }`}
+              >
                 Crochet Creation
               </span>
-              <span className="text-[7px] md:text-[8px] font-medium tracking-[0.25em] text-[#D9B4B4]/80 uppercase block -mt-0.5">
-                Handcrafted with Love
+              <span
+                className={`text-[8px] md:text-[9px] font-bold uppercase tracking-[0.24em] mt-1 transition-colors duration-500 ${
+                  solid ? 'text-ondark-muted' : 'text-bodytext'
+                }`}
+              >
+                Handcrafted with love
               </span>
             </span>
-            <span className="sm:hidden text-base md:text-lg font-serif font-bold text-[#FEF9F6]">Crochet Creation</span>
           </Link>
 
-          {/* Desktop Nav Links */}
-          {!hideLinks && (
-            <nav className="hidden lg:flex items-center gap-6">
-              {NAV_LINKS.map((item) => {
-                const isActive = activeLabel.toUpperCase() === item.label.toUpperCase();
-                return (
-                  <Link
-                    key={item.label}
-                    href={item.href}
-                    className={`relative py-2 text-[11px] font-bold tracking-[0.15em] uppercase transition-all duration-300 flex flex-col items-center group ${
-                      isActive
-                        ? 'text-[#D9B4B4]'
-                        : 'text-[#FEF9F6]/80 hover:text-[#D9B4B4]'
-                    }`}
-                  >
-                    <span>{item.label}</span>
-                    <span className={`absolute bottom-0 h-[2px] bg-[#D9B4B4] transition-all duration-300 rounded-full ${isActive ? 'w-full' : 'w-0 group-hover:w-full'}`}></span>
-                    {item.isNew && (
-                      <span className="absolute -top-1 -right-5 bg-[#D9B4B4] text-[#6B5656] text-[7px] font-black px-1.5 py-0.5 rounded-full shadow-md">
-                        NEW
-                      </span>
-                    )}
-                  </Link>
-                );
-              })}
-            </nav>
-          )}
-
-          {/* Desktop Right Section */}
-          <div className="hidden lg:flex items-center gap-3">
-            {!hideLinks && <div className="h-6 w-px bg-white/10"></div>}
-
-            <a 
-              href="https://www.instagram.com/crochet_creation_02?igsh=OGwybjc3emljMzB6" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="p-1.5 rounded-full text-[#FEF9F6]/80 hover:text-white hover:bg-white/10 transition-colors"
-            >
-              <Instagram className="w-5 h-5" />
-            </a>
-
-            {/* Cart Button */}
-            <div
-              id="header-cart-icon"
-              onClick={openCart}
-              className={`relative flex items-center gap-1.5 px-2 py-1.5 cursor-pointer transition-all duration-300 text-[#FEF9F6]/80 hover:text-[#D9B4B4] ${
-                cartBouncing ? 'scale-105 text-[#D9B4B4]' : ''
-              }`}
-            >
-              <div className="relative">
-                <ShoppingBag className={`w-5 h-5 ${cartBouncing ? 'animate-bounce' : ''}`} />
-                {localCartCount > 0 && (
-                  <span className="absolute -top-1.5 -right-2 bg-[#D9B4B4] text-[#6B5656] text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center shadow-sm">
-                    {localCartCount > 9 ? '9+' : localCartCount}
+          {/* Centre links */}
+          <div className="hidden lg:flex items-center gap-8 xl:gap-10">
+            {NAV_LINKS.map((l) => (
+              <Link
+                key={l.href}
+                href={l.href}
+                aria-current={isActive(l.href) ? 'page' : undefined}
+                className={`relative text-[11px] font-bold uppercase tracking-[0.18em] transition-colors py-2 group ${
+                  isActive(l.href) ? (solid ? 'text-ondark' : 'text-terracotta-ink') : linkTone
+                }`}
+              >
+                {l.label}
+                {l.isNew && (
+                  <span className="absolute -top-2 -right-7 bg-terracotta-deep text-[8px] font-black text-[#FFF7EC] px-1.5 py-0.5 rounded-full tracking-[0.08em]">
+                    NEW
                   </span>
                 )}
-              </div>
-            </div>
+                {/* Underline sweeps out from the centre on hover, locked open when active. */}
+                <span
+                  className={`absolute -bottom-0.5 left-0 right-0 h-[2px] rounded-full origin-center transition-transform duration-300 ${
+                    solid ? 'bg-ondark' : 'bg-terracotta-ink'
+                  } ${isActive(l.href) ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'}`}
+                />
+              </Link>
+            ))}
+          </div>
 
-            {/* Auth Section */}
-            {token && userProfile ? (
-              <div className="flex items-center gap-2 pl-2 border-l border-white/10">
-                {userProfile.is_admin && (
-                  <Link
-                    href="/admin/dashboard"
-                    className="text-[9px] font-black bg-[#D9B4B4]/20 hover:bg-[#D9B4B4]/30 text-[#D9B4B4] px-2.5 py-1 rounded-lg uppercase tracking-wider transition-all duration-300 border border-[#D9B4B4]/10"
-                  >
-                    Admin
-                  </Link>
-                )}
-                <Link
-                  href="/dashboard"
-                  className="flex items-center gap-1.5 hover:text-[#D9B4B4] transition-all text-[11px] font-semibold text-[#FEF9F6]/90"
+          {/* Right cluster */}
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+            <a
+              href={INSTAGRAM_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Crochet Creation on Instagram"
+              className={`hidden sm:flex w-11 h-11 items-center justify-center rounded-full transition-all duration-300 hover:scale-110 ${iconTone}`}
+            >
+              <Instagram className="w-[18px] h-[18px]" />
+            </a>
+
+            <button
+              onClick={openCart}
+              aria-label={`Open basket, ${cartCount} item${cartCount === 1 ? '' : 's'}`}
+              className={`relative w-11 h-11 flex items-center justify-center rounded-full transition-all duration-300 hover:scale-110 active:scale-95 ${iconTone}`}
+            >
+              <ShoppingBag className="w-[18px] h-[18px]" />
+              {cartCount > 0 && (
+                <span
+                  key={cartCount}
+                  className="absolute top-1 right-0.5 min-w-[18px] h-[18px] px-1 bg-terracotta-deep text-[#FFF7EC] text-[9px] font-black rounded-full flex items-center justify-center animate-pop"
                 >
-                  {userProfile.picture ? (
-                    <img src={userProfile.picture} alt="Profile" className="w-5 h-5 rounded-full border border-[#D9B4B4]/30 object-cover shadow-sm" />
+                  {cartCount > 9 ? '9+' : cartCount}
+                </span>
+              )}
+            </button>
+
+            {signedIn ? (
+              <div className="hidden md:flex items-center gap-1 pl-2 ml-0.5 border-l border-current/15">
+                <Link
+                  href={user.is_admin ? '/admin/dashboard' : '/dashboard'}
+                  className={`flex items-center gap-2 px-2 py-1.5 rounded-full transition-colors ${linkTone}`}
+                >
+                  {user.picture ? (
+                    <Image src={user.picture} alt="" width={26} height={26} className="rounded-full object-cover" />
                   ) : (
-                    <span className="text-[12px]">👋</span>
+                    <span className="w-[26px] h-[26px] rounded-full bg-terracotta-deep text-[#FFF7EC] text-[10px] font-black flex items-center justify-center">
+                      {(user.first_name || 'U').charAt(0).toUpperCase()}
+                    </span>
                   )}
-                  <span className="tracking-wide">{userProfile.first_name || 'User'}</span>
+                  <span className="text-[11px] font-bold tracking-wide max-w-[90px] truncate">
+                    {user.first_name || 'Account'}
+                  </span>
                 </Link>
                 <button
                   onClick={handleLogout}
-                  className="p-1.5 rounded-lg text-[#FEF9F6]/60 hover:text-[#D9B4B4] transition-all"
-                  title="Sign Out"
+                  aria-label="Log out"
+                  className={`w-11 h-11 flex items-center justify-center rounded-full transition-all duration-300 hover:scale-110 ${iconTone}`}
                 >
-                  <LogOut className="w-3.5 h-3.5" />
+                  <LogOut className="w-4 h-4" />
                 </button>
               </div>
             ) : (
-              <button
-                onClick={() => {
-                  if (onOpenAuth) {
-                    onOpenAuth();
-                  } else {
-                    router.push('/?login=true&redirect=' + encodeURIComponent(window.location.pathname));
-                  }
-                }}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-[#FEF9F6]/80 hover:text-[#D9B4B4] transition-all duration-300 text-[11px] font-bold uppercase tracking-widest border-l border-white/10 pl-4 ml-2"
-              >
-                <User className="w-4 h-4" />
-                Sign In
+              <button onClick={openAuth} className="hidden md:inline-flex btn-pill btn-terracotta !px-5 !py-2.5 !text-[10px]">
+                <User className="w-3.5 h-3.5" />
+                Sign in
               </button>
             )}
 
-
-          </div>
-
-          {/* Mobile Right Action Bar (visible on mobile only, < md) */}
-          <div className="flex md:hidden items-center gap-2">
-            {token && userProfile ? (
-              <span className="flex items-center gap-1.5 text-[10px] font-bold text-[#FEF9F6]/95 bg-white/10 pl-1.5 pr-3 py-1 rounded-full border border-white/10 select-none shadow-sm">
-                {userProfile.picture ? (
-                  <img src={userProfile.picture} alt="Profile" className="w-5 h-5 rounded-full border border-white/20 object-cover" />
-                ) : (
-                  <span className="text-[12px]">👋</span>
-                )}
-                <span className="tracking-wide">{userProfile.first_name || 'Me'}</span>
-              </span>
-            ) : (
-              <button
-                onClick={() => {
-                  if (onOpenAuth) onOpenAuth();
-                  else router.push('/?login=true');
-                }}
-                className="flex items-center justify-center p-2 text-[#FEF9F6] hover:text-[#D9B4B4] min-w-[44px] min-h-[44px]"
-              >
-                <User className="w-5 h-5" />
-              </button>
-            )}
-          </div>
-
-          {/* Tablet/Medium Screen Icons (visible only on md to lg screens) */}
-          <div className="hidden md:flex lg:hidden items-center gap-3">
-            <a 
-              href="https://www.instagram.com/crochet_creation_02?igsh=OGwybjc3emljMzB6" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="min-w-[44px] min-h-[44px] flex items-center justify-center text-[#FEF9F6] hover:text-[#D9B4B4] transition-colors"
-            >
-              <Instagram className="w-5 h-5" />
-            </a>
-            <div
-              id="mobile-cart-icon-header"
-              onClick={openCart}
-              className={`relative min-w-[44px] min-h-[44px] flex items-center justify-center cursor-pointer transition-transform duration-300 ${cartBouncing ? 'scale-110' : ''}`}
-            >
-              <ShoppingBag className={`w-5 h-5 text-[#D9B4B4] ${cartBouncing ? 'animate-bounce' : ''}`} />
-              {localCartCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-[#D9B4B4] text-[#6B5656] text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center">
-                  {localCartCount}
-                </span>
-              )}
-            </div>
             <button
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="min-w-[44px] min-h-[44px] flex items-center justify-center text-[#FEF9F6] hover:text-[#D9B4B4] transition-colors"
-              aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
+              onClick={() => setMenuOpen(true)}
+              aria-label="Open menu"
+              aria-expanded={menuOpen}
+              className={`lg:hidden w-11 h-11 flex items-center justify-center rounded-full transition-all duration-300 active:scale-90 ${iconTone}`}
             >
-              {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              <Menu className="w-5 h-5" />
+            </button>
+          </div>
+        </nav>
+      </header>
+
+      {/* ── Mobile sheet ───────────────────────────────────────────── */}
+      <div
+        className={`fixed inset-0 z-[60] lg:hidden transition-opacity duration-300 ${
+          menuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
+        aria-hidden={!menuOpen}
+      >
+        <div className="absolute inset-0 bg-teal-deep/60 backdrop-blur-sm" onClick={() => setMenuOpen(false)} />
+
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Menu"
+          className={`absolute top-0 right-0 h-[100dvh] w-[88%] max-w-sm bg-paper shadow-panel
+            flex flex-col transition-transform duration-[450ms] ease-[cubic-bezier(0.22,1,0.36,1)]
+            ${menuOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        >
+          <div className="flex items-center justify-between px-5 h-16 border-b border-line-soft shrink-0">
+            <span className="heading-sm text-[17px]">Menu</span>
+            <button
+              onClick={() => setMenuOpen(false)}
+              aria-label="Close menu"
+              className="w-11 h-11 flex items-center justify-center rounded-full text-ink/70 hover:text-terracotta-ink active:scale-90 transition-transform"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          <nav data-lenis-prevent className="flex-1 overflow-y-auto overscroll-contain px-5 py-6 flex flex-col gap-1.5">
+            {NAV_LINKS.map((l, i) => (
+              <Link
+                key={l.href}
+                href={l.href}
+                style={{ transitionDelay: menuOpen ? `${80 + i * 60}ms` : '0ms' }}
+                className={`flex items-center justify-between px-4 py-4 rounded-2xl font-display text-lg
+                  transition-all duration-500 ${menuOpen ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4'}
+                  ${isActive(l.href) ? 'bg-terracotta-deep text-[#FFF7EC]' : 'text-ink hover:bg-parchment-deep'}`}
+              >
+                <span className="flex items-center gap-2">
+                  {l.label}
+                  {l.isNew && (
+                    <span
+                      className={`text-[8px] font-black uppercase tracking-[0.14em] px-2 py-1 rounded-full ${
+                        isActive(l.href) ? 'bg-[#FFF7EC]/25 text-[#FFF7EC]' : 'bg-terracotta/12 text-terracotta-ink'
+                      }`}
+                    >
+                      New
+                    </span>
+                  )}
+                </span>
+                <ChevronRight className="w-4 h-4 opacity-50" aria-hidden="true" />
+              </Link>
+            ))}
+
+            <span className="chain-rule my-5 opacity-60" aria-hidden="true" />
+
+            {signedIn ? (
+              <>
+                <Link
+                  href={user.is_admin ? '/admin/dashboard' : '/dashboard'}
+                  className="flex items-center gap-3 px-4 py-4 rounded-2xl text-ink hover:bg-parchment-deep transition-colors"
+                >
+                  <LayoutDashboard className="w-4 h-4 text-terracotta-ink" />
+                  <span className="font-semibold text-sm">
+                    {user.is_admin ? 'Admin dashboard' : 'My orders'}
+                  </span>
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-3 px-4 py-4 rounded-2xl text-terracotta-ink hover:bg-terracotta/10 transition-colors text-left"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span className="font-semibold text-sm">Log out</span>
+                </button>
+              </>
+            ) : (
+              <button onClick={openAuth} className="btn-pill btn-terracotta w-full mt-1">
+                <User className="w-3.5 h-3.5" />
+                Sign in
+              </button>
+            )}
+          </nav>
+
+          <div className="px-5 py-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] border-t border-line-soft shrink-0 flex items-center justify-between gap-3">
+            <a
+              href={INSTAGRAM_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 text-xs font-semibold text-bodytext hover:text-terracotta-ink transition-colors"
+            >
+              <Instagram className="w-4 h-4" />
+              @crochet__creation__
+            </a>
+            <button
+              onClick={() => { setMenuOpen(false); openCart(); }}
+              className="flex items-center gap-2 text-xs font-semibold text-ink hover:text-terracotta-ink transition-colors"
+            >
+              <ShoppingBag className="w-4 h-4" />
+              Basket ({cartCount})
             </button>
           </div>
         </div>
-
-        {/* Mobile Navigation Drawer */}
-        {isMenuOpen && (
-          <div
-            className="lg:hidden fixed inset-0 z-[60] flex flex-col pt-20 pb-8 px-6 text-sm font-semibold tracking-widest uppercase text-center backdrop-blur-xl transition-all animate-in fade-in duration-200"
-            style={{
-              backgroundColor: `${activeTheme.primaryDark}F5`
-            }}
-          >
-            <button
-              onClick={() => setIsMenuOpen(false)}
-              className="absolute top-5 right-5 min-w-[44px] min-h-[44px] flex items-center justify-center text-[#FEF9F6] hover:text-[#D9B4B4] transition-colors"
-            >
-              <X className="w-7 h-7" />
-            </button>
-
-            <nav className="flex flex-col items-center gap-1 flex-1 justify-center">
-              <Link href="/#home" onClick={() => setIsMenuOpen(false)} className="w-full py-4 min-h-[48px] flex items-center justify-center hover:text-[#D9B4B4] hover:bg-white/5 rounded-xl transition-all text-[#FEF9F6] text-base tracking-[0.2em]">HOME</Link>
-              <Link href="/shop" onClick={() => setIsMenuOpen(false)} className="w-full py-4 min-h-[48px] flex items-center justify-center hover:text-[#D9B4B4] hover:bg-white/5 rounded-xl transition-all text-[#FEF9F6] text-base tracking-[0.2em]">SHOP</Link>
-              <Link href="/videos" onClick={() => setIsMenuOpen(false)} className="w-full py-4 min-h-[48px] flex items-center justify-center hover:text-[#D9B4B4] hover:bg-white/5 rounded-xl transition-all text-[#FEF9F6] text-base tracking-[0.2em]">VIDEOS</Link>
-            </nav>
-
-            <div className="flex items-center justify-center gap-4 pt-4 border-t border-[#FEF9F6]/10 text-[#FEF9F6]">
-              <div
-                id="mobile-cart-icon"
-                onClick={() => {
-                  setIsMenuOpen(false);
-                  openCart();
-                }}
-                className={`flex items-center gap-1.5 cursor-pointer transition-transform duration-300 ${cartBouncing ? 'scale-110 text-[#D9B4B4]' : ''}`}
-              >
-                <ShoppingBag className="w-4 h-4 text-[#D9B4B4]" />
-                <span>{localCartCount} items</span>
-              </div>
-              <span className="text-white/30">|</span>
-              <a 
-                href="https://www.instagram.com/crochet_creation_02?igsh=OGwybjc3emljMzB6" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-[#D9B4B4] hover:text-white transition-colors"
-              >
-                <Instagram className="w-5 h-5" />
-              </a>
-              <span className="text-white/30">|</span>
-              {token && userProfile ? (
-                <div className="flex items-center gap-2">
-                  {userProfile.is_admin && (
-                    <Link
-                      href="/admin/dashboard"
-                      onClick={() => setIsMenuOpen(false)}
-                      className="text-[9px] bg-[#6B5656] hover:bg-[#D9B4B4] hover:text-[#6B5656] text-white px-2 py-1 rounded font-bold uppercase tracking-wider transition-all duration-300"
-                    >
-                      Admin
-                    </Link>
-                  )}
-                  <Link href="/dashboard" onClick={() => setIsMenuOpen(false)} className="text-[10px] font-bold uppercase tracking-wider text-stone-300 hover:text-white transition-colors">
-                    Hi, {userProfile.first_name}
-                  </Link>
-                  <button onClick={handleLogout} className="hover:text-[#D9B4B4] transition-colors p-1" title="Logout">
-                    <LogOut className="w-4 h-4" />
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={() => {
-                    setIsMenuOpen(false);
-                    if (onOpenAuth) onOpenAuth();
-                    else router.push('/?login=true');
-                  }}
-                  className="hover:text-[#D9B4B4] transition-colors p-1 flex items-center gap-1"
-                >
-                  <User className="w-4 h-4" />
-                  <span className="text-[10px] font-bold">LOGIN</span>
-                </button>
-              )}
-            </div>
-
-
-          </div>
-        )}
-      </header>
-
-      {/* Mobile Bottom Navigation Bar (< md) */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-stone-900/95 backdrop-blur-md border-t border-white/10 z-[140] flex justify-around items-center py-2 pb-safe-bottom shadow-[0_-2px_15px_rgba(0,0,0,0.15)] select-none">
-        <Link 
-          href="/" 
-          className="flex flex-col items-center gap-1 text-[#FEF9F6]/70 hover:text-[#FEF9F6] active:scale-95 transition-all py-1 px-3"
-          onClick={(e) => {
-            if (pathname === '/') {
-              e.preventDefault();
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }
-          }}
-        >
-          <Home className={`w-5 h-5 ${pathname === '/' ? 'text-[#D9B4B4]' : 'text-[#FEF9F6]/70'}`} />
-          <span className="text-[9px] font-black uppercase tracking-wider">Home</span>
-        </Link>
-        
-        <Link 
-          href="/shop" 
-          className="flex flex-col items-center gap-1 text-[#FEF9F6]/70 hover:text-[#FEF9F6] active:scale-95 transition-all py-1 px-3"
-        >
-          <Search className={`w-5 h-5 ${pathname?.startsWith('/shop') ? 'text-[#D9B4B4]' : 'text-[#FEF9F6]/70'}`} />
-          <span className="text-[9px] font-black uppercase tracking-wider">Shop</span>
-        </Link>
-        
-        <Link 
-          href="/videos" 
-          className="flex flex-col items-center gap-1 text-[#FEF9F6]/70 hover:text-[#FEF9F6] active:scale-95 transition-all py-1 px-3"
-        >
-          <PlayCircle className={`w-5 h-5 ${pathname?.startsWith('/videos') ? 'text-[#D9B4B4]' : 'text-[#FEF9F6]/70'}`} />
-          <span className="text-[9px] font-black uppercase tracking-wider">Videos</span>
-        </Link>
-        
-        <button 
-          onClick={openCart} 
-          className="relative flex flex-col items-center gap-1 text-[#FEF9F6]/70 hover:text-[#FEF9F6] active:scale-95 transition-all py-1 px-3"
-        >
-          <div className="relative">
-            <ShoppingBag className="w-5 h-5 text-[#FEF9F6]/70" />
-            {localCartCount > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 bg-[#D9B4B4] text-[#6B5656] text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center shadow-sm">
-                {localCartCount}
-              </span>
-            )}
-          </div>
-          <span className="text-[9px] font-black uppercase tracking-wider">Cart</span>
-        </button>
-        
-        {token && userProfile ? (
-          <Link 
-            href={userProfile.is_admin ? '/admin/dashboard' : '/dashboard'} 
-            className="flex flex-col items-center gap-1 text-[#FEF9F6]/70 hover:text-[#FEF9F6] active:scale-95 transition-all py-1 px-3"
-          >
-            <User className={`w-5 h-5 ${pathname?.startsWith('/dashboard') || pathname?.startsWith('/admin') ? 'text-[#D9B4B4]' : 'text-[#FEF9F6]/70'}`} />
-            <span className="text-[9px] font-black uppercase tracking-wider">Profile</span>
-          </Link>
-        ) : (
-          <button 
-            onClick={() => {
-              if (onOpenAuth) onOpenAuth();
-              else router.push('/?login=true');
-            }} 
-            className="flex flex-col items-center gap-1 text-[#FEF9F6]/70 hover:text-[#FEF9F6] active:scale-95 transition-all py-1 px-3"
-          >
-            <User className="w-5 h-5 text-[#FEF9F6]/70" />
-            <span className="text-[9px] font-black uppercase tracking-wider">Profile</span>
-          </button>
-        )}
       </div>
     </>
   );

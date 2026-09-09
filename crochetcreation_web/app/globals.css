@@ -2,25 +2,55 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ═══════════════════════════════════════════════════════════════
+   CROCHET CREATION — STORYBOOK DESIGN SYSTEM
+   Warm parchment ground, deep teal + olive + terracotta bands,
+   organic torn-paper dividers, storybook serif display type.
+   ═══════════════════════════════════════════════════════════════ */
+
 @layer base {
   :root {
-    --background: #FEF9F6;
-    --foreground: #2D2525;
-    
-    --primary: #D9B4B4;
-    --primary-foreground: #6B5656;
-    
-    --secondary: #6B5656;
-    --secondary-foreground: #FEF9F6;
-    
-    --muted: #F3EAE6;
-    --muted-foreground: #7D6B6B;
-    
-    --border: #EADBDB;
-    --input: #EADBDB;
-    --ring: #D9B4B4;
-    
-    --radius: 0.5rem;
+    /* --- Grounds --- */
+    --parchment: #F4EADA;        /* page background */
+    --parchment-deep: #EADFC8;   /* alternating band */
+    --card: #FFFCF5;             /* raised cards */
+    --card-warm: #FBF4E6;
+
+    /* --- Feature panels --- */
+    --teal: #1F4E4A;             /* services panel, footer */
+    --teal-deep: #16403C;
+    --teal-soft: #2C6560;
+    --olive: #585C36;            /* process band — dark enough for AA body text */
+    --olive-deep: #474A2B;
+    --terracotta: #C0663A;       /* large display accents and illustration */
+    --terracotta-deep: #A5522C;  /* buttons/chips — carries cream text at AA */
+    --terracotta-ink: #9A4B25;   /* small terracotta text on light grounds */
+    --terracotta-soft: #D98A5E;
+
+    /* --- Ink --- */
+    --ink: #23423C;              /* headings */
+    --body: #4A5A52;             /* paragraphs */
+    --muted: #596661;            /* captions, meta — AA on every ground we use */
+    --on-dark: #F6EEDF;          /* text on teal/olive */
+    --on-dark-muted: #C4D3C9;
+
+    /* --- Lines & accents --- */
+    --line: #DDCFB4;
+    --line-soft: #E8DDC6;
+    --gold: #C79A4B;
+    --blush: #D99A86;
+
+    /* shadcn-style aliases kept so existing utility classes resolve */
+    --background: var(--parchment);
+    --foreground: var(--body);
+    --primary: var(--terracotta);
+    --primary-foreground: var(--on-dark);
+    --secondary: var(--teal);
+    --secondary-foreground: var(--on-dark);
+    --border: var(--line);
+    --input: var(--line);
+    --ring: var(--terracotta);
+    --radius: 1rem;
   }
 
   html, body {
@@ -28,311 +58,326 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
-    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-    background-color: var(--background);
-    color: var(--foreground);
+    font-family: var(--font-body, 'Nunito Sans'), system-ui, -apple-system, sans-serif;
+    background-color: var(--parchment);
+    color: var(--body);
+    font-size: 16px;
+    line-height: 1.65;
+  }
+
+  /* Headings default to ink, but resolve through a variable so any dark band
+     can flip them to the light palette without every heading needing its own
+     colour class. Dark panels set --heading-color below. */
+  h1, h2, h3, h4, .font-display {
+    font-family: var(--font-display), Georgia, 'Times New Roman', serif;
+    color: var(--heading-color, var(--ink));
+    text-wrap: balance;
+    /* Instrument Serif ships a single weight. Pinning it here stops the
+       browser synthesising a smeared faux-bold wherever a `font-semibold`
+       utility lands on a display element — and at these sizes the regular
+       weight is what reads expensive. */
+    font-weight: 400;
+    letter-spacing: -0.015em;
+  }
+
+  /* Small headings sit in the sans, where a 400-weight high-contrast serif
+     would look thin and washed out. */
+  .heading-sm {
+    font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+    color: var(--heading-color, var(--ink));
+  }
+
+  /* Visible keyboard focus everywhere, matched to the accent. */
+  :where(a, button, input, textarea, select, [tabindex]):focus-visible {
+    outline: 2px solid var(--terracotta);
+    outline-offset: 2px;
+    border-radius: 4px;
   }
 }
 
-/* Dusty charcoal-purple textured panel */
-.bg-crochet-charcoal {
-  background-color: #6B5656;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 0),
-                    radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 0);
-  background-size: 12px 12px;
-  background-position: 0 0, 6px 6px;
+/* ═══════════════════════════════════════════════════════════════
+   TEXTURES
+   Paper grain and knit weave, so flat colour bands still read warm.
+   ═══════════════════════════════════════════════════════════════ */
+
+.bg-paper {
+  background-color: var(--parchment);
+  background-image:
+    radial-gradient(rgba(140, 116, 78, 0.055) 1px, transparent 0),
+    radial-gradient(rgba(140, 116, 78, 0.04) 1px, transparent 0);
+  background-size: 22px 22px, 13px 13px;
+  background-position: 0 0, 7px 9px;
 }
 
-/* Stripe pattern for filter bars and accents */
-.bg-crochet-stripe {
-  background: repeating-linear-gradient(
-    -45deg,
-    #EAD8D8,
-    #EAD8D8 8px,
-    #E3CECE 8px,
-    #E3CECE 16px
-  );
+.bg-paper-deep {
+  background-color: var(--parchment-deep);
+  background-image:
+    radial-gradient(rgba(120, 98, 62, 0.06) 1px, transparent 0),
+    radial-gradient(rgba(120, 98, 62, 0.045) 1px, transparent 0);
+  background-size: 22px 22px, 13px 13px;
+  background-position: 0 0, 7px 9px;
 }
 
-/* Subtle wood grain background for panels */
-.bg-crochet-wood {
-  background-color: #4C3C3C;
-  background-image: linear-gradient(0deg, rgba(255,255,255,0.03) 50%, transparent 50%),
-                    linear-gradient(90deg, rgba(255,255,255,0.03) 50%, transparent 50%);
-  background-size: 20px 20px;
+/* Teal panel with a faint knitted-stitch weave. */
+.bg-teal-weave {
+  background-color: var(--teal);
+  background-image:
+    repeating-linear-gradient(45deg, rgba(255, 253, 245, 0.028) 0 2px, transparent 2px 7px),
+    repeating-linear-gradient(-45deg, rgba(255, 253, 245, 0.028) 0 2px, transparent 2px 7px);
+  background-size: 14px 14px;
 }
 
-/* Custom Scrollbars */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+.bg-olive-weave {
+  background-color: var(--olive);
+  background-image:
+    repeating-linear-gradient(45deg, rgba(255, 253, 245, 0.03) 0 2px, transparent 2px 7px),
+    repeating-linear-gradient(-45deg, rgba(255, 253, 245, 0.03) 0 2px, transparent 2px 7px);
+  background-size: 14px 14px;
 }
 
-::-webkit-scrollbar-track {
-  background: transparent;
+.bg-terracotta-weave {
+  background-color: var(--terracotta-deep);
+  background-image:
+    repeating-linear-gradient(45deg, rgba(255, 253, 245, 0.035) 0 2px, transparent 2px 7px),
+    repeating-linear-gradient(-45deg, rgba(255, 253, 245, 0.035) 0 2px, transparent 2px 7px);
+  background-size: 14px 14px;
 }
 
-::-webkit-scrollbar-thumb {
-  background: rgba(107, 86, 86, 0.2);
-  border-radius: 4px;
+/* Dark bands: headings (and the default text colour) switch to the light
+   palette for everything nested inside. */
+.bg-teal-weave,
+.bg-olive-weave,
+.bg-terracotta-weave,
+.bg-teal,
+.bg-teal-deep,
+.bg-olive,
+.bg-terracotta {
+  --heading-color: var(--on-dark);
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(107, 86, 86, 0.4);
+/* A light surface nested inside a dark band must hand the heading colour back,
+   otherwise headings inherit the band's on-dark tone and render cream on cream. */
+.card-soft,
+.bg-paper,
+.bg-paper-deep,
+.bg-parchment,
+.bg-parchment-card,
+.bg-parchment-deep {
+  --heading-color: var(--ink);
 }
 
-/* ═══════════════════════════════════════════════════
-   PARALLAX & SCROLL ANIMATIONS
-   ═══════════════════════════════════════════════════ */
+/* A single crochet chain-stitch rule, used under section headings. */
+.chain-rule {
+  height: 8px;
+  background-image: radial-gradient(circle at 4px 4px, var(--line) 3px, transparent 3.5px);
+  background-size: 12px 8px;
+  background-repeat: repeat-x;
+}
 
-/* Fade-in-up animation for scroll-triggered sections */
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(40px);
+/* ═══════════════════════════════════════════════════════════════
+   COMPONENT PRIMITIVES
+   ═══════════════════════════════════════════════════════════════ */
+
+@layer components {
+  /* Eyebrow label: letterspaced small caps above headings. */
+  .eyebrow {
+    @apply text-[10px] md:text-[11px] font-bold uppercase tracking-[0.22em];
+    color: var(--terracotta-ink);
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+  .eyebrow-on-dark { color: var(--on-dark-muted); }
+
+  /* Pill buttons — the reference's signature control. */
+  .btn-pill {
+    @apply inline-flex items-center justify-center gap-2 rounded-full font-semibold
+           transition-all duration-200 active:scale-[0.97]
+           px-7 py-3.5 text-[11px] uppercase tracking-[0.16em];
+    min-height: 44px;
+  }
+  .btn-teal {
+    background-color: var(--teal);
+    color: var(--on-dark);
+    box-shadow: 0 6px 18px -8px rgba(31, 78, 74, 0.7);
+  }
+  .btn-teal:hover { background-color: var(--teal-deep); }
+
+  .btn-terracotta {
+    background-color: var(--terracotta-deep);
+    color: #FFF7EC;
+    box-shadow: 0 6px 18px -8px rgba(192, 102, 58, 0.75);
+  }
+  .btn-terracotta:hover { background-color: #8E4522; }
+
+  .btn-outline {
+    background-color: transparent;
+    color: var(--ink);
+    border: 1.5px solid var(--line);
+  }
+  .btn-outline:hover {
+    border-color: var(--terracotta-ink);
+    color: var(--terracotta-ink);
+  }
+
+  .btn-cream {
+    background-color: var(--card);
+    color: var(--ink);
+    border: 1.5px solid var(--line-soft);
+  }
+  .btn-cream:hover { background-color: #fff; border-color: var(--terracotta); }
+
+  /* Soft raised card with the storybook's generous radius. */
+  .card-soft {
+    background-color: var(--card);
+    border: 1px solid var(--line-soft);
+    border-radius: 20px;
+    box-shadow: 0 2px 10px -4px rgba(90, 74, 48, 0.10);
+  }
+
+  /* Filter chips (ALL / TOYS / ACCESSORIES …). */
+  .chip {
+    @apply inline-flex items-center rounded-full px-4 py-2 text-[10px] md:text-[11px]
+           font-bold uppercase tracking-[0.14em] transition-all duration-200 whitespace-nowrap;
+    min-height: 38px;
+    color: var(--muted);
+    background-color: transparent;
+  }
+  .chip:hover { color: var(--ink); }
+  .chip-active {
+    background-color: var(--terracotta-deep);
+    color: #FFF7EC;
+    box-shadow: 0 4px 12px -5px rgba(192, 102, 58, 0.8);
+  }
+
+  /* Circular icon badge used in the services and process rows. */
+  .badge-round {
+    @apply flex items-center justify-center rounded-full shrink-0;
+    background-color: var(--card);
+    border: 1.5px solid var(--line);
   }
 }
 
-@keyframes fadeInLeft {
-  from {
-    opacity: 0;
-    transform: translateX(-40px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
+/* ═══════════════════════════════════════════════════════════════
+   ORGANIC SECTION EDGES
+   The torn-paper transitions between colour bands.
+   ═══════════════════════════════════════════════════════════════ */
 
-@keyframes fadeInRight {
-  from {
-    opacity: 0;
-    transform: translateX(40px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
+.edge-wrap { position: relative; line-height: 0; }
+.edge-wrap svg { display: block; width: 100%; height: auto; }
 
-@keyframes scaleIn {
-  from {
-    opacity: 0;
-    transform: scale(0.85);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
+/* ═══════════════════════════════════════════════════════════════
+   MOTION
+   ═══════════════════════════════════════════════════════════════ */
 
-/* Gentle floating animation for decorative elements */
-@keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-12px); }
+@keyframes floatSoft {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50%      { transform: translateY(-10px) rotate(1.5deg); }
 }
-
-@keyframes floatSlow {
-  0%, 100% { transform: translateY(0px) rotate(0deg); }
-  50% { transform: translateY(-8px) rotate(2deg); }
+@keyframes swaySoft {
+  0%, 100% { transform: rotate(-2.5deg); }
+  50%      { transform: rotate(2.5deg); }
 }
-
-/* Shimmer glow effect */
-@keyframes shimmer {
-  0% { opacity: 0.4; }
-  50% { opacity: 1; }
-  100% { opacity: 0.4; }
-}
-
-/* Yarn drawing animation */
-@keyframes drawThread {
-  from { stroke-dashoffset: 1000; }
+@keyframes drawStroke {
   to { stroke-dashoffset: 0; }
 }
-
-/* Rotate for spinners */
-@keyframes gentleSpin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pop {
+  0%   { transform: scale(0.4); opacity: 0; }
+  60%  { transform: scale(1.18); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
 }
 
-/* Utility animation classes */
-.animate-fade-in-up {
-  animation: fadeInUp 0.8s ease-out forwards;
+.animate-float-soft { animation: floatSoft 7s ease-in-out infinite; }
+.animate-pop { animation: pop 340ms cubic-bezier(0.34, 1.56, 0.64, 1); }
+.animate-fade-in { animation: fadeIn 420ms ease-out; }
+.animate-sway { animation: swaySoft 6s ease-in-out infinite; transform-origin: top center; }
+.animate-draw { stroke-dasharray: 1200; stroke-dashoffset: 1200; animation: drawStroke 2.4s ease-out forwards; }
+
+/* Skeleton shimmer for loading product cards. */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background-color: var(--parchment-deep);
+}
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 253, 245, 0.55), transparent);
+  animation: shimmer 1.6s infinite;
 }
 
-.animate-fade-in-left {
-  animation: fadeInLeft 0.8s ease-out forwards;
-}
-
-.animate-fade-in-right {
-  animation: fadeInRight 0.8s ease-out forwards;
-}
-
-.animate-scale-in {
-  animation: scaleIn 0.6s ease-out forwards;
-}
-
-.animate-float {
-  animation: float 4s ease-in-out infinite;
-}
-
-.animate-float-slow {
-  animation: floatSlow 6s ease-in-out infinite;
-}
-
-.animate-shimmer {
-  animation: shimmer 3s ease-in-out infinite;
-}
-
-.animate-gentle-spin {
-  animation: gentleSpin 20s linear infinite;
-}
-
-/* Staggered animation delays for child elements */
-.stagger-1 { animation-delay: 0.1s; }
-.stagger-2 { animation-delay: 0.2s; }
-.stagger-3 { animation-delay: 0.3s; }
-.stagger-4 { animation-delay: 0.4s; }
-.stagger-5 { animation-delay: 0.5s; }
-.stagger-6 { animation-delay: 0.6s; }
-
-/* Scroll-triggered visibility (used with IntersectionObserver) */
-.scroll-hidden {
-  opacity: 0;
-  transform: translateY(30px);
-  transition: opacity 0.7s ease-out, transform 0.7s ease-out;
-}
-
-.scroll-visible {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-/* Parallax depth layers */
-.parallax-layer-slow {
-  will-change: transform;
-  transition: transform 0.05s linear;
-}
-
-.parallax-layer-fast {
-  will-change: transform;
-  transition: transform 0.03s linear;
-}
-
-/* Image reveal on scroll */
-.image-reveal {
-  clip-path: inset(100% 0 0 0);
-  transition: clip-path 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-}
-
-.image-reveal.revealed {
-  clip-path: inset(0 0 0 0);
-}
-
-/* SVG thread glow effect */
-.thread-glow {
-  filter: drop-shadow(0 0 6px rgba(217, 180, 180, 0.8))
-          drop-shadow(0 0 12px rgba(107, 86, 86, 0.3));
-}
-
-/* Gradient text effect */
-.text-gradient-crochet {
-  background: linear-gradient(135deg, #6B5656 0%, #D9B4B4 50%, #6B5656 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-/* Smooth page transitions */
-html {
-  scroll-behavior: smooth;
-}
-
-/* Reduce motion for accessibility */
 @media (prefers-reduced-motion: reduce) {
-  .animate-fade-in-up,
-  .animate-fade-in-left,
-  .animate-fade-in-right,
-  .animate-scale-in,
-  .animate-float,
-  .animate-float-slow,
-  .animate-shimmer,
-  .animate-gentle-spin {
+  .animate-float-soft,
+  .animate-sway,
+  .animate-draw,
+  .animate-pop,
+  .animate-fade-in,
+  .skeleton::after {
     animation: none !important;
   }
-  
-  .scroll-hidden {
-    opacity: 1;
-    transform: none;
-    transition: none;
+
+  /* Neutralise every transition/transform-based effect too. */
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
   }
+  html { scroll-behavior: auto; }
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   UTILITIES
+   ═══════════════════════════════════════════════════════════════ */
 
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* Preloader draw path animation */
-@keyframes drawPath {
-  to {
-    stroke-dashoffset: 0;
-  }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(31, 78, 74, 0.22);
+  border-radius: 4px;
 }
-.animate-draw-path {
-  animation: drawPath 2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-}
+::-webkit-scrollbar-thumb:hover { background: rgba(31, 78, 74, 0.4); }
 
-/* ═══════════════════════════════════════════════════
-   ERP ADMIN DARK THEME CUSTOM STYLES
-   ═══════════════════════════════════════════════════ */
-.dark {
-  color-scheme: dark;
-}
+::selection { background: rgba(192, 102, 58, 0.22); }
 
-/* Base dark container overrides */
-.dark .bg-white {
-  background-color: #0f172a !important; /* Slate-900 */
-}
+/* ═══════════════════════════════════════════════════════════════
+   ADMIN ERP — dark mode overrides (unchanged behaviour, retuned
+   to the new palette so the panel stays legible).
+   ═══════════════════════════════════════════════════════════════ */
+.dark { color-scheme: dark; }
+
+.dark .bg-white { background-color: #14201D !important; }
 .dark .bg-gray-50,
 .dark .bg-gray-55,
-.dark .bg-[#FEF9F6],
-.dark .bg-[#F7F5F2] {
-  background-color: #020617 !important; /* Slate-950 */
-}
-.dark .bg-[#FDFBF9] {
-  background-color: #0f172a !important; /* Slate-900 */
-}
+.dark .bg-\[\#FEF9F6\],
+.dark .bg-\[\#F7F5F2\] { background-color: #0D1614 !important; }
+.dark .bg-\[\#FDFBF9\] { background-color: #14201D !important; }
+.dark .bg-gray-100 { background-color: #0B1210 !important; }
 
-/* activeTab / input / layout containers */
-.dark .bg-gray-100 {
-  background-color: #090d16 !important; /* Slate-950 dark */
-}
-
-/* Border overrides */
 .dark .border-gray-100,
-.dark .border-stone-100 {
-  border-color: #1e293b !important; /* Slate-800 */
-}
+.dark .border-stone-100 { border-color: #22322D !important; }
 .dark .border-gray-200,
 .dark .border-stone-200,
 .dark .border-stone-250,
-.dark .border-gray-250 {
-  border-color: #334155 !important; /* Slate-700 */
-}
-.dark .border-[#EADBDB] {
-  border-color: #1e293b !important;
-}
+.dark .border-gray-250 { border-color: #2E413A !important; }
+.dark .border-\[\#EADBDB\] { border-color: #22322D !important; }
 
-/* Text color overrides */
 .dark .text-slate-900,
 .dark .text-stone-850,
-.dark .text-stone-800 {
-  color: #f8fafc !important; /* Slate-50 */
-}
+.dark .text-stone-800 { color: #F4EADA !important; }
 .dark .text-slate-805,
 .dark .text-slate-800,
 .dark .text-slate-700,
@@ -340,35 +385,27 @@ html {
 .dark .text-stone-550,
 .dark .text-gray-700,
 .dark .text-gray-655,
-.dark .text-gray-650 {
-  color: #cbd5e1 !important; /* Slate-300 */
-}
+.dark .text-gray-650 { color: #C4D3C9 !important; }
 .dark .text-gray-500,
 .dark .text-stone-500,
 .dark .text-stone-450,
 .dark .text-gray-400,
-.dark .text-stone-400 {
-  color: #94a3b8 !important; /* Slate-400 */
-}
+.dark .text-stone-400 { color: #8A9A90 !important; }
 
-/* Hover effects */
 .dark .hover\:bg-gray-50\/50:hover,
 .dark .hover\:bg-gray-55\/70:hover,
 .dark .hover\:bg-gray-50:hover,
-.dark .hover\:bg-stone-50:hover {
-  background-color: #1e293b !important; /* Slate-800 */
-}
+.dark .hover\:bg-stone-50:hover { background-color: #1C2A26 !important; }
 
-/* KPI icon containers */
 .dark .bg-emerald-50 {
   background-color: rgba(16, 185, 129, 0.15) !important;
   color: #34d399 !important;
   border-color: rgba(16, 185, 129, 0.2) !important;
 }
 .dark .bg-amber-50 {
-  background-color: rgba(245, 158, 11, 0.15) !important;
-  color: #fbbf24 !important;
-  border-color: rgba(245, 158, 11, 0.2) !important;
+  background-color: rgba(199, 154, 75, 0.18) !important;
+  color: #E0B76A !important;
+  border-color: rgba(199, 154, 75, 0.25) !important;
 }
 .dark .bg-sky-50 {
   background-color: rgba(14, 165, 233, 0.15) !important;
@@ -376,31 +413,22 @@ html {
   border-color: rgba(14, 165, 233, 0.2) !important;
 }
 .dark .bg-red-50 {
-  background-color: rgba(239, 68, 68, 0.15) !important;
-  color: #f87171 !important;
-  border-color: rgba(239, 68, 68, 0.2) !important;
+  background-color: rgba(192, 102, 58, 0.18) !important;
+  color: #D98A5E !important;
+  border-color: rgba(192, 102, 58, 0.25) !important;
 }
 
-/* SVG Chart adjustments for dark theme */
-.dark line[stroke="#F1F1F1"] {
-  stroke: #1e293b !important;
-}
+.dark line[stroke="#F1F1F1"] { stroke: #22322D !important; }
 .dark text[fill="#A0A0A0"],
 .dark text[fill="#888888"],
-.dark text[fill="#6B5656"] {
-  fill: #94a3b8 !important;
-}
+.dark text[fill="#6B5656"] { fill: #8A9A90 !important; }
 
-/* Inputs and Forms */
 .dark input,
 .dark select,
 .dark textarea {
-  background-color: #020617 !important; /* Slate-950 */
-  border-color: #334155 !important; /* Slate-700 */
-  color: #f8fafc !important; /* Slate-50 */
+  background-color: #0D1614 !important;
+  border-color: #2E413A !important;
+  color: #F4EADA !important;
 }
 .dark input::placeholder,
-.dark textarea::placeholder {
-  color: #475569 !important;
-}
-
+.dark textarea::placeholder { color: #5A6B62 !important; }

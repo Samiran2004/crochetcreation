@@ -35,6 +35,8 @@ export const clearSession = () => {
   localStorage.removeItem('crochet_cart');
   localStorage.setItem('crochet_cart_count', '0');
   window.dispatchEvent(new Event('cart-change'));
+  // Lets the header re-read the session without a reload.
+  window.dispatchEvent(new Event('session-change'));
 };
 
 // One shared refresh at a time. Without this, a page that fires several
