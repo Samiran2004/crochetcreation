@@ -11,6 +11,7 @@ from app.routes.admin_routes import router as admin_router
 from app.routes.user_routes import router as user_router
 from app.routes.review_routes import router as review_router
 from app.routes.video_routes import router as video_router
+from app.routes.thankyou_routes import router as thankyou_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -47,6 +48,7 @@ app.include_router(admin_router)
 app.include_router(user_router)
 app.include_router(review_router)
 app.include_router(video_router)
+app.include_router(thankyou_router)
 
 # Configure Rate Limiting
 from slowapi import _rate_limit_exceeded_handler

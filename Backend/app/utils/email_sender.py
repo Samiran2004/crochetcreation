@@ -480,3 +480,44 @@ async def send_review_thank_you_email(to_email: str, name: str, product_title: s
     html_content = BASE_HTML_TEMPLATE.format(title="Thank You for Your Review!", body_content=body)
     await send_brevo_email(to_email, name, subject, html_content)
 
+
+async def send_thankyou_email(to_email: str, customer_name: str, thankyou_url: str) -> bool:
+    """
+    Sends a personalized thank-you email to a customer with a link to their
+    unique thank-you page. Called as a background task from the thank-you route.
+    """
+    subject = f"Thank You for Your Purchase, {customer_name}! 💖🧶"
+
+    body = f"""
+    <div style="text-align: center;">
+        <span style="font-size: 11px; background-color: #EADCC9; color: #5D4037; padding: 4px 12px; border-radius: 20px; text-transform: uppercase; font-weight: bold; letter-spacing: 1px;">Purchase Appreciation</span>
+        <h2 style="color: #4E342E; margin-top: 15px; margin-bottom: 5px; font-size: 24px;">Thank You, {customer_name}!</h2>
+        <p style="color: #6D4C41; margin-top: 0; font-size: 15px; font-style: italic;">We truly appreciate your support.</p>
+    </div>
+
+    <div class="welcome-text">Hi {customer_name},</div>
+    <p>Thank you so much for choosing <strong>Crochet Creation</strong>! Every purchase means the world to us as a small handmade business. Your support helps us keep crafting with love and passion.</p>
+    <p>We've created a special <strong>personalized thank-you page</strong> just for you! Click the button below to view it:</p>
+
+    <div class="button-container">
+        <a href="{thankyou_url}" class="button">View Your Thank You Page 🎁</a>
+    </div>
+
+    <div class="card" style="margin-top: 25px; margin-bottom: 25px; text-align: center;">
+        <p style="margin: 0; font-style: italic; color: #5D4037;">
+            "Every stitch is made with love, and every customer is cherished. Thank you for being part of the Crochet Creation family!"
+        </p>
+    </div>
+
+    <p style="border-top: 1px dashed #EFEAE2; padding-top: 20px; font-size: 14px; color: #6D4C41;">
+        <strong>Love what you got?</strong><br>
+        Share your experience with us on Instagram <a href="https://instagram.com/crochet_creation_02" style="color: #8D6E63; font-weight: bold; text-decoration: none;">@crochet_creation_02</a> — we'd love to see your unboxing! 📸
+    </p>
+
+    <p style="margin-bottom: 0;">Warmest stitches,</p>
+    <p style="margin-top: 5px; font-weight: bold; color: #4E342E; font-size: 16px;">The Crochet Creation Team 🧶</p>
+    """
+
+    html_content = BASE_HTML_TEMPLATE.format(title="Thank You for Your Purchase!", body_content=body)
+    return await send_brevo_email(to_email, customer_name, subject, html_content)
+

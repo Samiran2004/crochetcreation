@@ -308,6 +308,9 @@ async def ensure_indexes():
         # OTPs clean themselves up once they expire.
         await db["otps"].create_index("email", unique=True)
         await db["otps"].create_index("expires_at", expireAfterSeconds=0)
+        # Thank-you customer entries
+        await db["thankyou_customers"].create_index("unique_id", unique=True)
+        await db["thankyou_customers"].create_index([("created_at", -1)])
         print("Database indexes ensured.")
     except Exception as e:
         # A failed index build must never stop the app from serving.

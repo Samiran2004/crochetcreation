@@ -172,6 +172,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       title: 'CRM',
       items: [
         { name: 'Customers', path: '/admin/customers', icon: Users },
+        { name: 'Thank You', path: '/admin/thankyou', icon: Heart },
       ]
     },
     {
