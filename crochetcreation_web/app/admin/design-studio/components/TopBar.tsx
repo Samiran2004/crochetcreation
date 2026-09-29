@@ -157,7 +157,7 @@ export const TopBar: React.FC<{
       <div className="hidden lg:block">
         <Popover
           align="right"
-          width="w-72"
+          width={300}
           trigger={() => (
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-600 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-800">
               <Keyboard className="h-4 w-4" />
@@ -184,7 +184,7 @@ export const TopBar: React.FC<{
 
       <Popover
         align="right"
-        width="w-80"
+        width={340}
         trigger={() => (
           <span className="inline-flex items-center gap-2 rounded-lg border border-gray-250 dark:border-slate-700 px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 hover:border-teal dark:hover:border-parchment">
             <Share2 className="h-3.5 w-3.5" />
@@ -229,7 +229,7 @@ export const TopBar: React.FC<{
 
       <Popover
         align="right"
-        width="w-72"
+        width={300}
         trigger={() => (
           <span className="inline-flex items-center gap-2 rounded-lg border border-gray-250 dark:border-slate-700 px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 hover:border-teal dark:hover:border-parchment">
             <Download className="h-3.5 w-3.5" />

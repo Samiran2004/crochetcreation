@@ -288,10 +288,10 @@ const DesignEditor: React.FC<{ design: DesignRecord }> = ({ design }) => {
 
       // While a text object is being edited on the canvas, every key belongs
       // to that text — including Delete and the arrows.
-      if (typing || editor.isEditingText()) {
-        if (e.key === 'Escape') editor.canvasRef.current?.discardActiveObject();
-        return;
-      }
+      // While a field or an on-canvas text object has focus, every key
+      // belongs to it — including Escape, which should close the field or its
+      // popover rather than clear the artboard selection underneath.
+      if (typing || editor.isEditingText()) return;
 
       const mod = e.metaKey || e.ctrlKey;
 

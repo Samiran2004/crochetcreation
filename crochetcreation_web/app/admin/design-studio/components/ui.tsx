@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useEffect, useId, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Check, ChevronDown } from 'lucide-react';
 import { ACCENT_COLORS, BRAND_COLORS, NEUTRAL_COLORS } from '../lib/presets';
 
@@ -182,23 +183,107 @@ export const Segmented = <T extends string>({
   </div>
 );
 
-/** A popover anchored under its trigger that closes on outside click or Esc. */
-export const Popover: React.FC<{
-  trigger: (open: boolean) => React.ReactNode;
-  children: (close: () => void) => React.ReactNode;
-  align?: 'left' | 'right';
-  width?: string;
-}> = ({ trigger, children, align = 'left', width = 'w-64' }) => {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+/**
+ * Place a floating panel against an anchor, in viewport coordinates.
+ *
+ * The Studio's panels scroll, and a scrolling box clips its own overflow on
+ * *both* axes — so a dropdown rendered inside one gets sliced off at the
+ * panel edge no matter how high its z-index is. Floating panels therefore
+ * render into `document.body` and are positioned here: measured from the
+ * anchor, clamped inside the viewport, and flipped above when there is more
+ * room up than down.
+ */
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(Math.max(value, min), Math.max(min, max));
+
+const useAnchoredPosition = (
+  open: boolean,
+  anchor: HTMLElement | null,
+  desiredWidth: number,
+  align: 'left' | 'right',
+  onOutOfView: () => void,
+): React.CSSProperties => {
+  const [style, setStyle] = useState<React.CSSProperties>({ visibility: 'hidden' });
+  const escape = useRef(onOutOfView);
+  escape.current = onOutOfView;
+
+  useLayoutEffect(() => {
+    if (!open || !anchor) return;
+
+    const place = () => {
+      const rect = anchor.getBoundingClientRect();
+      const gap = 8;
+      const margin = 10;
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+
+      // The anchor can be scrolled out of its own panel while the dropdown is
+      // open. Following it off-screen would leave a menu floating with
+      // nothing to point at, so the panel closes instead.
+      if (rect.bottom < 0 || rect.top > vh || rect.right < 0 || rect.left > vw) {
+        escape.current();
+        return;
+      }
+
+      const width = Math.min(desiredWidth, vw - margin * 2);
+      const left = clamp(
+        align === 'right' ? rect.right - width : rect.left,
+        margin,
+        vw - width - margin,
+      );
+
+      const spaceBelow = vh - rect.bottom - gap - margin;
+      const spaceAbove = rect.top - gap - margin;
+      const flip = spaceBelow < 240 && spaceAbove > spaceBelow;
+
+      const maxHeight = clamp(flip ? spaceAbove : spaceBelow, 180, vh - margin * 2);
+
+      // Flipped panels hang from the trigger's top edge; the rest sit below
+      // it, clamped so a trigger near the bottom cannot push the panel off.
+      const placement = flip
+        ? { bottom: clamp(vh - rect.top + gap, margin, vh - margin) }
+        : { top: clamp(rect.bottom + gap, margin, vh - maxHeight - margin) };
+
+      setStyle({ position: 'fixed', left, width, maxHeight, ...placement, visibility: 'visible' });
+    };
+
+    place();
+    window.addEventListener('resize', place);
+    // Capture phase, so a scroll inside any ancestor panel is seen too.
+    window.addEventListener('scroll', place, true);
+    return () => {
+      window.removeEventListener('resize', place);
+      window.removeEventListener('scroll', place, true);
+    };
+  }, [align, anchor, desiredWidth, open]);
+
+  return style;
+};
+
+/**
+ * Dismiss-on-outside-click for a portalled panel.
+ *
+ * The panel is no longer a DOM descendant of its trigger, so "outside" has to
+ * be judged against both elements or the very click that opened the panel
+ * would close it again.
+ */
+const useDismiss = (
+  open: boolean,
+  onClose: () => void,
+  ...nodes: (HTMLElement | null)[]
+) => {
+  const refs = useRef(nodes);
+  refs.current = nodes;
 
   useEffect(() => {
     if (!open) return;
     const onDown = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Node;
+      if (refs.current.some((n) => n && n.contains(target))) return;
+      onClose();
     };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
+      if (e.key === 'Escape') onClose();
     };
     document.addEventListener('mousedown', onDown);
     document.addEventListener('keydown', onKey);
@@ -206,19 +291,67 @@ export const Popover: React.FC<{
       document.removeEventListener('mousedown', onDown);
       document.removeEventListener('keydown', onKey);
     };
-  }, [open]);
+  }, [onClose, open]);
+};
+
+/**
+ * A floating surface anchored to an element, rendered in a portal.
+ *
+ * Shared by every dropdown in the Studio so they all escape panel clipping,
+ * stay on screen, and dismiss identically.
+ */
+export const FloatingPanel: React.FC<{
+  open: boolean;
+  anchor: HTMLElement | null;
+  onClose: () => void;
+  width?: number;
+  align?: 'left' | 'right';
+  padded?: boolean;
+  children: React.ReactNode;
+}> = ({ open, anchor, onClose, width = 288, align = 'left', padded = true, children }) => {
+  const [panel, setPanel] = useState<HTMLDivElement | null>(null);
+  const [mounted, setMounted] = useState(false);
+  const style = useAnchoredPosition(open, anchor, width, align, onClose);
+
+  useEffect(() => setMounted(true), []);
+  useDismiss(open, onClose, anchor, panel);
+
+  if (!mounted || !open) return null;
+
+  return createPortal(
+    <div
+      ref={setPanel}
+      style={style}
+      className={`z-[90] flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900 ${
+        padded ? 'p-3' : ''
+      }`}
+    >
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">{children}</div>
+    </div>,
+    document.body,
+  );
+};
+
+/** A popover anchored under its trigger that closes on outside click or Esc. */
+export const Popover: React.FC<{
+  trigger: (open: boolean) => React.ReactNode;
+  children: (close: () => void) => React.ReactNode;
+  align?: 'left' | 'right';
+  width?: number;
+}> = ({ trigger, children, align = 'left', width = 288 }) => {
+  const [open, setOpen] = useState(false);
+  const [anchor, setAnchor] = useState<HTMLDivElement | null>(null);
+  const close = useCallback(() => setOpen(false), []);
 
   return (
-    <div className="relative" ref={ref}>
-      <div onClick={() => setOpen((v) => !v)}>{trigger(open)}</div>
-      {open && (
-        <div
-          className={`absolute z-50 mt-2 ${width} ${align === 'right' ? 'right-0' : 'left-0'} rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3 shadow-xl`}
-        >
-          {children(() => setOpen(false))}
-        </div>
-      )}
-    </div>
+    <>
+      <div ref={setAnchor} className="relative" onClick={() => setOpen((v) => !v)}>
+        {trigger(open)}
+      </div>
+      <FloatingPanel open={open} anchor={anchor} onClose={close} width={width} align={align}>
+        {children(close)}
+      </FloatingPanel>
+    </>
   );
 };
 
@@ -327,7 +460,7 @@ export const ColorButton: React.FC<{
   allowTransparent?: boolean;
 }> = ({ value, label, onChange, onCommit, allowTransparent }) => (
   <Popover
-    width="w-72"
+    width={300}
     trigger={() => (
       <button
         type="button"

@@ -316,7 +316,7 @@ export const ElementsPanel: React.FC<{
 
       <PanelSection title="Element colour">
         <Popover
-          width="w-72"
+          width={300}
           trigger={() => (
             <button
               type="button"
