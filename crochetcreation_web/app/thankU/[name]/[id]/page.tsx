@@ -1,15 +1,11 @@
+import { Great_Vibes, Montserrat } from 'next/font/google';
 import React from 'react';
 import { Metadata, ResolvingMetadata } from 'next';
 import { getApiUrl } from '../../../utils/apiFetch';
-import {
-  Heart,
-  MapPin,
-  Globe,
-  Instagram,
-  Sparkles,
-  Gift,
-  Star,
-} from 'lucide-react';
+import { Globe, Instagram, MapPin } from 'lucide-react';
+
+const greatVibes = Great_Vibes({ weight: '400', subsets: ['latin'], display: 'swap' });
+const montserrat = Montserrat({ weight: ['300', '400', '500'], subsets: ['latin'], display: 'swap' });
 
 interface Props {
   params: { name: string; id: string };
@@ -69,8 +65,7 @@ export default async function ThankYouPage({ params }: Props) {
   let error = false;
 
   try {
-    // Fetch data directly on the server
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || getApiUrl(); // Use env if available on server
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || getApiUrl();
     const res = await fetch(`${apiUrl}/api/thankyou/${name}/${id}`, { cache: 'no-store' });
     if (res.ok) {
       data = await res.json();
@@ -83,22 +78,19 @@ export default async function ThankYouPage({ params }: Props) {
 
   if (error || !data) {
     return (
-      <div className="min-h-screen bg-[#FDF6EE] flex items-center justify-center p-6">
+      <div className="min-h-screen bg-[#F2EFE9] flex items-center justify-center p-6">
         <div className="text-center max-w-md">
-          <div className="w-20 h-20 mx-auto mb-6 bg-[#EADCC9] rounded-full flex items-center justify-center">
-            <Gift className="w-10 h-10 text-[#8D6E63]" />
-          </div>
-          <h1 className="text-2xl font-bold text-[#3E2723] mb-3 font-serif">
-            Page Not Found
+          <h1 className={`${montserrat.className} text-2xl text-[#1C1C1C] mb-3`}>
+            PAGE NOT FOUND
           </h1>
-          <p className="text-sm text-[#6D4C41] leading-relaxed">
+          <p className={`${montserrat.className} text-sm text-[#555] font-light leading-relaxed mb-6`}>
             This thank-you page doesn't exist or may have been removed.
           </p>
           <a
             href="https://crochetcreation.vercel.app"
-            className="inline-block mt-6 px-6 py-3 bg-[#1F4E4A] text-white rounded-xl text-sm font-semibold hover:bg-[#16403C] transition-colors"
+            className={`${montserrat.className} inline-block px-6 py-3 border border-[#1C1C1C] text-[#1C1C1C] rounded-full text-xs tracking-widest hover:bg-[#1C1C1C] hover:text-[#F2EFE9] transition-colors`}
           >
-            Visit Crochet Creation
+            RETURN HOME
           </a>
         </div>
       </div>
@@ -106,173 +98,156 @@ export default async function ThankYouPage({ params }: Props) {
   }
 
   const customerName = data.name;
-  const purchaseDate = new Date(data.created_at).toLocaleDateString('en-IN', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
 
   return (
-    <div className="min-h-screen bg-parchment-warm relative overflow-hidden font-sans">
-      {/* Subtle Floating Ornaments */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-40">
-        <div className="absolute top-[10%] left-[8%] animate-float-soft">
-          <Heart className="w-5 h-5 text-blush opacity-30" strokeWidth={1.5} />
-        </div>
-        <div className="absolute top-[25%] right-[12%] animate-float-soft" style={{ animationDelay: '1.5s' }}>
-          <Sparkles className="w-6 h-6 text-gold opacity-20" strokeWidth={1} />
-        </div>
-        <div className="absolute bottom-[20%] left-[15%] animate-float-soft" style={{ animationDelay: '0.5s' }}>
-          <Star className="w-4 h-4 text-terracotta-soft opacity-20" strokeWidth={1.5} />
-        </div>
-        <div className="absolute top-[60%] right-[8%] animate-float-soft" style={{ animationDelay: '2.5s' }}>
-          <Heart className="w-4 h-4 text-blush opacity-25" strokeWidth={1.5} />
-        </div>
-      </div>
+    <div className="min-h-screen bg-[#E5E0D8] flex flex-col items-center justify-center p-4 sm:p-8 font-sans selection:bg-[#E6C8B4]/40">
+      
+      {/* The Physical Card Wrapper */}
+      <div className="relative w-full max-w-[900px] aspect-[4/5] sm:aspect-[1.5/1] bg-[#F2EFE9] shadow-2xl overflow-hidden rounded-sm animate-in fade-in zoom-in-[0.98] duration-1000">
+        
+        {/* --- BACKGROUND SVG ELEMENTS --- */}
+        
+        {/* 1. Paper Texture Overlay (Subtle noise) */}
+        <div className="absolute inset-0 opacity-[0.4] mix-blend-overlay pointer-events-none z-0" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.85%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22/%3E%3C/svg%3E")' }}></div>
 
-      {/* Main Container */}
-      <div className="relative z-10 flex items-center justify-center min-h-screen p-4 sm:p-6 py-12">
-        <div className="w-full max-w-lg">
+        {/* 2. Top-Left Peach Blob */}
+        <svg className="absolute top-0 left-0 w-[60%] sm:w-[45%] h-[50%] sm:h-[80%] z-0" viewBox="0 0 400 400" preserveAspectRatio="none">
+          <path d="M0,0 L380,0 C320,100 350,220 220,280 C120,330 50,380 0,400 Z" fill="#E6C8B4" />
+        </svg>
+
+        {/* 3. Bottom-Left Grey Blob */}
+        <svg className="absolute bottom-0 left-0 w-[55%] sm:w-[45%] h-[35%] sm:h-[45%] z-0" viewBox="0 0 400 250" preserveAspectRatio="none">
+          <path d="M0,250 L0,120 C80,90 180,180 260,140 C340,100 400,200 400,250 Z" fill="#D3D3CB" />
+        </svg>
+
+        {/* 4. Bottom-Right Dark Blob */}
+        <svg className="absolute bottom-0 right-0 w-[45%] sm:w-[35%] h-[35%] sm:h-[60%] z-0" viewBox="0 0 300 300" preserveAspectRatio="none">
+          <path d="M300,300 L300,80 C270,140 180,160 120,210 C60,260 30,300 0,300 Z" fill="#2F2E2C" />
+        </svg>
+
+        {/* 5. Gold Wavy Lines & Splatters */}
+        <svg className="absolute inset-0 w-full h-full z-0" viewBox="0 0 800 500" preserveAspectRatio="none">
+          {/* Top-left gold line intersecting peach blob */}
+          <path d="M-20,250 C120,130 220,30 400,-20" fill="none" stroke="#B8955A" strokeWidth="1.5" />
+          {/* Bottom-spanning gold line */}
+          <path d="M50,550 C250,420 400,480 550,380 C680,290 750,420 850,380" fill="none" stroke="#B8955A" strokeWidth="1.5" />
           
-          {/* Main Card */}
-          <div className="bg-parchment-card rounded-2xl shadow-panel overflow-hidden border border-line-soft animate-in fade-in slide-in-from-bottom-8 duration-1000 ease-out">
+          {/* Gold splatters/dots */}
+          <circle cx="700" cy="50" r="1.5" fill="#B8955A" />
+          <circle cx="740" cy="80" r="2.5" fill="#B8955A" />
+          <circle cx="680" cy="90" r="1" fill="#B8955A" />
+          <circle cx="760" cy="40" r="1.5" fill="#B8955A" />
+          <circle cx="790" cy="110" r="2" fill="#B8955A" />
+          <circle cx="650" cy="70" r="1" fill="#B8955A" />
+          <circle cx="720" cy="120" r="1.5" fill="#B8955A" />
+          
+          {/* Dark dots on the left */}
+          <circle cx="80" cy="60" r="1.5" fill="#1C1C1C" />
+          <circle cx="120" cy="40" r="1" fill="#1C1C1C" />
+          <circle cx="90" cy="90" r="2" fill="#1C1C1C" />
+          <circle cx="140" cy="450" r="1.5" fill="#1C1C1C" />
+          <circle cx="180" cy="480" r="2" fill="#1C1C1C" />
+          <circle cx="110" cy="420" r="1" fill="#1C1C1C" />
+        </svg>
+
+        {/* 6. Botanical Line Art */}
+        <svg className="absolute bottom-0 left-[2%] sm:left-[5%] w-[40%] sm:w-[28%] h-[60%] sm:h-[80%] z-0" viewBox="0 0 200 400" preserveAspectRatio="xMinYMax meet">
+          <g stroke="#1C1C1C" strokeWidth="1.2" fill="none" strokeLinecap="round" strokeLinejoin="round">
+            {/* Main stem */}
+            <path d="M10,400 Q80,200 130,50" />
             
-            {/* Header Section */}
-            <div className="relative pt-12 pb-8 px-6 sm:px-10 text-center animate-in fade-in zoom-in-95 duration-1000 delay-150 fill-mode-both">
-              {/* Logo */}
-              <div className="mx-auto mb-6 w-28 h-28 relative group">
-                <div className="absolute inset-0 bg-blush/20 rounded-full blur-2xl group-hover:bg-blush/30 transition-colors duration-700"></div>
-                <img
-                  src="/assets/ydvosqobemjif56aj4xu.jpg"
-                  alt="Crochet Creation Logo"
-                  className="w-full h-full object-cover rounded-full shadow-soft ring-1 ring-line/50 relative z-10 p-1 bg-white"
-                />
-              </div>
+            {/* Leaves outline */}
+            <path d="M130,50 Q145,20 160,35 Q145,60 130,50" />
+            <path d="M115,90 Q85,70 80,95 Q105,105 115,90" />
+            <path d="M100,135 Q135,115 145,140 Q120,155 100,135" />
+            <path d="M85,185 Q50,165 40,195 Q75,205 85,185" />
+            <path d="M70,240 Q115,220 130,255 Q95,270 70,240" />
+            <path d="M50,310 Q10,290 0,330 Q40,335 50,310" />
+            
+            {/* Center veins */}
+            <path d="M130,50 Q145,40 160,35" strokeWidth="0.8"/>
+            <path d="M115,90 Q95,85 80,95" strokeWidth="0.8"/>
+            <path d="M100,135 Q125,130 145,140" strokeWidth="0.8"/>
+            <path d="M85,185 Q60,185 40,195" strokeWidth="0.8"/>
+            <path d="M70,240 Q100,240 130,255" strokeWidth="0.8"/>
+            <path d="M50,310 Q20,315 0,330" strokeWidth="0.8"/>
+            
+            {/* Delicate dots near leaves */}
+            <circle cx="165" cy="25" r="1.5" fill="#1C1C1C" stroke="none"/>
+            <circle cx="75" cy="85" r="1.5" fill="#1C1C1C" stroke="none"/>
+            <circle cx="150" cy="130" r="1.5" fill="#1C1C1C" stroke="none"/>
+            <circle cx="35" cy="180" r="1.5" fill="#1C1C1C" stroke="none"/>
+            <circle cx="135" cy="240" r="1.5" fill="#1C1C1C" stroke="none"/>
+          </g>
+        </svg>
 
-              {/* Brand Identity */}
-              <h1 className="text-3xl font-display text-ink tracking-tight mb-2">
-                Crochet Creation
-              </h1>
-              <p className="text-sm font-serif text-terracotta-soft italic tracking-wide">
-                Handmade with love & care
-              </p>
-            </div>
-
-            {/* Elegant Divider */}
-            <div className="flex items-center justify-center px-10">
-              <div className="flex-1 h-px bg-gradient-to-r from-transparent via-line to-transparent opacity-60"></div>
-              <Heart className="w-3 h-3 mx-4 text-line" strokeWidth={2} />
-              <div className="flex-1 h-px bg-gradient-to-r from-transparent via-line to-transparent opacity-60"></div>
-            </div>
-
-            {/* Body Section */}
-            <div className="px-6 sm:px-10 py-10 text-center space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-300 fill-mode-both">
-              
-              {/* Greeting */}
-              <div>
-                <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-parchment rounded-full mb-6 border border-line-soft shadow-sm">
-                  <Sparkles className="w-3.5 h-3.5 text-gold" />
-                  <span className="text-[10px] font-bold text-teal-deep uppercase tracking-[0.2em]">
-                    Special Appreciation
-                  </span>
-                </div>
-                
-                <h2 className="text-2xl sm:text-3xl font-display text-ink leading-tight mb-4">
-                  Thank You,<br />{customerName}!
-                </h2>
-                
-                <p className="text-base text-bodytext leading-relaxed font-serif max-w-sm mx-auto">
-                  I truly appreciate you choosing Crochet Creation! Every purchase supports my craft and means the world to me.
-                </p>
-              </div>
-
-              {/* Purchase Details */}
-              <div className="flex flex-col items-center">
-                <p className="text-[9px] font-bold text-muted uppercase tracking-[0.15em] mb-1.5">
-                  Order Date
-                </p>
-                <div className="bg-parchment px-5 py-2 rounded-lg border border-line-soft text-[15px] font-semibold text-ink shadow-sm">
-                  {purchaseDate}
-                </div>
-              </div>
-
-              {/* Personal Message Card */}
-              <div className="relative bg-parchment-warm rounded-xl p-8 text-left border border-line-soft overflow-hidden group hover:shadow-soft transition-shadow duration-500">
-                <div className="absolute top-0 right-0 w-24 h-24 bg-blush/5 rounded-full blur-2xl transform translate-x-10 -translate-y-10 group-hover:bg-blush/10 transition-colors duration-700"></div>
-                <div className="absolute bottom-0 left-0 w-24 h-24 bg-gold/5 rounded-full blur-2xl transform -translate-x-10 translate-y-10"></div>
-                
-                <p className="text-[15px] text-bodytext leading-relaxed font-serif italic relative z-10 text-center">
-                  &ldquo;Every stitch in your handmade piece carries my dedication and love. I hope it brings warmth, joy, and a touch of artistry to your world.&rdquo;
-                </p>
-                
-                <p className="text-center text-[13px] text-terracotta-deep mt-6 font-display italic relative z-10">
-                  — Crochet Creation
-                </p>
-              </div>
-            </div>
-
-            {/* Social & Contact */}
-            <div className="bg-parchment/60 border-t border-line-soft px-6 sm:px-10 py-8 animate-in fade-in duration-1000 delay-500 fill-mode-both">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <a
-                  href="https://instagram.com/crochet_creation_02"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/60 transition-colors border border-transparent hover:border-line-soft group"
-                >
-                  <div className="w-8 h-8 rounded-full bg-parchment-card border border-line-soft flex items-center justify-center shrink-0 group-hover:shadow-sm transition-all">
-                    <Instagram className="w-4 h-4 text-terracotta" />
-                  </div>
-                  <span className="text-sm font-semibold text-ink group-hover:text-terracotta transition-colors">
-                    @crochet_creation_02
-                  </span>
-                </a>
-
-                <a
-                  href="https://crochetcreation.vercel.app"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/60 transition-colors border border-transparent hover:border-line-soft group"
-                >
-                  <div className="w-8 h-8 rounded-full bg-parchment-card border border-line-soft flex items-center justify-center shrink-0 group-hover:shadow-sm transition-all">
-                    <Globe className="w-4 h-4 text-teal" />
-                  </div>
-                  <span className="text-sm font-semibold text-ink group-hover:text-teal transition-colors">
-                    Official Website
-                  </span>
-                </a>
-              </div>
-              
-              <div className="flex items-center justify-center gap-2 mt-6 text-xs font-semibold text-muted">
-                <MapPin className="w-3.5 h-3.5" />
-                <span>Hooghly, Kolkata</span>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="bg-teal-deep px-6 sm:px-10 py-6 text-center relative overflow-hidden">
-              <div className="absolute inset-0 bg-[url('/assets/ydvosqobemjif56aj4xu.jpg')] opacity-[0.03] bg-cover bg-center mix-blend-overlay"></div>
-              <p className="text-[15px] text-ondark font-serif italic relative z-10 tracking-wide">
-                Customisation always available
-              </p>
-              <p className="text-[10px] text-ondark-muted mt-3 tracking-[0.15em] uppercase font-bold relative z-10">
-                © {new Date().getFullYear()} Crochet Creation
-              </p>
-            </div>
+        {/* --- FOREGROUND TEXT CONTENT --- */}
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center text-center px-6 sm:px-12 pl-[15%] sm:pl-0 sm:ml-[10%] animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-300">
+          
+          {/* Main "Thank You" Script */}
+          <div className="flex items-center justify-center gap-2 sm:gap-4 mb-4 sm:mb-6">
+            <h1 className={`${greatVibes.className} text-6xl sm:text-7xl md:text-[5.5rem] text-[#1C1C1C] leading-none`}>
+              Thank You
+            </h1>
+            <svg className="w-6 h-6 sm:w-8 sm:h-8 text-[#B8955A] -mt-4 sm:-mt-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+            </svg>
           </div>
 
-          {/* Bottom Call to Action */}
-          <div className="text-center mt-10 animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-700 fill-mode-both">
-            <a
-              href="https://crochetcreation.vercel.app"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-white/40 hover:bg-white/80 backdrop-blur-sm text-[11px] font-bold text-ink hover:text-teal-deep rounded-full shadow-sm transition-all border border-line hover:border-teal/30 hover:shadow-soft"
-            >
-              <Globe className="w-4 h-4" />
-              <span className="tracking-[0.1em] uppercase">Return to Store</span>
-            </a>
+          {/* Divider Line with Heart */}
+          <div className="flex items-center justify-center w-full max-w-[180px] sm:max-w-[280px] mb-6 sm:mb-8">
+            <div className="h-[1px] flex-1 bg-[#1C1C1C]/70"></div>
+            <div className="mx-3 sm:mx-4">
+              <svg className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-[#1C1C1C] fill-current" viewBox="0 0 24 24">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+              </svg>
+            </div>
+            <div className="h-[1px] flex-1 bg-[#1C1C1C]/70"></div>
           </div>
+
+          {/* Message Text */}
+          <div className={`${montserrat.className} text-[10px] sm:text-[13px] tracking-[0.2em] sm:tracking-[0.25em] text-[#1C1C1C] font-light leading-[2] sm:leading-loose mb-6 sm:mb-8 uppercase`}>
+            DEAR {customerName},<br />
+            YOUR KINDNESS<br />
+            TRULY MEANS A LOT.
+          </div>
+
+          {/* With Love Signature */}
+          <div className={`${greatVibes.className} text-2xl sm:text-4xl text-[#B8955A] mb-3 sm:mb-5 flex items-center justify-center gap-2`}>
+            with love, 
+            <span className="text-xl sm:text-2xl">♡</span>
+          </div>
+
+          {/* Business Name */}
+          <div className={`${montserrat.className} text-[9px] sm:text-xs tracking-[0.25em] sm:tracking-[0.3em] text-[#1C1C1C] uppercase`}>
+            Crochet Creation
+          </div>
+
         </div>
       </div>
+
+      {/* External Links (Below the card) */}
+      <div className="mt-8 sm:mt-12 flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-10 animate-in fade-in duration-1000 delay-700">
+        <a
+          href="https://instagram.com/crochet_creation_02"
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`${montserrat.className} flex items-center gap-2 text-[10px] sm:text-xs tracking-widest uppercase text-[#555] hover:text-[#1C1C1C] transition-colors`}
+        >
+          <Instagram className="w-3.5 h-3.5" />
+          <span>@crochet_creation_02</span>
+        </a>
+        <a
+          href="https://crochetcreation.vercel.app"
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`${montserrat.className} flex items-center gap-2 text-[10px] sm:text-xs tracking-widest uppercase text-[#555] hover:text-[#1C1C1C] transition-colors`}
+        >
+          <Globe className="w-3.5 h-3.5" />
+          <span>Website</span>
+        </a>
+      </div>
+
     </div>
   );
 }
