@@ -177,31 +177,32 @@ export default async function ThankYouPage({ params }: Props) {
 
           {/* Main Card */}
           <div
-            className="bg-[#FFF9F2] rounded-3xl shadow-xl overflow-hidden border border-[#EADCC9]/60"
+            className="bg-[#FFF9F2] rounded-3xl shadow-xl overflow-hidden border border-[#EADCC9]/60 animate-in fade-in slide-in-from-bottom-8 duration-700 ease-out"
             style={{
               boxShadow: '0 20px 60px -15px rgba(139, 110, 80, 0.15), 0 8px 25px -8px rgba(139, 110, 80, 0.10)',
             }}
           >
             {/* Card Header with Logo */}
-            <div className="relative pt-8 pb-6 px-6 text-center">
+            <div className="relative pt-10 pb-6 px-6 text-center animate-in fade-in zoom-in-95 duration-700 delay-150 fill-mode-both">
               {/* Logo */}
-              <div className="mx-auto mb-4 w-32 h-32 relative">
+              <div className="mx-auto mb-5 w-32 h-32 relative">
+                <div className="absolute inset-0 bg-[#E8A0BF]/20 rounded-full blur-xl animate-pulse"></div>
                 <img
-                  src="/assets/crochet_creation_logo.png"
+                  src="/assets/ydvosqobemjif56aj4xu.jpg"
                   alt="Crochet Creation Logo"
-                  className="w-full h-full object-contain drop-shadow-md"
+                  className="w-full h-full object-cover rounded-full shadow-lg ring-4 ring-white relative z-10"
                 />
               </div>
 
               {/* Brand Title */}
               <h1
-                className="text-2xl sm:text-3xl font-bold text-[#3E2723] tracking-wide font-serif"
+                className="text-2xl sm:text-3xl font-bold text-[#3E2723] tracking-wide font-serif drop-shadow-sm"
                 style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}
               >
                 CROCHET CREATION
               </h1>
               <p
-                className="text-sm text-[#6D4C41] mt-1 italic tracking-wider"
+                className="text-sm text-[#6D4C41] mt-1.5 italic tracking-wider font-medium"
                 style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}
               >
                 Handmade crochet products
@@ -220,51 +221,52 @@ export default async function ThankYouPage({ params }: Props) {
             </div>
 
             {/* Thank You Content */}
-            <div className="px-6 sm:px-8 py-8 text-center space-y-6">
+            <div className="px-6 sm:px-8 py-8 text-center space-y-7 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-300 fill-mode-both">
               {/* Thank You Heading */}
               <div>
-                <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-[#1F4E4A]/8 rounded-full mb-4">
-                  <Sparkles className="w-3.5 h-3.5 text-[#C79A4B]" />
+                <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-gradient-to-r from-[#1F4E4A]/5 via-[#1F4E4A]/10 to-[#1F4E4A]/5 rounded-full mb-5 shadow-sm border border-[#1F4E4A]/10">
+                  <Sparkles className="w-3.5 h-3.5 text-[#C79A4B] animate-pulse" />
                   <span className="text-[10px] font-bold text-[#1F4E4A] uppercase tracking-widest">
                     Special Appreciation
                   </span>
                 </div>
                 <h2
-                  className="text-xl sm:text-2xl font-bold text-[#3E2723] font-serif"
+                  className="text-2xl sm:text-3xl font-bold text-[#3E2723] font-serif"
                   style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}
                 >
                   Thank You, {customerName}!
                 </h2>
-                <p className="text-sm text-[#6D4C41] mt-3 leading-relaxed max-w-sm mx-auto">
+                <p className="text-[15px] text-[#6D4C41] mt-3.5 leading-relaxed max-w-sm mx-auto font-medium">
                   We truly appreciate you choosing Crochet Creation! Every purchase
                   supports our artisans and keeps the craft alive.
                 </p>
               </div>
 
               {/* Purchase Date Card */}
-              <div className="bg-[#FDF6EE] border border-[#EADCC9] rounded-2xl p-4 max-w-xs mx-auto">
-                <p className="text-[10px] font-bold text-[#8D6E63] uppercase tracking-widest mb-1">
+              <div className="bg-[#FDF6EE] border border-[#EADCC9] rounded-2xl p-4 max-w-xs mx-auto shadow-sm transform transition-all hover:scale-[1.02]">
+                <p className="text-[10px] font-extrabold text-[#8D6E63] uppercase tracking-widest mb-1.5">
                   Purchase Date
                 </p>
-                <p className="text-sm font-semibold text-[#3E2723]">{purchaseDate}</p>
+                <p className="text-[15px] font-bold text-[#3E2723]">{purchaseDate}</p>
               </div>
 
               {/* Message */}
-              <div className="bg-gradient-to-br from-[#1F4E4A] to-[#16403C] rounded-2xl p-5 text-left">
-                <p className="text-sm text-[#F4EADA] leading-relaxed italic">
+              <div className="bg-gradient-to-br from-[#1F4E4A] to-[#16403C] rounded-2xl p-6 text-left shadow-lg relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-5 rounded-full blur-2xl transform translate-x-10 -translate-y-10 group-hover:opacity-10 transition-opacity"></div>
+                <p className="text-[15px] text-[#F4EADA] leading-relaxed italic relative z-10">
                   &ldquo;Every stitch in your handmade piece carries our dedication and
                   love. We hope it brings warmth, joy, and a touch of artistry to
                   your world. Thank you for being part of the Crochet Creation
                   family!&rdquo;
                 </p>
-                <p className="text-right text-xs text-[#C4D3C9] mt-3 font-semibold">
+                <p className="text-right text-xs text-[#C4D3C9] mt-4 font-bold relative z-10 tracking-wide">
                   — The Crochet Creation Team 🧶
                 </p>
               </div>
             </div>
 
             {/* Contact Info Section */}
-            <div className="bg-[#F4EADA]/50 border-t border-[#EADCC9]/60 px-6 sm:px-8 py-6 space-y-3">
+            <div className="bg-[#F4EADA]/50 border-t border-[#EADCC9]/60 px-6 sm:px-8 py-6 space-y-4 animate-in fade-in duration-700 delay-500 fill-mode-both">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-[#E8A0BF]/15 flex items-center justify-center shrink-0">
                   <Instagram className="w-4 h-4 text-[#C0663A]" />
@@ -304,29 +306,30 @@ export default async function ThankYouPage({ params }: Props) {
             </div>
 
             {/* Footer */}
-            <div className="bg-[#3E2723] px-6 sm:px-8 py-5 text-center">
+            <div className="bg-[#3E2723] px-6 sm:px-8 py-5 text-center relative overflow-hidden">
+              <div className="absolute inset-0 bg-[url('/assets/ydvosqobemjif56aj4xu.jpg')] opacity-5 bg-cover bg-center"></div>
               <p
-                className="text-base text-[#F4EADA] font-semibold font-serif"
+                className="text-[17px] text-[#F4EADA] font-semibold font-serif relative z-10"
                 style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}
               >
                 Thank you{' '}
-                <span className="text-[#D99A86]">|</span>{' '}
+                <span className="text-[#D99A86] mx-1">|</span>{' '}
                 Customisation available
               </p>
-              <p className="text-[10px] text-[#A1887F] mt-2 tracking-wider uppercase font-medium">
+              <p className="text-[10px] text-[#A1887F] mt-2.5 tracking-widest uppercase font-bold relative z-10">
                 © {new Date().getFullYear()} Crochet Creation. Handmade with ❤️
               </p>
             </div>
           </div>
 
           {/* Subtle CTA */}
-          <div className="text-center mt-6">
+          <div className="text-center mt-8 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-700 fill-mode-both">
             <a
               href="https://crochetcreation.vercel.app"
-              className="inline-flex items-center gap-2 text-xs font-semibold text-[#8D6E63] hover:text-[#5D4037] transition-colors"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-white/60 hover:bg-white text-xs font-bold text-[#8D6E63] hover:text-[#5D4037] rounded-full shadow-sm transition-all border border-[#EADCC9]"
             >
               <Globe className="w-3.5 h-3.5" />
-              <span>Explore more at Crochet Creation</span>
+              <span className="tracking-wide uppercase">Explore more at Crochet Creation</span>
             </a>
           </div>
         </div>
