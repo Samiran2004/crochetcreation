@@ -5,6 +5,9 @@ import type * as FabricNS from 'fabric';
 import {
   CUSTOM_PROPS,
   addToCanvas,
+  applyCrop,
+  applyMask,
+  buildFromSvg,
   centerOn,
   coverBox,
   createPathShape,
@@ -18,10 +21,13 @@ import {
   makeBackgroundGradient,
   meta,
   nextId,
+  placeBackgroundImage,
   registerCustomProps,
+  type BackgroundFit,
   type FabricCanvas,
   type FabricModule,
   type FabricObj,
+  type MaskOption,
   type ShapeOptions,
   type TextOptions,
 } from '../lib/engine';
@@ -63,6 +69,8 @@ export const useDesignEditor = ({ width, height, initialScene, onDirtyChange }: 
   const clipboardRef = useRef<FabricObj | null>(null);
   const suppressRef = useRef(0);
   const backgroundRef = useRef<BackgroundSpec>({ type: 'solid', color: '#FFFCF5' });
+  const backgroundFitRef = useRef<BackgroundFit>('cover');
+  const backgroundAdjustRef = useRef({ blur: 0, brightness: 0, opacity: 1 });
 
   const [ready, setReady] = useState(false);
   const [tick, setTick] = useState(0);
@@ -75,6 +83,12 @@ export const useDesignEditor = ({ width, height, initialScene, onDirtyChange }: 
   const [dirty, setDirty] = useState(false);
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
+  const [hasBackgroundImage, setHasBackgroundImage] = useState(false);
+  const [backgroundAdjust, setBackgroundAdjustState] = useState({
+    blur: 0,
+    brightness: 0,
+    opacity: 1,
+  });
 
   const bump = useCallback(() => setTick((t) => t + 1), []);
 
@@ -102,20 +116,32 @@ export const useDesignEditor = ({ width, height, initialScene, onDirtyChange }: 
   const refreshLayers = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const active = new Set(canvas.getActiveObjects());
+    const active = canvas.getActiveObjects();
     // Top of the panel should be the top of the stack, so the list is the
     // reverse of fabric's back-to-front object order.
     const nodes: LayerNode[] = canvas
       .getObjects()
       .map((obj) => {
         const id = ensureId(obj);
+        let thumbnail: string | undefined;
+        try {
+          // A tiny raster per layer. Wrapped because an object whose image
+          // came from a tainted source throws here, and a missing preview
+          // must never take the whole panel down.
+          const longest = Math.max(obj.getScaledWidth(), obj.getScaledHeight()) || 1;
+          thumbnail = obj.toDataURL({ format: 'png', multiplier: Math.min(1, 48 / longest) });
+        } catch {
+          thumbnail = undefined;
+        }
         return {
           id,
           name: layerName(obj),
           kind: kindOf(obj),
           locked: !!meta(obj).dsLocked,
           visible: obj.visible !== false,
-          selected: active.has(obj),
+          selected: active.indexOf(obj) !== -1,
+          opacity: typeof obj.opacity === 'number' ? obj.opacity : 1,
+          thumbnail,
         };
       })
       .reverse();
@@ -126,6 +152,19 @@ export const useDesignEditor = ({ width, height, initialScene, onDirtyChange }: 
     setCanUndo(historyRef.current.canUndo);
     setCanRedo(historyRef.current.canRedo);
   }, []);
+
+  /**
+   * Mark an in-progress change as unsaved without pushing an undo step.
+   *
+   * Dragging a slider fires continuously; each tick genuinely changes the
+   * design, so autosave has to know about it — but recording sixty history
+   * entries for one gesture would make undo useless. The gesture's `onCommit`
+   * pushes the single history entry when the drag ends.
+   */
+  const touch = useCallback(() => {
+    markDirty(true);
+    bump();
+  }, [bump, markDirty]);
 
   const commit = useCallback(() => {
     const canvas = canvasRef.current;
@@ -247,9 +286,9 @@ export const useDesignEditor = ({ width, height, initialScene, onDirtyChange }: 
       });
       canvas.requestRenderAll();
       if (opts.commit) commit();
-      else bump();
+      else touch();
     },
-    [bump, commit],
+    [commit, touch],
   );
 
   // -------------------------------------------------------------- objects
@@ -306,11 +345,12 @@ export const useDesignEditor = ({ width, height, initialScene, onDirtyChange }: 
       if (slot) {
         const boxW = slot.getScaledWidth();
         const boxH = slot.getScaledHeight();
-        const cx = (slot.left ?? 0) + boxW / 2;
-        const cy = (slot.top ?? 0) + boxH / 2;
+        // Read the centre rather than deriving it from left/top: fabric v7
+        // objects are centre-origin, so left/top already *is* the centre.
+        const centre = slot.getCenterPoint();
 
         coverBox(image, boxW, boxH);
-        centerOn(image, cx, cy);
+        centerOn(image, centre.x, centre.y);
 
         const rx = (slot as FabricNS.Rect).rx ?? 0;
         const clip = new fabric.Rect({
@@ -330,34 +370,73 @@ export const useDesignEditor = ({ width, height, initialScene, onDirtyChange }: 
         canvas.setActiveObject(image);
         canvas.requestRenderAll();
       } else {
-        const boxW = canvas.getWidth() * 0.6;
-        const boxH = canvas.getHeight() * 0.6;
-        fitInto(image, boxW, boxH);
+        fitInto(image, artboard.width * 0.6, artboard.height * 0.6);
         addToCanvas(canvas, image);
       }
       commit();
     },
-    [commit],
+    [artboard.height, artboard.width, commit],
   );
 
   const setBackgroundImage = useCallback(
-    async (url: string) => {
+    async (url: string, fit: BackgroundFit = 'cover') => {
       const canvas = canvasRef.current;
       const fabric = fabricRef.current;
       if (!canvas || !fabric) return;
       const image = await loadImage(fabric, url);
-      coverBox(image, canvas.getWidth() / zoom, canvas.getHeight() / zoom);
-      image.set({
-        left: artboard.width / 2 - image.getScaledWidth() / 2,
-        top: artboard.height / 2 - image.getScaledHeight() / 2,
-        selectable: false,
-        evented: false,
-      });
+      placeBackgroundImage(image, fit, artboard.width, artboard.height);
+      backgroundFitRef.current = fit;
       canvas.backgroundImage = image;
+      canvas.requestRenderAll();
+      setHasBackgroundImage(true);
+      commit();
+    },
+    [artboard.height, artboard.width, commit],
+  );
+
+  const setBackgroundFit = useCallback(
+    (fit: BackgroundFit) => {
+      const canvas = canvasRef.current;
+      const image = canvas?.backgroundImage as FabricNS.FabricImage | undefined;
+      if (!canvas || !image) return;
+      backgroundFitRef.current = fit;
+      placeBackgroundImage(image, fit, artboard.width, artboard.height);
       canvas.requestRenderAll();
       commit();
     },
-    [artboard.height, artboard.width, commit, zoom],
+    [artboard.height, artboard.width, commit],
+  );
+
+  /**
+   * Blur, dim and desaturate the backdrop.
+   *
+   * Photographic backgrounds almost always need knocking back before text
+   * sits legibly on them, so these three controls live with the background
+   * rather than in the image inspector — the backdrop is not selectable.
+   */
+  const setBackgroundAdjustments = useCallback(
+    (next: { blur?: number; brightness?: number; opacity?: number }) => {
+      const canvas = canvasRef.current;
+      const fabric = fabricRef.current;
+      const image = canvas?.backgroundImage as FabricNS.FabricImage | undefined;
+      if (!canvas || !fabric || !image) return;
+
+      const merged = { ...backgroundAdjustRef.current, ...next };
+      backgroundAdjustRef.current = merged;
+
+      const filters: FabricNS.filters.BaseFilter<string>[] = [];
+      if (merged.blur > 0) filters.push(new fabric.filters.Blur({ blur: merged.blur }));
+      if (merged.brightness !== 0) {
+        filters.push(new fabric.filters.Brightness({ brightness: merged.brightness }));
+      }
+      image.filters = filters;
+      image.applyFilters();
+      image.set({ opacity: merged.opacity });
+      canvas.requestRenderAll();
+      setBackgroundAdjustState(merged);
+      touch();
+    },
+    [touch],
   );
 
   const clearBackgroundImage = useCallback(() => {
@@ -365,8 +444,51 @@ export const useDesignEditor = ({ width, height, initialScene, onDirtyChange }: 
     if (!canvas) return;
     canvas.backgroundImage = undefined;
     canvas.requestRenderAll();
+    setHasBackgroundImage(false);
     commit();
   }, [commit]);
+
+  // ------------------------------------------------------- svg / masking
+
+  const addSvgMarkup = useCallback(
+    async (markup: string, recolor?: string) => {
+      const canvas = canvasRef.current;
+      const fabric = fabricRef.current;
+      if (!canvas || !fabric) return false;
+      const object = await buildFromSvg(fabric, canvas, markup, { recolor });
+      if (!object) return false;
+      addToCanvas(canvas, object);
+      commit();
+      return true;
+    },
+    [commit],
+  );
+
+  const setMask = useCallback(
+    (mask: MaskOption) => {
+      const canvas = canvasRef.current;
+      const fabric = fabricRef.current;
+      const object = canvas?.getActiveObject();
+      if (!canvas || !fabric || !object) return;
+      applyMask(fabric, object, mask);
+      object.setCoords();
+      canvas.requestRenderAll();
+      commit();
+    },
+    [commit],
+  );
+
+  const setCropRatio = useCallback(
+    (ratio: number | null) => {
+      const canvas = canvasRef.current;
+      const object = canvas?.getActiveObject();
+      if (!canvas || !object || object.type !== 'image') return;
+      applyCrop(object as FabricNS.FabricImage, ratio);
+      canvas.requestRenderAll();
+      commit();
+    },
+    [commit],
+  );
 
   const removeSelected = useCallback(() => {
     const canvas = canvasRef.current;
@@ -632,6 +754,116 @@ export const useDesignEditor = ({ width, height, initialScene, onDirtyChange }: 
     [commit, findById],
   );
 
+  /**
+   * Drag-and-drop reorder.
+   *
+   * The panel lists front-to-back while fabric stores back-to-front, so both
+   * indices are flipped before the move — getting this backwards is the
+   * classic layer-panel bug where dragging up sends a layer behind.
+   */
+  const reorderLayerTo = useCallback(
+    (id: string, targetPanelIndex: number) => {
+      const canvas = canvasRef.current;
+      const obj = findById(id);
+      if (!canvas || !obj) return;
+      const total = canvas.getObjects().length;
+      const stackIndex = Math.max(0, Math.min(total - 1, total - 1 - targetPanelIndex));
+      canvas.moveObjectTo(obj, stackIndex);
+      canvas.requestRenderAll();
+      commit();
+    },
+    [commit, findById],
+  );
+
+  const setLayerOpacity = useCallback(
+    (id: string, opacity: number, shouldCommit = false) => {
+      const canvas = canvasRef.current;
+      const obj = findById(id);
+      if (!canvas || !obj) return;
+      obj.set({ opacity });
+      canvas.requestRenderAll();
+      if (shouldCommit) commit();
+      else touch();
+    },
+    [commit, findById, touch],
+  );
+
+  const duplicateLayer = useCallback(
+    async (id: string) => {
+      const canvas = canvasRef.current;
+      const obj = findById(id);
+      if (!canvas || !obj) return;
+      const cloned = await obj.clone([...CUSTOM_PROPS]);
+      meta(cloned).dsId = nextId();
+      cloned.set({ left: (cloned.left ?? 0) + 24, top: (cloned.top ?? 0) + 24 });
+      canvas.add(cloned);
+      canvas.setActiveObject(cloned);
+      canvas.requestRenderAll();
+      commit();
+    },
+    [commit, findById],
+  );
+
+  /** Ctrl/Cmd-click in the layers panel builds a multi-selection. */
+  const toggleLayerInSelection = useCallback(
+    (id: string) => {
+      const canvas = canvasRef.current;
+      const fabric = fabricRef.current;
+      const obj = findById(id);
+      if (!canvas || !fabric || !obj || meta(obj).dsLocked) return;
+
+      const current = canvas.getActiveObjects();
+      const next = current.indexOf(obj) === -1
+        ? [...current, obj]
+        : current.filter((o) => o !== obj);
+
+      canvas.discardActiveObject();
+      if (next.length === 1) canvas.setActiveObject(next[0]);
+      else if (next.length > 1) {
+        canvas.setActiveObject(new fabric.ActiveSelection(next, { canvas }));
+      }
+      canvas.requestRenderAll();
+      syncSelection();
+    },
+    [findById, syncSelection],
+  );
+
+  const setAllLayersVisible = useCallback(
+    (visible: boolean) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      canvas.discardActiveObject();
+      canvas.getObjects().forEach((obj) => obj.set({ visible }));
+      canvas.requestRenderAll();
+      commit();
+    },
+    [commit],
+  );
+
+  const setAllLayersLocked = useCallback(
+    (locked: boolean) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      canvas.discardActiveObject();
+      canvas.getObjects().forEach((obj) => {
+        meta(obj).dsLocked = locked;
+        obj.set({
+          selectable: !locked,
+          evented: !locked,
+          lockMovementX: locked,
+          lockMovementY: locked,
+          lockRotation: locked,
+          lockScalingX: locked,
+          lockScalingY: locked,
+          hasControls: !locked,
+        });
+      });
+      canvas.requestRenderAll();
+      commit();
+    },
+    [commit],
+  );
+
   const deleteLayer = useCallback(
     (id: string) => {
       const canvas = canvasRef.current;
@@ -657,6 +889,7 @@ export const useDesignEditor = ({ width, height, initialScene, onDirtyChange }: 
           await loadFontsForScene(scene);
           await canvas.loadFromJSON(scene);
           canvas.getObjects().forEach(ensureId);
+          setHasBackgroundImage(!!canvas.backgroundImage);
           canvas.requestRenderAll();
         });
       });
@@ -786,6 +1019,7 @@ export const useDesignEditor = ({ width, height, initialScene, onDirtyChange }: 
         instance.getObjects().forEach(ensureId);
         const bg = instance.backgroundColor;
         if (typeof bg === 'string') backgroundRef.current = { type: 'solid', color: bg };
+        setHasBackgroundImage(!!instance.backgroundImage);
         instance.requestRenderAll();
       }
 
@@ -970,7 +1204,15 @@ export const useDesignEditor = ({ width, height, initialScene, onDirtyChange }: 
       setBackground,
       background: backgroundRef.current,
       setBackgroundImage,
+      setBackgroundFit,
+      backgroundFit: backgroundFitRef.current,
+      setBackgroundAdjustments,
+      backgroundAdjust,
+      hasBackgroundImage,
       clearBackgroundImage,
+      addSvgMarkup,
+      setMask,
+      setCropRatio,
       removeSelected,
       copySelection,
       pasteClipboard,
@@ -985,6 +1227,12 @@ export const useDesignEditor = ({ width, height, initialScene, onDirtyChange }: 
       toggleLayerVisible,
       renameLayer,
       moveLayer,
+      reorderLayerTo,
+      setLayerOpacity,
+      duplicateLayer,
+      toggleLayerInSelection,
+      setAllLayersVisible,
+      setAllLayersLocked,
       deleteLayer,
       exportDataURL,
       exportSVG,
@@ -997,9 +1245,11 @@ export const useDesignEditor = ({ width, height, initialScene, onDirtyChange }: 
       addImage,
       addPath,
       addPrimitive,
+      addSvgMarkup,
       addText,
       align,
       artboard,
+      backgroundAdjust,
       canRedo,
       canUndo,
       clearBackgroundImage,
@@ -1008,11 +1258,13 @@ export const useDesignEditor = ({ width, height, initialScene, onDirtyChange }: 
       deleteLayer,
       dirty,
       distribute,
+      duplicateLayer,
       duplicateSelection,
       exportDataURL,
       exportSVG,
       groupSelection,
       guides,
+      hasBackgroundImage,
       isEditingText,
       layers,
       loadTemplate,
@@ -1023,8 +1275,16 @@ export const useDesignEditor = ({ width, height, initialScene, onDirtyChange }: 
       removeSelected,
       renameLayer,
       reorder,
+      reorderLayerTo,
       ready,
       selectLayer,
+      setAllLayersLocked,
+      setAllLayersVisible,
+      setBackgroundAdjustments,
+      setBackgroundFit,
+      setCropRatio,
+      setLayerOpacity,
+      setMask,
       selectionCount,
       selectionKind,
       serialize,
@@ -1033,6 +1293,7 @@ export const useDesignEditor = ({ width, height, initialScene, onDirtyChange }: 
       setBackgroundImage,
       setZoom,
       tick,
+      toggleLayerInSelection,
       toggleLayerLock,
       toggleLayerVisible,
       undo,

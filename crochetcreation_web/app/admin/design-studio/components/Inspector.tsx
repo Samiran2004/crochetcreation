@@ -39,7 +39,15 @@ import {
   Toggle,
 } from './ui';
 import { FontPicker } from './FontPicker';
-import { fillToColor, isGradientFill, makeLinearGradient, meta } from '../lib/engine';
+import {
+  CROP_RATIOS,
+  MASK_OPTIONS,
+  currentMaskId,
+  fillToColor,
+  isGradientFill,
+  makeLinearGradient,
+  meta,
+} from '../lib/engine';
 import { FONT_SIZE_STEPS, GRADIENT_PRESETS } from '../lib/presets';
 import { fontSupportsItalic, getFontWeights, loadFont } from '../lib/fonts';
 import type { DesignEditorApi } from './useDesignEditor';
@@ -652,8 +660,72 @@ const ImageInspector: React.FC<{ editor: DesignEditorApi; obj: AnyObj }> = ({ ed
     editor.update({ clipPath: clip }, { commit: true });
   };
 
+  const activeMask = currentMaskId(obj);
+
   return (
     <div className="space-y-5">
+      <PanelSection
+        title="Shape"
+        action={
+          activeMask !== 'none' ? (
+            <button
+              type="button"
+              onClick={() => editor.setMask(MASK_OPTIONS[0])}
+              className="text-[10px] font-bold uppercase tracking-wider text-terracotta hover:underline"
+            >
+              Clear
+            </button>
+          ) : undefined
+        }
+      >
+        <p className="text-[10px] leading-relaxed text-gray-450 dark:text-slate-500">
+          Mask the photo into any silhouette — a square upload becomes a circle, an arch, a heart,
+          anything. The original is never altered, so you can change or remove the shape later.
+        </p>
+        <div className="grid grid-cols-5 gap-1.5">
+          {MASK_OPTIONS.map((mask) => (
+            <button
+              key={mask.id}
+              type="button"
+              title={mask.label}
+              aria-label={mask.label}
+              onClick={() => editor.setMask(mask)}
+              className={`flex aspect-square items-center justify-center rounded-lg border p-1.5 transition-all duration-150 ${
+                activeMask === mask.id
+                  ? 'border-teal bg-teal/10 dark:border-parchment dark:bg-parchment/10'
+                  : 'border-gray-200 hover:border-teal dark:border-slate-700 dark:hover:border-parchment'
+              }`}
+            >
+              {mask.path ? (
+                <svg viewBox="0 0 100 100" className="h-full w-full">
+                  <path d={mask.path} className="fill-teal dark:fill-parchment" />
+                </svg>
+              ) : (
+                <span className="text-[8px] font-black uppercase text-gray-400">None</span>
+              )}
+            </button>
+          ))}
+        </div>
+      </PanelSection>
+
+      <PanelSection title="Crop">
+        <div className="grid grid-cols-3 gap-1.5">
+          {CROP_RATIOS.map((crop) => (
+            <button
+              key={crop.id}
+              type="button"
+              onClick={() => editor.setCropRatio(crop.ratio)}
+              className="rounded-lg border border-gray-200 px-2 py-2 text-[10px] font-bold text-slate-500 transition-colors hover:border-teal hover:text-teal dark:border-slate-700 dark:text-slate-400 dark:hover:border-parchment dark:hover:text-parchment"
+            >
+              {crop.label}
+            </button>
+          ))}
+        </div>
+        <p className="text-[10px] leading-relaxed text-gray-450 dark:text-slate-500">
+          Cropping is lossless — pick Original at any time to bring the full frame back.
+        </p>
+      </PanelSection>
+
       <PanelSection title="Filters">
         <div className="grid grid-cols-3 gap-1.5">
           {FILTER_PRESETS.map((preset) => (

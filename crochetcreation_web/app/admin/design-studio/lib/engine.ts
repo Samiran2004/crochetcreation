@@ -14,7 +14,7 @@ export type FabricObj = FabricNS.FabricObject;
  * adds must be registered on `FabricObject.customProperties` — otherwise a
  * reopened design loses every layer name and lock.
  */
-export const CUSTOM_PROPS = ['dsId', 'dsName', 'dsLocked', 'dsSlot'] as const;
+export const CUSTOM_PROPS = ['dsId', 'dsName', 'dsLocked', 'dsSlot', 'dsMask'] as const;
 
 let customPropsRegistered = false;
 
@@ -30,6 +30,8 @@ type Meta = {
   dsName?: string;
   dsLocked?: boolean;
   dsSlot?: boolean;
+  /** Which entry of MASK_OPTIONS produced this object's clip path. */
+  dsMask?: string;
 };
 
 export const meta = (obj: FabricObj): Meta => obj as unknown as Meta;
@@ -47,6 +49,20 @@ export const ensureId = (obj: FabricObj): string => {
 };
 
 // --------------------------------------------------------------- helpers
+
+/**
+ * The artboard's size in design units.
+ *
+ * `canvas.getWidth()` is the *element* width, which the editor scales by the
+ * zoom level — so reading it directly makes every new element's size and
+ * position depend on how far the admin happened to be zoomed in. Dividing the
+ * zoom back out gives the stable artboard coordinates everything should be
+ * laid out in.
+ */
+export const boardSize = (canvas: FabricCanvas): { width: number; height: number } => {
+  const zoom = canvas.getZoom() || 1;
+  return { width: canvas.getWidth() / zoom, height: canvas.getHeight() / zoom };
+};
 
 export const kindOf = (obj: FabricObj | null | undefined): SelectionKind => {
   if (!obj) return 'none';
@@ -191,7 +207,7 @@ export const createText = (
   canvas: FabricCanvas,
   options: TextOptions = {},
 ): FabricNS.Textbox => {
-  const boardWidth = canvas.getWidth();
+  const boardWidth = boardSize(canvas).width;
   const width = options.width ?? Math.round(boardWidth * 0.6);
 
   const textbox = new fabric.Textbox(options.text ?? 'Your text here', {
@@ -227,7 +243,8 @@ export const createPrimitive = (
   kind: string,
   options: ShapeOptions = {},
 ): FabricObj => {
-  const board = Math.min(canvas.getWidth(), canvas.getHeight());
+  const { width: bw, height: bh } = boardSize(canvas);
+  const board = Math.min(bw, bh);
   const size = options.size ?? Math.round(board * 0.3);
   const shared = {
     fill: options.fill ?? '#1F4E4A',
@@ -274,7 +291,8 @@ export const createPathShape = (
   pathData: string,
   options: { strokeOnly?: boolean; color?: string; targetWidth?: number } = {},
 ): FabricNS.Path => {
-  const board = Math.min(canvas.getWidth(), canvas.getHeight());
+  const { width: bw, height: bh } = boardSize(canvas);
+  const board = Math.min(bw, bh);
   const color = options.color ?? '#1F4E4A';
   const strokeWidth = options.strokeOnly ? 6 : 0;
 
@@ -325,10 +343,21 @@ export const coverBox = (obj: FabricObj, boxWidth: number, boxHeight: number): v
   obj.set({ scaleX: scale, scaleY: scale });
 };
 
+/**
+ * Put an object's centre at a point.
+ *
+ * Done as a delta from wherever the object's centre currently is, rather than
+ * by computing a corner: fabric v7 defaults objects to a *centre* origin, so
+ * `left`/`top` mean different things on different objects, and subtracting
+ * half the width lands everything half its own size off-target. Measuring the
+ * real centre and shifting by the difference is correct for any origin.
+ */
 export const centerOn = (obj: FabricObj, cx: number, cy: number): void => {
+  obj.setCoords();
+  const current = obj.getCenterPoint();
   obj.set({
-    left: cx - obj.getScaledWidth() / 2,
-    top: cy - obj.getScaledHeight() / 2,
+    left: (obj.left ?? 0) + (cx - current.x),
+    top: (obj.top ?? 0) + (cy - current.y),
   });
   obj.setCoords();
 };
@@ -339,7 +368,8 @@ export const addToCanvas = (
   opts: { center?: boolean; select?: boolean } = {},
 ): void => {
   if (opts.center !== false) {
-    centerOn(obj, canvas.getWidth() / 2, canvas.getHeight() / 2);
+    const board = boardSize(canvas);
+    centerOn(obj, board.width / 2, board.height / 2);
   }
   canvas.add(obj);
   if (opts.select !== false) {
@@ -462,8 +492,7 @@ export const applyTemplate = async (
   canvas: FabricCanvas,
   spec: TemplateSpec,
 ): Promise<void> => {
-  const W = canvas.getWidth();
-  const H = canvas.getHeight();
+  const { width: W, height: H } = boardSize(canvas);
 
   const families = Array.from(
     new Set(spec.layers.filter((l) => l.type === 'text').map((l) => (l as { font: string }).font)),
@@ -493,4 +522,236 @@ export const applyTemplate = async (
 
   canvas.discardActiveObject();
   canvas.requestRenderAll();
+};
+
+// ------------------------------------------------------------ SVG import
+
+/**
+ * Turn SVG markup into real, editable fabric objects.
+ *
+ * Icons imported this way stay vector: every path can be recoloured, scaled
+ * and restyled like anything else the Studio drew. Rasterising them into an
+ * image would be simpler and would lose exactly the thing that makes an icon
+ * library worth having.
+ */
+export const buildFromSvg = async (
+  fabric: FabricModule,
+  canvas: FabricCanvas,
+  markup: string,
+  options: { targetWidth?: number; recolor?: string } = {},
+): Promise<FabricObj | null> => {
+  const parsed = await fabric.loadSVGFromString(markup);
+  const objects = (parsed.objects ?? []).filter((o): o is FabricObj => !!o);
+  if (!objects.length) return null;
+
+  const grouped = fabric.util.groupSVGElements(objects, parsed.options);
+
+  // Many icon sets ship `fill="currentColor"` or no fill at all, which paints
+  // black or nothing on the artboard. Recolouring on import means an imported
+  // icon lands looking like it belongs to the design.
+  if (options.recolor) {
+    const paint = (obj: FabricObj) => {
+      const group = obj as unknown as { _objects?: FabricObj[] };
+      if (Array.isArray(group._objects)) {
+        group._objects.forEach(paint);
+        return;
+      }
+      const current = obj.fill;
+      const hasFill = typeof current === 'string' && current !== 'none' && current !== '';
+      if (hasFill || !obj.stroke) obj.set({ fill: options.recolor });
+      if (obj.stroke) obj.set({ stroke: options.recolor });
+    };
+    paint(grouped);
+  }
+
+  const { width: bw, height: bh } = boardSize(canvas);
+  const board = Math.min(bw, bh);
+  const target = options.targetWidth ?? board * 0.28;
+  const natural = grouped.width || 100;
+  const scale = target / natural;
+  grouped.set({ scaleX: scale, scaleY: scale });
+
+  ensureId(grouped);
+  meta(grouped).dsName = 'Imported graphic';
+  return grouped;
+};
+
+// ------------------------------------------------------------ image masks
+
+export interface MaskOption {
+  id: string;
+  label: string;
+  /** `null` clears the mask. Otherwise SVG path data on a 100x100 box. */
+  path: string | null;
+  /** Circles and squares look wrong stretched, so they mask a centred square. */
+  keepAspect?: boolean;
+}
+
+export const MASK_OPTIONS: MaskOption[] = [
+  { id: 'none', label: 'None', path: null },
+  { id: 'circle', label: 'Circle', path: 'M50 0 A50 50 0 1 1 49.99 0 Z', keepAspect: true },
+  { id: 'ellipse', label: 'Ellipse', path: 'M50 0 A50 50 0 1 1 49.99 0 Z' },
+  { id: 'square', label: 'Square', path: 'M0 0 H100 V100 H0 Z', keepAspect: true },
+  { id: 'rounded', label: 'Rounded', path: 'M18 0 H82 A18 18 0 0 1 100 18 V82 A18 18 0 0 1 82 100 H18 A18 18 0 0 1 0 82 V18 A18 18 0 0 1 18 0 Z' },
+  { id: 'squircle', label: 'Squircle', path: 'M50 0 C90 0 100 10 100 50 C100 90 90 100 50 100 C10 100 0 90 0 50 C0 10 10 0 50 0 Z', keepAspect: true },
+  { id: 'arch', label: 'Arch', path: 'M0 100 V44 A50 44 0 0 1 100 44 V100 Z' },
+  { id: 'arch-full', label: 'Dome', path: 'M0 100 V50 A50 50 0 0 1 100 50 V100 Z' },
+  { id: 'triangle', label: 'Triangle', path: 'M50 0 L100 100 H0 Z' },
+  { id: 'diamond', label: 'Diamond', path: 'M50 0 L100 50 L50 100 L0 50 Z', keepAspect: true },
+  { id: 'hexagon', label: 'Hexagon', path: 'M25 2 H75 L100 50 L75 98 H25 L0 50 Z' },
+  { id: 'pentagon', label: 'Pentagon', path: 'M50 0 L100 36 L81 100 H19 L0 36 Z' },
+  { id: 'octagon', label: 'Octagon', path: 'M29 0 H71 L100 29 V71 L71 100 H29 L0 71 V29 Z', keepAspect: true },
+  { id: 'star', label: 'Star', path: 'M50 0 L62 35 L100 36 L70 58 L80 96 L50 74 L20 96 L30 58 L0 36 L38 35 Z', keepAspect: true },
+  { id: 'heart', label: 'Heart', path: 'M50 98 C50 98 2 66 2 34 C2 16 16 2 32 2 C42 2 48 8 50 16 C52 8 58 2 68 2 C84 2 98 16 98 34 C98 66 50 98 50 98 Z' },
+  { id: 'blob', label: 'Blob', path: 'M76 8 C94 20 102 44 94 64 C86 84 62 100 42 97 C22 94 4 74 2 52 C0 30 12 10 30 4 C46 -1 60 -2 76 8 Z' },
+  { id: 'teardrop', label: 'Teardrop', path: 'M50 0 C50 0 96 46 96 64 C96 84 75 100 50 100 C25 100 4 84 4 64 C4 46 50 0 50 0 Z' },
+  { id: 'leaf', label: 'Leaf', path: 'M100 0 C100 0 92 60 58 88 C34 108 4 92 6 68 C8 44 38 40 58 34 C78 28 100 0 100 0 Z' },
+  { id: 'shield', label: 'Shield', path: 'M50 0 L98 16 V52 C98 78 78 96 50 100 C22 96 2 78 2 52 V16 Z' },
+  { id: 'flower', label: 'Flower', path: 'M50 2 C62 2 70 14 64 28 C80 20 94 30 92 44 C90 56 78 62 64 56 C74 68 68 86 54 88 C42 90 34 80 36 66 C26 78 10 74 6 62 C2 51 10 40 24 40 C10 32 12 14 24 10 C35 6 46 14 48 28 C46 14 42 2 50 2 Z' },
+];
+
+/**
+ * Clip an image to a shape.
+ *
+ * The clip path lives in the image's own unscaled coordinate space and is
+ * positioned from its centre, so the mask follows the image through any
+ * later move, scale or rotation without needing to be rebuilt.
+ */
+export const applyMask = (
+  fabric: FabricModule,
+  image: FabricObj,
+  mask: MaskOption,
+): void => {
+  if (!mask.path) {
+    image.set({ clipPath: undefined });
+    return;
+  }
+
+  const width = image.width || 1;
+  const height = image.height || 1;
+  const box = mask.keepAspect ? Math.min(width, height) : 0;
+
+  const path = new fabric.Path(mask.path, {
+    originX: 'center',
+    originY: 'center',
+  });
+  meta(path).dsMask = mask.id;
+
+  const naturalW = path.width || 100;
+  const naturalH = path.height || 100;
+  path.set({
+    scaleX: (box || width) / naturalW,
+    scaleY: (box || height) / naturalH,
+    // A clip path is drawn in its owner's coordinate space, where the origin
+    // is the owner's centre — so it has to sit at 0,0 rather than wherever
+    // its own path data happens to place it.
+    left: 0,
+    top: 0,
+  });
+
+  image.set({ clipPath: path, dirty: true });
+};
+
+export const currentMaskId = (image: FabricObj): string => {
+  const clip = image.clipPath as FabricObj | undefined;
+  if (!clip) return 'none';
+  return meta(clip).dsMask ?? 'custom';
+};
+
+// ------------------------------------------------------------ image crop
+
+export interface CropRatio {
+  id: string;
+  label: string;
+  /** width / height, or `null` for the image's own ratio. */
+  ratio: number | null;
+}
+
+export const CROP_RATIOS: CropRatio[] = [
+  { id: 'original', label: 'Original', ratio: null },
+  { id: '1-1', label: '1:1', ratio: 1 },
+  { id: '4-5', label: '4:5', ratio: 4 / 5 },
+  { id: '3-4', label: '3:4', ratio: 3 / 4 },
+  { id: '2-3', label: '2:3', ratio: 2 / 3 },
+  { id: '4-3', label: '4:3', ratio: 4 / 3 },
+  { id: '3-2', label: '3:2', ratio: 3 / 2 },
+  { id: '16-9', label: '16:9', ratio: 16 / 9 },
+  { id: '9-16', label: '9:16', ratio: 9 / 16 },
+];
+
+/**
+ * Crop to an aspect ratio, centred on what is currently visible.
+ *
+ * fabric crops by narrowing `width`/`height` and offsetting `cropX`/`cropY`
+ * into the source bitmap, so the crop is lossless — switching back to
+ * "Original" restores the full frame.
+ */
+export const applyCrop = (image: FabricNS.FabricImage, ratio: number | null): void => {
+  const element = image.getElement() as HTMLImageElement | HTMLCanvasElement;
+  const naturalW =
+    (element as HTMLImageElement).naturalWidth || element.width || image.width || 1;
+  const naturalH =
+    (element as HTMLImageElement).naturalHeight || element.height || image.height || 1;
+
+  if (ratio === null) {
+    image.set({ cropX: 0, cropY: 0, width: naturalW, height: naturalH });
+    image.setCoords();
+    return;
+  }
+
+  let cropW = naturalW;
+  let cropH = Math.round(naturalW / ratio);
+  if (cropH > naturalH) {
+    cropH = naturalH;
+    cropW = Math.round(naturalH * ratio);
+  }
+
+  image.set({
+    cropX: Math.round((naturalW - cropW) / 2),
+    cropY: Math.round((naturalH - cropH) / 2),
+    width: cropW,
+    height: cropH,
+  });
+  image.setCoords();
+};
+
+// ------------------------------------------------------- background image
+
+export type BackgroundFit = 'cover' | 'contain' | 'stretch' | 'tile';
+
+/**
+ * Lay an image behind everything on the artboard.
+ *
+ * `backgroundImage` is drawn before the object stack and is never selectable,
+ * which is what separates a backdrop from "an image at the bottom of the
+ * layer list" — it cannot be picked up by a stray click while editing.
+ */
+export const placeBackgroundImage = (
+  image: FabricNS.FabricImage,
+  fit: BackgroundFit,
+  boardWidth: number,
+  boardHeight: number,
+): void => {
+  const w = image.width || 1;
+  const h = image.height || 1;
+
+  if (fit === 'stretch') {
+    image.set({ scaleX: boardWidth / w, scaleY: boardHeight / h });
+  } else if (fit === 'contain') {
+    const scale = Math.min(boardWidth / w, boardHeight / h);
+    image.set({ scaleX: scale, scaleY: scale });
+  } else {
+    const scale = Math.max(boardWidth / w, boardHeight / h);
+    image.set({ scaleX: scale, scaleY: scale });
+  }
+
+  image.set({
+    originX: 'left',
+    originY: 'top',
+    left: (boardWidth - image.getScaledWidth()) / 2,
+    top: (boardHeight - image.getScaledHeight()) / 2,
+    selectable: false,
+    evented: false,
+  });
+  image.setCoords();
 };

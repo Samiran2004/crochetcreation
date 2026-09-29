@@ -87,3 +87,19 @@ class RenderUploadRequest(BaseModel):
     """Push a rendered artboard into the Cloudinary media library."""
     data_url: str = Field(..., description="data:image/png;base64,... payload")
     filename: Optional[str] = Field(default=None, max_length=140)
+
+
+class UrlImportRequest(BaseModel):
+    """Pull an icon or image in from another site (Icons8, Flaticon, a CDN…)."""
+    url: str = Field(..., max_length=2048)
+    filename: Optional[str] = Field(default=None, max_length=140)
+
+
+class UrlImportResponse(BaseModel):
+    """
+    SVG comes back as markup so the editor can turn it into real, recolourable
+    vector objects; a raster arrives as an ordinary media-library asset.
+    """
+    kind: str  # "svg" | "image"
+    svg: Optional[str] = None
+    asset: Optional[DesignAssetResponse] = None

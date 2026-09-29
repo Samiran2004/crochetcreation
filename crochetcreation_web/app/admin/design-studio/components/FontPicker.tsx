@@ -1,14 +1,18 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, Search, Sparkles } from 'lucide-react';
+import { AlertCircle, Check, ChevronDown, Plus, Search, Sparkles, Trash2 } from 'lucide-react';
 import {
   FONT_CATEGORIES,
+  getCustomFonts,
+  importGoogleFont,
   loadFont,
+  removeCustomFont,
   searchFonts,
   type FontCategory,
   type FontDefinition,
 } from '../lib/fonts';
+import { Spinner } from './ui';
 
 /**
  * One row of the font list.
@@ -87,6 +91,121 @@ const FontRow: React.FC<{
         <Sparkles className="h-3.5 w-3.5 shrink-0 text-gold" aria-label="Premium face" />
       )}
     </button>
+  );
+};
+
+
+/**
+ * Bring in any family from Google Fonts by name.
+ *
+ * The catalog is curated, not exhaustive — this is the escape hatch that
+ * makes the type library effectively unlimited. Imports persist locally and
+ * are re-fetched automatically when a saved design that uses one is reopened
+ * somewhere else.
+ */
+const GoogleFontImporter: React.FC<{ onImported: (family: string) => void }> = ({ onImported }) => {
+  const [name, setName] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [status, setStatus] = useState<'idle' | 'ok' | 'missing'>('idle');
+  const [custom, setCustom] = useState<FontDefinition[]>([]);
+
+  useEffect(() => setCustom(getCustomFonts()), []);
+
+  const run = async () => {
+    const family = name.trim();
+    if (!family) return;
+    setBusy(true);
+    setStatus('idle');
+    try {
+      const imported = await importGoogleFont(family);
+      if (!imported) {
+        setStatus('missing');
+        return;
+      }
+      setCustom(getCustomFonts());
+      setStatus('ok');
+      setName('');
+      onImported(imported.family);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="space-y-2 border-t border-gray-150 p-3 dark:border-slate-800">
+      <p className="text-[9px] font-black uppercase tracking-widest text-gray-400">
+        Import from Google Fonts
+      </p>
+      <div className="flex gap-1.5">
+        <input
+          value={name}
+          onChange={(e) => {
+            setName(e.target.value);
+            setStatus('idle');
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') void run();
+            e.stopPropagation();
+          }}
+          placeholder="e.g. Brittany Signature"
+          spellCheck={false}
+          className="min-w-0 flex-1 rounded-lg border border-gray-250 bg-white px-2.5 py-1.5 text-[11px] text-slate-700 placeholder-gray-400 focus:border-teal focus:outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
+        />
+        <button
+          type="button"
+          onClick={() => void run()}
+          disabled={busy || !name.trim()}
+          className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-teal px-2.5 py-1.5 text-[10px] font-bold text-parchment disabled:opacity-40 dark:bg-parchment dark:text-teal"
+        >
+          {busy ? <Spinner className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
+          Add
+        </button>
+      </div>
+
+      {status === 'missing' && (
+        <p className="flex items-start gap-1.5 text-[10px] font-semibold text-terracotta">
+          <AlertCircle className="mt-0.5 h-3 w-3 shrink-0" />
+          Google Fonts has no family with that exact name. Check the spelling on fonts.google.com.
+        </p>
+      )}
+      {status === 'ok' && (
+        <p className="flex items-center gap-1.5 text-[10px] font-semibold text-teal dark:text-parchment">
+          <Check className="h-3 w-3 shrink-0" />
+          Added and selected.
+        </p>
+      )}
+
+      {custom.length > 0 && (
+        <div className="space-y-1 pt-1">
+          <p className="text-[9px] font-black uppercase tracking-widest text-gray-400">
+            Your imports
+          </p>
+          {custom.map((font) => (
+            <div key={font.family} className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => onImported(font.family)}
+                className="min-w-0 flex-1 truncate rounded px-1.5 py-1 text-left text-[13px] text-ink hover:bg-gray-100 dark:text-parchment dark:hover:bg-slate-800"
+                style={{ fontFamily: `"${font.family}", serif` }}
+              >
+                {font.family}
+              </button>
+              <button
+                type="button"
+                title="Remove import"
+                onClick={() => {
+                  removeCustomFont(font.family);
+                  setCustom(getCustomFonts());
+                }}
+                className="shrink-0 rounded p-1 text-gray-400 hover:text-terracotta"
+              >
+                <Trash2 className="h-3 w-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 };
 
@@ -194,6 +313,12 @@ export const FontPicker: React.FC<{
               ))
             )}
           </div>
+
+          <GoogleFontImporter
+            onImported={(family) => {
+              pick(family);
+            }}
+          />
         </div>
       )}
     </div>

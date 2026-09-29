@@ -1,8 +1,12 @@
+import asyncio
 import base64
 import binascii
+import ipaddress
 import json
 import logging
 import re
+import socket
+from urllib.parse import urlparse
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
@@ -14,6 +18,8 @@ from app.api.deps import get_current_admin_user
 from app.core.db import get_database
 from app.models.design import (
     DesignAssetResponse,
+    UrlImportRequest,
+    UrlImportResponse,
     DesignCreate,
     DesignResponse,
     DesignSummary,
@@ -546,4 +552,199 @@ async def upload_rendered_design(
         height=doc.get("height"),
         filename=doc.get("filename"),
         created_at=doc["created_at"],
+    )
+
+
+# ------------------------------------------------------- third-party import
+
+MAX_IMPORT_BYTES = 8 * 1024 * 1024
+IMPORT_TIMEOUT_SECONDS = 12
+MAX_IMPORT_REDIRECTS = 3
+
+# Only markup that renders. Anything that can execute, embed HTML, or reach
+# back out to the network is stripped before the SVG is handed to the editor.
+_SVG_SCRIPT_RE = re.compile(r"<\s*(script|foreignObject|iframe|object|embed)\b.*?<\s*/\s*\1\s*>", re.IGNORECASE | re.DOTALL)
+_SVG_SELF_CLOSING_RE = re.compile(r"<\s*(script|foreignObject|iframe|object|embed|use)\b[^>]*/\s*>", re.IGNORECASE)
+_SVG_EVENT_ATTR_RE = re.compile(r"\son[a-z]+\s*=\s*(\"[^\"]*\"|'[^']*'|[^\s>]+)", re.IGNORECASE)
+_SVG_JS_URL_RE = re.compile(r"(href|xlink:href|src)\s*=\s*(\"|')\s*(javascript:|data:text/html)[^\"']*(\"|')", re.IGNORECASE)
+_SVG_EXTERNAL_REF_RE = re.compile(r"\s(xlink:href|href)\s*=\s*(\"|')\s*https?://[^\"']*(\"|')", re.IGNORECASE)
+
+
+def _sanitize_svg(markup: str) -> str:
+    cleaned = _SVG_SCRIPT_RE.sub("", markup)
+    cleaned = _SVG_SELF_CLOSING_RE.sub("", cleaned)
+    cleaned = _SVG_EVENT_ATTR_RE.sub("", cleaned)
+    cleaned = _SVG_JS_URL_RE.sub("", cleaned)
+    cleaned = _SVG_EXTERNAL_REF_RE.sub("", cleaned)
+    if "<svg" not in cleaned.lower():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="That link did not contain a usable SVG.",
+        )
+    return cleaned
+
+
+def _resolve_public_ips(host: str) -> None:
+    """
+    Refuse anything that resolves inside the network this server sits in.
+
+    Without it, "import from URL" is a request forwarder: an admin URL could
+    be pointed at the metadata service or an internal admin port and the
+    response handed straight back.
+    """
+    try:
+        infos = socket.getaddrinfo(host, None)
+    except socket.gaierror:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="That address could not be resolved.",
+        )
+
+    for info in infos:
+        try:
+            ip = ipaddress.ip_address(info[4][0])
+        except ValueError:
+            continue
+        if (
+            ip.is_private
+            or ip.is_loopback
+            or ip.is_link_local
+            or ip.is_reserved
+            or ip.is_multicast
+            or ip.is_unspecified
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="That address is not allowed.",
+            )
+
+
+async def _validate_import_url(raw: str) -> str:
+    parsed = urlparse((raw or "").strip())
+    if parsed.scheme not in {"http", "https"}:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only http and https links can be imported.",
+        )
+    if not parsed.hostname:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="That does not look like a valid link.",
+        )
+    await asyncio.get_event_loop().run_in_executor(None, _resolve_public_ips, parsed.hostname)
+    return parsed.geturl()
+
+
+@router.post("/assets/import-url", response_model=UrlImportResponse)
+async def import_asset_from_url(
+    payload: UrlImportRequest,
+    current_admin: UserInDB = Depends(get_current_admin_user),
+):
+    """
+    Fetch an icon or image from another site and bring it into the Studio.
+
+    The browser cannot do this itself — an icon CDN rarely sends CORS headers,
+    and reading SVG markup cross-origin is blocked. Fetching here also means
+    every redirect hop is re-checked against the private-address rules.
+    """
+    import httpx
+
+    db = _db()
+    url = await _validate_import_url(payload.url)
+
+    try:
+        async with httpx.AsyncClient(
+            timeout=IMPORT_TIMEOUT_SECONDS,
+            follow_redirects=False,
+            headers={"User-Agent": "CrochetCreation-DesignStudio/1.0"},
+        ) as client:
+            response = None
+            for _ in range(MAX_IMPORT_REDIRECTS + 1):
+                response = await client.get(url)
+                if response.status_code in (301, 302, 303, 307, 308):
+                    location = response.headers.get("location")
+                    if not location:
+                        break
+                    url = await _validate_import_url(str(httpx.URL(url).join(location)))
+                    continue
+                break
+    except HTTPException:
+        raise
+    except httpx.HTTPError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="That link could not be reached.",
+        )
+
+    if response is None or response.status_code >= 400:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="That link returned an error.",
+        )
+
+    content_type = (response.headers.get("content-type") or "").split(";")[0].strip().lower()
+    body = response.content
+
+    if len(body) > MAX_IMPORT_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="That file is larger than 8MB.",
+        )
+
+    looks_like_svg = content_type == "image/svg+xml" or (
+        content_type in {"", "text/plain", "application/octet-stream", "text/html"}
+        and b"<svg" in body[:4096].lower()
+    )
+
+    if looks_like_svg:
+        try:
+            markup = body.decode("utf-8", errors="replace")
+        except Exception:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="That SVG could not be read.",
+            )
+        return UrlImportResponse(kind="svg", svg=_sanitize_svg(markup), asset=None)
+
+    if not content_type.startswith("image/"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="That link is not an image. Paste a direct image or SVG link.",
+        )
+
+    try:
+        uploaded = await upload_bytes_to_cloudinary(
+            body, folder="crochetcreation/designs/imported"
+        )
+    except Exception:
+        logger.exception("Failed to store an imported image")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not store that image. Please try again.",
+        )
+
+    doc = {
+        "url": uploaded["url"],
+        "public_id": uploaded["public_id"],
+        "width": uploaded.get("width"),
+        "height": uploaded.get("height"),
+        "filename": (payload.filename or urlparse(url).path.rsplit("/", 1)[-1] or "imported")[:140],
+        "created_by": str(current_admin.email),
+        "created_at": datetime.now(timezone.utc),
+    }
+    result = await db[ASSETS].insert_one(doc)
+    doc["_id"] = result.inserted_id
+
+    return UrlImportResponse(
+        kind="image",
+        svg=None,
+        asset=DesignAssetResponse(
+            _id=str(doc["_id"]),
+            url=doc["url"],
+            public_id=doc["public_id"],
+            width=doc.get("width"),
+            height=doc.get("height"),
+            filename=doc.get("filename"),
+            created_at=doc["created_at"],
+        ),
     )

@@ -116,3 +116,35 @@ export const publishRender = async (
   if (!res.ok) return fail(res, 'Could not publish that image.');
   return withId(await res.json()) as DesignAsset;
 };
+
+export interface UrlImportResult {
+  kind: 'svg' | 'image';
+  svg: string | null;
+  asset: DesignAsset | null;
+}
+
+/**
+ * Bring in an icon or image from another site (Icons8, a CDN, anywhere).
+ *
+ * This goes through the API rather than `fetch` in the page because icon
+ * hosts rarely send CORS headers — the browser can display such an image but
+ * cannot read its bytes, which is exactly what turning an SVG into editable
+ * vectors requires.
+ */
+export const importFromUrl = async (
+  url: string,
+  filename?: string,
+): Promise<UrlImportResult> => {
+  const res = await apiFetch(`${base()}/assets/import-url`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url, filename }),
+  });
+  if (!res.ok) return fail(res, 'Could not import from that link.');
+  const data = await res.json();
+  return {
+    kind: data.kind,
+    svg: data.svg ?? null,
+    asset: data.asset ? (withId(data.asset) as DesignAsset) : null,
+  };
+};

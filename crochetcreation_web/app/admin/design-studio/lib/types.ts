@@ -40,5 +40,7 @@ export interface LayerNode {
   locked: boolean;
   visible: boolean;
   selected: boolean;
+  opacity: number;
+  /** Small PNG preview of the object, rendered on the fly. */
   thumbnail?: string;
 }

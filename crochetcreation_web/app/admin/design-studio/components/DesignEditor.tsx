@@ -3,15 +3,26 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
+  ArrowDownToLine,
+  ArrowUpToLine,
+  ChevronLeft,
+  ChevronRight,
+  Clipboard,
+  Copy,
   Image as ImageIcon,
   Layers as LayersIcon,
   LayoutTemplate,
+  Lock,
   Maximize,
+  Maximize2,
   PaintBucket,
   Shapes,
   Sliders,
+  Trash2,
   Type as TypeIcon,
   X,
+  ZoomIn,
+  ZoomOut,
 } from 'lucide-react';
 import { Spinner, TextButton } from './ui';
 import { TopBar, type ExportFormat } from './TopBar';
@@ -42,7 +53,21 @@ const RAIL: { id: RailTab; label: string; icon: React.ReactNode }[] = [
   { id: 'layers', label: 'Layers', icon: <LayersIcon className="h-4.5 w-4.5" /> },
 ];
 
-const AUTOSAVE_DELAY = 20000;
+/**
+ * How long the editor waits after the last change before writing.
+ *
+ * Short enough that work is never more than a couple of seconds from being
+ * safe, and debounced so a burst of edits (dragging a slider, typing into a
+ * text box) still produces a single write when the burst ends.
+ */
+const AUTOSAVE_DELAY = 2000;
+
+/**
+ * Re-rendering and uploading the gallery preview is by far the most expensive
+ * part of a save, and nobody is looking at the gallery mid-edit — so it rides
+ * along at most this often, and always on an explicit save.
+ */
+const THUMBNAIL_INTERVAL = 25000;
 
 const download = (href: string, filename: string) => {
   const link = document.createElement('a');
@@ -59,6 +84,28 @@ const slugify = (value: string) =>
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '') || 'design';
 
+const ContextItem: React.FC<{
+  icon: React.ReactNode;
+  label: string;
+  shortcut?: string;
+  danger?: boolean;
+  onClick: () => void;
+}> = ({ icon, label, shortcut, danger, onClick }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className={`flex w-full items-center gap-2.5 px-3 py-1.5 text-left text-[11px] font-semibold transition-colors ${
+      danger
+        ? 'text-terracotta hover:bg-terracotta/10'
+        : 'text-slate-600 hover:bg-gray-100 dark:text-slate-300 dark:hover:bg-slate-800'
+    }`}
+  >
+    <span className="shrink-0 text-gray-400">{icon}</span>
+    <span className="flex-1">{label}</span>
+    {shortcut && <span className="shrink-0 font-mono text-[9px] text-gray-350">{shortcut}</span>}
+  </button>
+);
+
 const DesignEditor: React.FC<{ design: DesignRecord }> = ({ design }) => {
   const [name, setName] = useState(design.name);
   const [tab, setTab] = useState<RailTab>(design.canvas_json ? 'elements' : 'templates');
@@ -69,6 +116,8 @@ const DesignEditor: React.FC<{ design: DesignRecord }> = ({ design }) => {
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirmTemplate, setConfirmTemplate] = useState<TemplateSpec | null>(null);
+  const [inspectorOpen, setInspectorOpen] = useState(true);
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
 
   const editor = useDesignEditor({
     width: design.width,
@@ -84,33 +133,63 @@ const DesignEditor: React.FC<{ design: DesignRecord }> = ({ design }) => {
   // newest closure without either of them re-subscribing on every keystroke.
   const saveRef = useRef<(silent?: boolean) => Promise<void>>();
 
+  const inFlightRef = useRef(false);
+  const rerunRef = useRef(false);
+  const lastThumbnailAtRef = useRef(0);
+
   const save = useCallback(
     async (silent = false) => {
       if (!editor.ready) return;
+
+      // Two-second autosave means a slow write can still be running when the
+      // next one is due. Rather than stacking requests, remember that another
+      // is wanted and run it once this one lands.
+      if (inFlightRef.current) {
+        rerunRef.current = true;
+        return;
+      }
+
       const scene = editor.serialize();
       if (!scene) return;
 
+      inFlightRef.current = true;
       setSaving(true);
       if (!silent) setError(null);
+
       try {
-        // A small preview is enough for the gallery card and keeps the
-        // request well inside the API's payload ceiling.
-        const previewScale = Math.min(1, 480 / Math.max(editor.artboard.width, editor.artboard.height));
-        const thumbnail = editor.exportDataURL('jpeg', previewScale, 0.72);
+        const now = Date.now();
+        const wantsThumbnail = !silent || now - lastThumbnailAtRef.current > THUMBNAIL_INTERVAL;
+
+        let thumbnail: string | undefined;
+        if (wantsThumbnail) {
+          // A small preview is enough for the gallery card and keeps the
+          // request well inside the API's payload ceiling.
+          const previewScale = Math.min(
+            1,
+            480 / Math.max(editor.artboard.width, editor.artboard.height),
+          );
+          thumbnail = editor.exportDataURL('jpeg', previewScale, 0.72) || undefined;
+          lastThumbnailAtRef.current = now;
+        }
 
         await updateDesign(design.id, {
           name: name.trim() || 'Untitled design',
           width: editor.artboard.width,
           height: editor.artboard.height,
           canvas_json: scene,
-          thumbnail_data_url: thumbnail || undefined,
+          thumbnail_data_url: thumbnail,
         });
         editor.markClean();
         setLastSavedAt(new Date());
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Could not save the design.');
       } finally {
+        inFlightRef.current = false;
         setSaving(false);
+        if (rerunRef.current) {
+          rerunRef.current = false;
+          void saveRef.current?.(true);
+        }
       }
     },
     [design.id, editor, name],
@@ -127,6 +206,18 @@ const DesignEditor: React.FC<{ design: DesignRecord }> = ({ design }) => {
     }, AUTOSAVE_DELAY);
     return () => window.clearTimeout(timer);
   }, [editor.dirty, editor.ready, editor.tick]);
+
+  // Renaming never touches the canvas, so it would otherwise never be
+  // picked up by the dirty-flag autosave above.
+  const nameSettledRef = useRef(design.name);
+  useEffect(() => {
+    if (!editor.ready || name === nameSettledRef.current) return;
+    const timer = window.setTimeout(() => {
+      nameSettledRef.current = name;
+      void saveRef.current?.(true);
+    }, 900);
+    return () => window.clearTimeout(timer);
+  }, [editor.ready, name]);
 
   // Last line of defence against closing the tab on unsaved work.
   useEffect(() => {
@@ -327,6 +418,49 @@ const DesignEditor: React.FC<{ design: DesignRecord }> = ({ design }) => {
     [editor.artboard.height, editor.artboard.width, editor.zoom],
   );
 
+  /**
+   * Right-click menu.
+   *
+   * Fabric does not manage selection on a secondary click, so the object
+   * under the pointer is resolved and selected first — otherwise the menu
+   * would act on whatever happened to be selected before.
+   */
+  const openContextMenu = useCallback(
+    (event: React.MouseEvent) => {
+      event.preventDefault();
+      const canvas = editor.canvasRef.current;
+      if (canvas) {
+        try {
+          const target = (
+            canvas as unknown as {
+              findTarget?: (e: Event) => unknown;
+            }
+          ).findTarget?.(event.nativeEvent);
+          if (target) canvas.setActiveObject(target as never);
+          else canvas.discardActiveObject();
+          canvas.requestRenderAll();
+        } catch {
+          // A fabric internal that moved is not worth failing the menu over.
+        }
+      }
+      setMenu({ x: event.clientX, y: event.clientY });
+    },
+    [editor],
+  );
+
+  useEffect(() => {
+    if (!menu) return;
+    const close = () => setMenu(null);
+    window.addEventListener('click', close);
+    window.addEventListener('resize', close);
+    window.addEventListener('scroll', close, true);
+    return () => {
+      window.removeEventListener('click', close);
+      window.removeEventListener('resize', close);
+      window.removeEventListener('scroll', close, true);
+    };
+  }, [menu]);
+
   const applyTemplateNow = useCallback(
     (spec: TemplateSpec) => {
       void editor.loadTemplate(spec);
@@ -401,10 +535,10 @@ const DesignEditor: React.FC<{ design: DesignRecord }> = ({ design }) => {
             {tab === 'templates' && (
               <TemplatesPanel editor={editor} onApply={setConfirmTemplate} />
             )}
-            {tab === 'elements' && <ElementsPanel editor={editor} />}
+            {tab === 'elements' && <ElementsPanel editor={editor} onError={showError} />}
             {tab === 'text' && <TextPanel editor={editor} />}
             {tab === 'uploads' && <UploadsPanel editor={editor} onError={showError} />}
-            {tab === 'background' && <BackgroundPanel editor={editor} />}
+            {tab === 'background' && <BackgroundPanel editor={editor} onError={showError} />}
             {tab === 'resize' && <ResizePanel editor={editor} />}
             {tab === 'layers' && <LayersPanel editor={editor} />}
           </aside>
@@ -413,9 +547,21 @@ const DesignEditor: React.FC<{ design: DesignRecord }> = ({ design }) => {
         {/* Stage */}
         <div
           ref={editor.hostRef}
-          className="relative flex min-w-0 flex-1 items-center justify-center overflow-auto bg-gray-100 p-9 dark:bg-slate-950"
+          onContextMenu={openContextMenu}
+          className="relative flex min-w-0 flex-1 items-center justify-center overflow-auto p-9"
+          style={{
+            // A faint dot grid reads as "canvas surface" and makes a white
+            // artboard's edges obvious without a hard border.
+            backgroundColor: 'var(--ds-stage-bg, #EFEFEC)',
+            backgroundImage:
+              'radial-gradient(circle at 1px 1px, rgba(35,66,60,0.10) 1px, transparent 0)',
+            backgroundSize: '18px 18px',
+          }}
         >
-          <div className="relative shrink-0 shadow-panel" style={stageStyle}>
+          <div
+            className="relative shrink-0 rounded-[2px] shadow-panel ring-1 ring-black/5"
+            style={stageStyle}
+          >
             <canvas ref={editor.elementRef} />
 
             {/* Smart guides live in their own overlay rather than being drawn
@@ -455,6 +601,43 @@ const DesignEditor: React.FC<{ design: DesignRecord }> = ({ design }) => {
             )}
           </div>
 
+          {/* Floating zoom bar — always reachable, never in the way. */}
+          <div className="pointer-events-auto absolute bottom-4 right-4 flex items-center gap-0.5 rounded-xl border border-gray-200 bg-white/95 px-1 py-1 shadow-lift backdrop-blur-sm dark:border-slate-700 dark:bg-slate-900/95">
+            <button
+              type="button"
+              title="Zoom out"
+              onClick={editor.zoomOut}
+              className="rounded-lg p-1.5 text-slate-600 hover:bg-gray-100 dark:text-slate-300 dark:hover:bg-slate-800"
+            >
+              <ZoomOut className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              title="Fit to screen"
+              onClick={editor.zoomToFit}
+              className="min-w-12 rounded-lg px-1.5 py-1 font-mono text-[11px] font-bold text-slate-600 hover:bg-gray-100 dark:text-slate-300 dark:hover:bg-slate-800"
+            >
+              {Math.round(editor.zoom * 100)}%
+            </button>
+            <button
+              type="button"
+              title="Zoom in"
+              onClick={editor.zoomIn}
+              className="rounded-lg p-1.5 text-slate-600 hover:bg-gray-100 dark:text-slate-300 dark:hover:bg-slate-800"
+            >
+              <ZoomIn className="h-3.5 w-3.5" />
+            </button>
+            <span className="mx-0.5 h-5 w-px bg-gray-200 dark:bg-slate-700" />
+            <button
+              type="button"
+              title="Fit to screen (⌘0)"
+              onClick={editor.zoomToFit}
+              className="rounded-lg p-1.5 text-slate-600 hover:bg-gray-100 dark:text-slate-300 dark:hover:bg-slate-800"
+            >
+              <Maximize2 className="h-3.5 w-3.5" />
+            </button>
+          </div>
+
           {!editor.ready && (
             <div className="absolute inset-0 flex items-center justify-center bg-gray-100/80 dark:bg-slate-950/80 backdrop-blur-sm">
               <div className="flex flex-col items-center gap-3 text-slate-500">
@@ -466,16 +649,162 @@ const DesignEditor: React.FC<{ design: DesignRecord }> = ({ design }) => {
         </div>
 
         {/* Inspector */}
-        <aside className="hidden w-72 shrink-0 overflow-y-auto border-l border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 xl:block">
-          <div className="mb-3 flex items-center gap-2 border-b border-gray-150 dark:border-slate-800 pb-3">
-            <Sliders className="h-3.5 w-3.5 text-gray-400" />
-            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">
-              Properties
-            </p>
-          </div>
-          <Inspector editor={editor} />
+        <aside
+          className={`relative hidden shrink-0 border-l border-gray-200 bg-white transition-[width] duration-200 dark:border-slate-800 dark:bg-slate-900 lg:block ${
+            inspectorOpen ? 'w-72' : 'w-0'
+          }`}
+        >
+          <button
+            type="button"
+            onClick={() => setInspectorOpen((v) => !v)}
+            title={inspectorOpen ? 'Hide properties' : 'Show properties'}
+            className="absolute -left-3 top-4 z-10 flex h-7 w-6 items-center justify-center rounded-l-lg border border-r-0 border-gray-200 bg-white text-gray-500 shadow-sm transition-colors hover:text-teal dark:border-slate-700 dark:bg-slate-900 dark:hover:text-parchment"
+          >
+            {inspectorOpen ? (
+              <ChevronRight className="h-3.5 w-3.5" />
+            ) : (
+              <ChevronLeft className="h-3.5 w-3.5" />
+            )}
+          </button>
+
+          {inspectorOpen && (
+            <div className="h-full overflow-y-auto p-4">
+              <div className="mb-3 flex items-center gap-2 border-b border-gray-150 pb-3 dark:border-slate-800">
+                <Sliders className="h-3.5 w-3.5 text-gray-400" />
+                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                  Properties
+                </p>
+              </div>
+              <Inspector editor={editor} />
+            </div>
+          )}
         </aside>
       </div>
+
+      {/* Right-click menu. Positioned in viewport space because the stage
+          scrolls independently of the page. */}
+      {menu && (
+        <div
+          className="fixed z-[60] w-52 overflow-hidden rounded-xl border border-gray-200 bg-white py-1 shadow-2xl dark:border-slate-700 dark:bg-slate-900"
+          style={{
+            left: Math.min(menu.x, (typeof window !== 'undefined' ? window.innerWidth : 0) - 220),
+            top: Math.min(menu.y, (typeof window !== 'undefined' ? window.innerHeight : 0) - 300),
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {editor.selectionKind === 'none' ? (
+            <>
+              <ContextItem
+                icon={<Clipboard className="h-3.5 w-3.5" />}
+                label="Paste"
+                shortcut="⌘V"
+                onClick={() => {
+                  void editor.pasteClipboard();
+                  setMenu(null);
+                }}
+              />
+              <ContextItem
+                icon={<Maximize2 className="h-3.5 w-3.5" />}
+                label="Fit to screen"
+                shortcut="⌘0"
+                onClick={() => {
+                  editor.zoomToFit();
+                  setMenu(null);
+                }}
+              />
+              <ContextItem
+                icon={<PaintBucket className="h-3.5 w-3.5" />}
+                label="Change background"
+                onClick={() => {
+                  setTab('background');
+                  setPanelOpen(true);
+                  setMenu(null);
+                }}
+              />
+            </>
+          ) : (
+            <>
+              <ContextItem
+                icon={<Copy className="h-3.5 w-3.5" />}
+                label="Duplicate"
+                shortcut="⌘D"
+                onClick={() => {
+                  void editor.duplicateSelection();
+                  setMenu(null);
+                }}
+              />
+              <ContextItem
+                icon={<Clipboard className="h-3.5 w-3.5" />}
+                label="Copy"
+                shortcut="⌘C"
+                onClick={() => {
+                  void editor.copySelection();
+                  setMenu(null);
+                }}
+              />
+              <div className="my-1 h-px bg-gray-150 dark:bg-slate-800" />
+              <ContextItem
+                icon={<ArrowUpToLine className="h-3.5 w-3.5" />}
+                label="Bring to front"
+                onClick={() => {
+                  editor.reorder('front');
+                  setMenu(null);
+                }}
+              />
+              <ContextItem
+                icon={<ArrowDownToLine className="h-3.5 w-3.5" />}
+                label="Send to back"
+                onClick={() => {
+                  editor.reorder('back');
+                  setMenu(null);
+                }}
+              />
+              <div className="my-1 h-px bg-gray-150 dark:bg-slate-800" />
+              {editor.selectionKind === 'multiple' && (
+                <ContextItem
+                  icon={<LayersIcon className="h-3.5 w-3.5" />}
+                  label="Group"
+                  shortcut="⌘G"
+                  onClick={() => {
+                    editor.groupSelection();
+                    setMenu(null);
+                  }}
+                />
+              )}
+              {editor.selectionKind === 'group' && (
+                <ContextItem
+                  icon={<LayersIcon className="h-3.5 w-3.5" />}
+                  label="Ungroup"
+                  shortcut="⌘⇧G"
+                  onClick={() => {
+                    editor.ungroupSelection();
+                    setMenu(null);
+                  }}
+                />
+              )}
+              <ContextItem
+                icon={<Lock className="h-3.5 w-3.5" />}
+                label="Lock"
+                onClick={() => {
+                  const id = editor.layers.find((l) => l.selected)?.id;
+                  if (id) editor.toggleLayerLock(id);
+                  setMenu(null);
+                }}
+              />
+              <ContextItem
+                icon={<Trash2 className="h-3.5 w-3.5" />}
+                label="Delete"
+                shortcut="Del"
+                danger
+                onClick={() => {
+                  editor.removeSelected();
+                  setMenu(null);
+                }}
+              />
+            </>
+          )}
+        </div>
+      )}
 
       {/* Applying a template throws the artboard away, so it asks first. */}
       {confirmTemplate && (
