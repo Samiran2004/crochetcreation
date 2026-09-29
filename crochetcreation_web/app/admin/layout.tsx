@@ -24,7 +24,8 @@ import {
   Moon,
   X,
   Activity,
-  Heart
+  Heart,
+  Palette
 } from 'lucide-react';
 import Link from 'next/link';
 import { apiFetch, getApiUrl, clearSession } from '../utils/apiFetch';
@@ -154,12 +155,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   if (!isAdmin) return null;
 
+  const isFullBleed = /^\/admin\/design-studio\/[^/]+/.test(pathname);
+
   const sidebarGroups = [
     {
       title: 'Overview',
       items: [
         { name: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
         { name: 'Homepage', path: '/admin/customizer', icon: ImageIcon },
+        { name: 'Design Studio', path: '/admin/design-studio', icon: Palette },
       ]
     },
     {
@@ -198,7 +202,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div className="space-y-1">
             {group.items.map((item) => {
               const Icon = item.icon;
-              const isActive = pathname === item.path;
+              const isActive =
+                pathname === item.path ||
+                (item.path !== '/admin/dashboard' && pathname.startsWith(`${item.path}/`));
 
               return (
                 <button
@@ -556,12 +562,22 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
           </header>
 
-          {/* Scrollable Workspace Container */}
-          <main className="flex-1 overflow-y-auto p-4 pb-24 md:p-8 md:pb-8 bg-gray-55/40 dark:bg-slate-950/70 transition-colors duration-250 overscroll-contain">
-            <div className="max-w-7xl mx-auto space-y-6">
+          {/* Scrollable Workspace Container.
+              The Design Studio editor is a full-bleed application surface: it
+              manages its own scrolling and needs the entire area, so it opts
+              out of the padded, max-width reading column every other screen
+              uses. */}
+          {isFullBleed ? (
+            <main className="flex-1 min-h-0 overflow-hidden bg-gray-55/40 dark:bg-slate-950/70">
               {children}
-            </div>
-          </main>
+            </main>
+          ) : (
+            <main className="flex-1 overflow-y-auto p-4 pb-24 md:p-8 md:pb-8 bg-gray-55/40 dark:bg-slate-950/70 transition-colors duration-250 overscroll-contain">
+              <div className="max-w-7xl mx-auto space-y-6">
+                {children}
+              </div>
+            </main>
+          )}
         </div>
 
       </div>
