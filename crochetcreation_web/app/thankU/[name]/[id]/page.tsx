@@ -206,7 +206,7 @@ export default async function ThankYouPage({ params }: Props) {
                 </p>
                 
                 <p className="text-center text-[13px] text-terracotta-deep mt-6 font-display italic relative z-10">
-                  — Samiran
+                  — Crochet Creation
                 </p>
               </div>
             </div>
