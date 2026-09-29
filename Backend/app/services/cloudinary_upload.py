@@ -127,3 +127,40 @@ async def upload_pdf_to_cloudinary(pdf_bytes: bytes, order_id: str) -> str:
     )
     return result.get("secure_url")
 
+
+
+async def upload_bytes_to_cloudinary(
+    data: bytes,
+    folder: str = "crochetcreation/designs",
+    public_id: str = None,
+    overwrite: bool = False,
+) -> dict:
+    """
+    Upload raw image bytes (e.g. a canvas render decoded from a data URL).
+
+    Used by the Design Studio, which produces its images in the browser rather
+    than receiving them as a multipart file.
+    """
+    import asyncio
+
+    options = {
+        "folder": folder,
+        "resource_type": "image",
+        "quality": "auto:best",
+    }
+    if public_id:
+        options["public_id"] = public_id
+        options["overwrite"] = overwrite
+        options["invalidate"] = True
+
+    loop = asyncio.get_event_loop()
+    result = await loop.run_in_executor(
+        None,
+        lambda: cloudinary.uploader.upload(data, **options)
+    )
+    return {
+        "url": result.get("secure_url"),
+        "public_id": result.get("public_id"),
+        "width": result.get("width"),
+        "height": result.get("height"),
+    }
