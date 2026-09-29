@@ -23,7 +23,8 @@ import {
   Sun,
   Moon,
   X,
-  Activity
+  Activity,
+  Heart
 } from 'lucide-react';
 import Link from 'next/link';
 import { apiFetch, getApiUrl, clearSession } from '../utils/apiFetch';

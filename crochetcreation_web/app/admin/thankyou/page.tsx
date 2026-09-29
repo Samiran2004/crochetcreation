@@ -20,6 +20,7 @@ import {
   Plus,
   X,
   Loader2,
+  MessageCircle,
 } from 'lucide-react';
 import { apiFetch, getApiUrl } from '../../utils/apiFetch';
 
@@ -165,6 +166,12 @@ export default function AdminThankYou() {
       setCopiedId(entryId);
       setTimeout(() => setCopiedId(null), 2000);
     }
+  };
+
+  const handleWhatsAppShare = (url: string, name: string) => {
+    const text = `Hi ${name}! 💖 Thank you so much for choosing Crochet Creation! Every purchase means the world to us.\n\nWe've created a special personalized thank-you page just for you! Click the link below to view it:\n${url}\n\nWarmest stitches,\nThe Crochet Creation Team 🧶`;
+    const encodedText = encodeURIComponent(text);
+    window.open(`https://wa.me/?text=${encodedText}`, '_blank');
   };
 
   const filteredEntries = entries.filter(
@@ -559,6 +566,13 @@ export default function AdminThankYou() {
                           >
                             <ExternalLink className="w-3.5 h-3.5 text-stone-400 dark:text-slate-500" />
                           </a>
+                          <button
+                            onClick={() => handleWhatsAppShare(entry.thankyou_url, entry.name)}
+                            className="p-1.5 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded-lg transition-colors shrink-0 group"
+                            title="Share on WhatsApp"
+                          >
+                            <MessageCircle className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-500 group-hover:fill-emerald-600" />
+                          </button>
                         </div>
                       </td>
 

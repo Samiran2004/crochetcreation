@@ -1,7 +1,5 @@
-'use client';
-
-import React, { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import React from 'react';
+import { Metadata, ResolvingMetadata } from 'next';
 import { getApiUrl } from '../../../utils/apiFetch';
 import {
   Heart,
@@ -13,53 +11,74 @@ import {
   Star,
 } from 'lucide-react';
 
-interface ThankYouData {
-  name: string;
-  created_at: string;
+interface Props {
+  params: { name: string; id: string };
 }
 
-export default function ThankYouPage() {
-  const params = useParams();
-  const name = params?.name as string;
-  const id = params?.id as string;
+export async function generateMetadata(
+  { params }: Props,
+  parent: ResolvingMetadata
+): Promise<Metadata> {
+  const name = params.name;
+  let customerName = name.replace(/-/g, ' '); 
+  try {
+    const res = await fetch(`${getApiUrl()}/api/thankyou/${name}/${params.id}`, { cache: 'no-store' });
+    if (res.ok) {
+      const data = await res.json();
+      customerName = data.name;
+    }
+  } catch (e) {
+    // ignore
+  }
 
-  const [data, setData] = useState<ThankYouData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const title = `Thank You, ${customerName}! | Crochet Creation`;
+  const description = `A special thank you to ${customerName} for choosing Crochet Creation. Your support helps us keep crafting with love and passion!`;
+  const url = `https://crochetcreation.vercel.app/thankU/${name}/${params.id}`;
+  const ogImage = 'https://crochetcreation.vercel.app/og-image.jpg';
 
-  useEffect(() => {
-    if (!name || !id) return;
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      url,
+      images: [
+        {
+          url: ogImage,
+          width: 1200,
+          height: 630,
+          alt: `Thank You ${customerName}`,
+        },
+      ],
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [ogImage],
+    }
+  };
+}
 
-    const fetchData = async () => {
-      try {
-        const res = await fetch(`${getApiUrl()}/api/thankyou/${name}/${id}`);
-        if (res.ok) {
-          const json = await res.json();
-          setData(json);
-        } else {
-          setError(true);
-        }
-      } catch {
-        setError(true);
-      } finally {
-        setLoading(false);
-      }
-    };
+export default async function ThankYouPage({ params }: Props) {
+  const { name, id } = params;
 
-    fetchData();
-  }, [name, id]);
+  let data = null;
+  let error = false;
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#FDF6EE] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-10 h-10 border-[3px] border-[#8D6E63] border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm font-medium text-[#6D4C41] tracking-wide">
-            Loading your special page...
-          </p>
-        </div>
-      </div>
-    );
+  try {
+    // Fetch data directly on the server
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || getApiUrl(); // Use env if available on server
+    const res = await fetch(`${apiUrl}/api/thankyou/${name}/${id}`, { cache: 'no-store' });
+    if (res.ok) {
+      data = await res.json();
+    } else {
+      error = true;
+    }
+  } catch {
+    error = true;
   }
 
   if (error || !data) {
@@ -73,7 +92,7 @@ export default function ThankYouPage() {
             Page Not Found
           </h1>
           <p className="text-sm text-[#6D4C41] leading-relaxed">
-            This thank-you page doesn&apos;t exist or may have been removed.
+            This thank-you page doesn't exist or may have been removed.
           </p>
           <a
             href="https://crochetcreation.vercel.app"
