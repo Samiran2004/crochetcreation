@@ -4,7 +4,7 @@ from app.models.settings import SettingsModel
 from app.core.db import get_database
 from app.api.deps import get_current_admin_user
 from app.models.user import UserInDB
-from app.services.cloudinary_upload import upload_image_and_get_details, delete_image_from_cloudinary
+from app.services.storage import upload_image, delete_asset
 
 logger = logging.getLogger("app.settings")
 
@@ -124,10 +124,10 @@ async def upload_homepage_image(
         if doc and "images" in doc and section in doc["images"]:
             old_image = doc["images"][section]
             
-        details = await upload_image_and_get_details(file, folder="crochetcreation/homepage")
+        details = await upload_image(file, folder="crochetcreation/homepage")
         
         if old_image and isinstance(old_image, dict) and old_image.get("public_id"):
-            await delete_image_from_cloudinary(old_image["public_id"])
+            await delete_asset(old_image["public_id"], old_image.get("url"))
             
         update_query = {
             f"images.{section}": {
@@ -186,7 +186,7 @@ async def reset_homepage_image(
         old_image = doc["images"][section]
         
         if old_image and isinstance(old_image, dict) and old_image.get("public_id"):
-            await delete_image_from_cloudinary(old_image["public_id"])
+            await delete_asset(old_image["public_id"], old_image.get("url"))
             
         await db["homepage_images"].update_one(
             {"_id": "homepage_images"},

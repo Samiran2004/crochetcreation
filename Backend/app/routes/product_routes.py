@@ -2,7 +2,7 @@ import logging
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, status, Depends, Query
 from typing import List, Optional
 from app.models.product import ProductModel, ProductUpdate, ProductCreate, PaginatedProductsResponse
-from app.services.cloudinary_upload import upload_image_to_cloudinary, delete_image_by_url
+from app.services.storage import upload_image, delete_by_url
 from app.core.db import get_database
 from app.api.deps import get_current_admin_user
 from app.models.user import UserInDB
@@ -56,14 +56,14 @@ async def create_product(
         if images:
             for img in images:
                 if img.filename:
-                    upload_res = await upload_image_to_cloudinary(img)
+                    upload_res = await upload_image(img)
                     uploaded_urls.append(upload_res["url"])
                     if not upload_width:
                         upload_width = upload_res["width"]
                         upload_height = upload_res["height"]
                     
         if not uploaded_urls and image and image.filename:
-            upload_res = await upload_image_to_cloudinary(image)
+            upload_res = await upload_image(image)
             uploaded_urls.append(upload_res["url"])
             upload_width = upload_res.get("width")
             upload_height = upload_res.get("height")
@@ -290,14 +290,14 @@ async def update_product(
         if images:
             for img in images:
                 if img.filename:
-                    upload_res = await upload_image_to_cloudinary(img)
+                    upload_res = await upload_image(img)
                     uploaded_urls.append(upload_res["url"])
                     if not width:
                         width = upload_res["width"]
                         height = upload_res["height"]
                     
         if not uploaded_urls and image and image.filename:
-            upload_res = await upload_image_to_cloudinary(image)
+            upload_res = await upload_image(image)
             uploaded_urls.append(upload_res["url"])
             width = upload_res["width"]
             height = upload_res["height"]
@@ -320,7 +320,7 @@ async def update_product(
                 for url in urls_to_delete:
                     if url in remaining_urls:
                         remaining_urls.remove(url)
-                        await delete_image_by_url(url)
+                        await delete_by_url(url)
             except Exception as e:
                 pass
                 
@@ -445,7 +445,7 @@ async def delete_product(
             all_old_urls.add(old_image_url)
             
         for old_url in all_old_urls:
-            await delete_image_by_url(old_url)
+            await delete_by_url(old_url)
             
         # Delete from DB
         await db["products"].delete_one({"_id": ObjectId(product_id)})

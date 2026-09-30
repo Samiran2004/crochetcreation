@@ -33,6 +33,13 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'res.cloudinary.com',
       },
+      // Cloudflare R2, served through the bucket's custom domain. Kept
+      // alongside Cloudinary rather than replacing it: assets uploaded
+      // before the switch still carry their original absolute URLs.
+      {
+        protocol: 'https',
+        hostname: 'cdn.crochetcreation.online',
+      },
     ],
   },
 };
