@@ -70,6 +70,7 @@ export const useDesignEditor = ({ width, height, initialScene, onDirtyChange }: 
   const fabricRef = useRef<FabricModule | null>(null);
   const historyRef = useRef(new History());
   const clipboardRef = useRef<FabricObj | null>(null);
+  const styleClipboardRef = useRef<Record<string, unknown> | null>(null);
   const suppressRef = useRef(0);
   const backgroundRef = useRef<BackgroundSpec>({ type: 'solid', color: '#FFFCF5' });
   const backgroundFitRef = useRef<BackgroundFit>('cover');
@@ -88,6 +89,15 @@ export const useDesignEditor = ({ width, height, initialScene, onDirtyChange }: 
   const [canRedo, setCanRedo] = useState(false);
   const [hasBackgroundImage, setHasBackgroundImage] = useState(false);
   const [backgroundLocked, setBackgroundLocked] = useState(false);
+  /** The selection's bounding box in viewport pixels, for the floating toolbar. */
+  const [selectionBox, setSelectionBox] = useState<{
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  } | null>(null);
+  const [isTransforming, setIsTransforming] = useState(false);
+  const [hasCopiedStyle, setHasCopiedStyle] = useState(false);
   const [backgroundAdjust, setBackgroundAdjustState] = useState({
     blur: 0,
     brightness: 0,
@@ -158,6 +168,37 @@ export const useDesignEditor = ({ width, height, initialScene, onDirtyChange }: 
   }, []);
 
   /**
+   * Where the selection sits on screen.
+   *
+   * Object coordinates are in artboard space and the canvas element is
+   * scaled by the zoom and scrolled inside the stage, so the toolbar's
+   * position has to be derived from all three — there is no single fabric
+   * value that already means "where this is on the user's screen".
+   */
+  const updateSelectionBox = useCallback(() => {
+    const canvas = canvasRef.current;
+    const element = elementRef.current;
+    if (!canvas || !element) {
+      setSelectionBox(null);
+      return;
+    }
+    const target = canvas.getActiveObject();
+    if (!target) {
+      setSelectionBox(null);
+      return;
+    }
+    const rect = target.getBoundingRect();
+    const zoom = canvas.getZoom() || 1;
+    const canvasRect = element.getBoundingClientRect();
+    setSelectionBox({
+      left: canvasRect.left + rect.left * zoom,
+      top: canvasRect.top + rect.top * zoom,
+      width: rect.width * zoom,
+      height: rect.height * zoom,
+    });
+  }, []);
+
+  /**
    * Mark an in-progress change as unsaved without pushing an undo step.
    *
    * Dragging a slider fires continuously; each tick genuinely changes the
@@ -167,8 +208,9 @@ export const useDesignEditor = ({ width, height, initialScene, onDirtyChange }: 
    */
   const touch = useCallback(() => {
     markDirty(true);
+    updateSelectionBox();
     bump();
-  }, [bump, markDirty]);
+  }, [bump, markDirty, updateSelectionBox]);
 
   const commit = useCallback(() => {
     const canvas = canvasRef.current;
@@ -177,8 +219,9 @@ export const useDesignEditor = ({ width, height, initialScene, onDirtyChange }: 
     syncHistoryFlags();
     markDirty(true);
     refreshLayers();
+    updateSelectionBox();
     bump();
-  }, [bump, markDirty, refreshLayers, syncHistoryFlags]);
+  }, [bump, markDirty, refreshLayers, syncHistoryFlags, updateSelectionBox]);
 
   // ------------------------------------------------------------- viewport
 
@@ -274,8 +317,9 @@ export const useDesignEditor = ({ width, height, initialScene, onDirtyChange }: 
     setSelectionCount(objs.length);
     setSelectionKind(objs.length > 1 ? 'multiple' : kindOf(objs[0] ?? null));
     refreshLayers();
+    updateSelectionBox();
     bump();
-  }, [bump, refreshLayers]);
+  }, [bump, refreshLayers, updateSelectionBox]);
 
   /** Apply a patch to every selected object; caller decides when to commit. */
   const update = useCallback(
@@ -638,6 +682,77 @@ export const useDesignEditor = ({ width, height, initialScene, onDirtyChange }: 
     await copySelection();
     await pasteClipboard();
   }, [copySelection, pasteClipboard]);
+
+  /**
+   * Properties that describe how something looks, as opposed to where it is.
+   *
+   * Copying style is only useful if it leaves geometry alone — so position,
+   * size, angle and the object's identity are all deliberately absent.
+   */
+  const SHARED_STYLE_KEYS = [
+    'fill',
+    'stroke',
+    'strokeWidth',
+    'strokeDashArray',
+    'strokeUniform',
+    'strokeLineCap',
+    'strokeLineJoin',
+    'opacity',
+    'shadow',
+    'paintFirst',
+  ] as const;
+
+  const TEXT_STYLE_KEYS = [
+    'fontFamily',
+    'fontSize',
+    'fontWeight',
+    'fontStyle',
+    'underline',
+    'linethrough',
+    'textAlign',
+    'charSpacing',
+    'lineHeight',
+    'textBackgroundColor',
+  ] as const;
+
+  const copyStyle = useCallback(() => {
+    const source = canvasRef.current?.getActiveObject();
+    if (!source) return;
+    const record = source as unknown as Record<string, unknown>;
+    const style: Record<string, unknown> = {};
+    [...SHARED_STYLE_KEYS, ...TEXT_STYLE_KEYS].forEach((key) => {
+      if (record[key] !== undefined) style[key] = record[key];
+    });
+    styleClipboardRef.current = style;
+    setHasCopiedStyle(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const pasteStyle = useCallback(() => {
+    const canvas = canvasRef.current;
+    const style = styleClipboardRef.current;
+    if (!canvas || !style) return;
+    const targets = canvas.getActiveObjects();
+    if (!targets.length) return;
+
+    targets.forEach((target) => {
+      const isText = kindOf(target) === 'text';
+      const patch: Record<string, unknown> = {};
+      Object.entries(style).forEach(([key, value]) => {
+        // Typography on a rectangle is meaningless, and copying a font size
+        // onto a shape would silently change nothing while looking like it
+        // worked — so text properties only travel between text objects.
+        if (!isText && (TEXT_STYLE_KEYS as readonly string[]).includes(key)) return;
+        patch[key] = value;
+      });
+      target.set(patch);
+      target.setCoords();
+    });
+
+    canvas.requestRenderAll();
+    commit();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [commit]);
 
   const reorder = useCallback(
     (action: 'front' | 'back' | 'forward' | 'backward') => {
@@ -1182,7 +1297,18 @@ export const useDesignEditor = ({ width, height, initialScene, onDirtyChange }: 
     if (!ready || !canvas) return;
 
     const onSelection = () => syncSelection();
-    const onModified = () => commit();
+    const onModified = () => {
+      commit();
+      updateSelectionBox();
+    };
+    // The bar is hidden for the duration of a drag: following the object
+    // frame by frame is both jittery and exactly where the cursor is.
+    const onTransformStart = () => setIsTransforming(true);
+    const onTransformEnd = () => {
+      setIsTransforming(false);
+      updateSelectionBox();
+    };
+    window.addEventListener('mouseup', onTransformEnd);
     const onAddedOrRemoved = () => {
       // Undo, paste and template application can all shuffle the backdrop
       // forward; re-assert the invariant before anything is recorded.
@@ -1268,6 +1394,11 @@ export const useDesignEditor = ({ width, height, initialScene, onDirtyChange }: 
     canvas.on('object:added', onAddedOrRemoved);
     canvas.on('object:removed', onAddedOrRemoved);
     canvas.on('object:moving', onMoving);
+    canvas.on('object:moving', onTransformStart);
+    canvas.on('object:scaling', onTransformStart);
+    canvas.on('object:rotating', onTransformStart);
+    canvas.on('object:skewing', onTransformStart);
+    canvas.on('mouse:up', onTransformEnd);
     canvas.on('mouse:up', clearGuides);
     canvas.on('text:changed', onTextChanged);
     canvas.on('text:editing:exited', onModified);
@@ -1280,11 +1411,49 @@ export const useDesignEditor = ({ width, height, initialScene, onDirtyChange }: 
       canvas.off('object:added', onAddedOrRemoved);
       canvas.off('object:removed', onAddedOrRemoved);
       canvas.off('object:moving', onMoving);
+      canvas.off('object:moving', onTransformStart);
+      canvas.off('object:scaling', onTransformStart);
+      canvas.off('object:rotating', onTransformStart);
+      canvas.off('object:skewing', onTransformStart);
+      window.removeEventListener('mouseup', onTransformEnd);
+      canvas.off('mouse:up', onTransformEnd);
       canvas.off('mouse:up', clearGuides);
       canvas.off('text:changed', onTextChanged);
       canvas.off('text:editing:exited', onModified);
     };
-  }, [artboard.height, artboard.width, bump, commit, ready, refreshLayers, syncSelection]);
+  }, [
+    artboard.height,
+    artboard.width,
+    bump,
+    commit,
+    ready,
+    refreshLayers,
+    syncSelection,
+    updateSelectionBox,
+  ]);
+
+  /**
+   * Re-place the toolbar when the page moves under it.
+   *
+   * Scrolling the stage or resizing the window changes where the artboard is
+   * on screen without touching the object at all, so neither produces a
+   * fabric event — they have to be watched directly.
+   */
+  useEffect(() => {
+    if (!ready) return;
+    const reposition = () => updateSelectionBox();
+    window.addEventListener('resize', reposition);
+    window.addEventListener('scroll', reposition, true);
+    return () => {
+      window.removeEventListener('resize', reposition);
+      window.removeEventListener('scroll', reposition, true);
+    };
+  }, [ready, updateSelectionBox]);
+
+  // Zooming rescales the canvas element, so the box has to be recomputed.
+  useEffect(() => {
+    if (ready) updateSelectionBox();
+  }, [artboard.height, artboard.width, ready, updateSelectionBox, zoom]);
 
   const isEditingText = useCallback((): boolean => {
     const obj = canvasRef.current?.getActiveObject();
@@ -1311,6 +1480,12 @@ export const useDesignEditor = ({ width, height, initialScene, onDirtyChange }: 
       activeObject,
       activeObjects,
       isEditingText,
+      selectionBox,
+      isTransforming,
+      copyStyle,
+      pasteStyle,
+      hasCopiedStyle,
+      updateSelectionBox,
       update,
       commit,
       markClean: () => markDirty(false),
@@ -1385,6 +1560,9 @@ export const useDesignEditor = ({ width, height, initialScene, onDirtyChange }: 
       clearBackgroundImage,
       commit,
       copySelection,
+      copyStyle,
+      hasCopiedStyle,
+      isTransforming,
       deleteLayer,
       dirty,
       distribute,
@@ -1401,6 +1579,7 @@ export const useDesignEditor = ({ width, height, initialScene, onDirtyChange }: 
       markDirty,
       moveLayer,
       pasteClipboard,
+      pasteStyle,
       redo,
       removeSelected,
       renameLayer,
@@ -1419,6 +1598,7 @@ export const useDesignEditor = ({ width, height, initialScene, onDirtyChange }: 
       transformBackground,
       setLayerOpacity,
       setMask,
+      selectionBox,
       selectionCount,
       selectionKind,
       serialize,
@@ -1433,6 +1613,7 @@ export const useDesignEditor = ({ width, height, initialScene, onDirtyChange }: 
       undo,
       ungroupSelection,
       update,
+      updateSelectionBox,
       zoom,
       zoomIn,
       zoomOut,

@@ -27,6 +27,7 @@ import {
 import { Spinner, TextButton } from './ui';
 import { TopBar, type ExportFormat } from './TopBar';
 import { Inspector } from './Inspector';
+import { SelectionToolbar } from './SelectionToolbar';
 import {
   BackgroundPanel,
   ElementsPanel,
@@ -313,12 +314,26 @@ const DesignEditor: React.FC<{ design: DesignRecord }> = ({ design }) => {
       }
       if (mod && e.key.toLowerCase() === 'c') {
         e.preventDefault();
-        void editor.copySelection();
+        // Alt turns copy/paste into copy/paste *style*, as in every other
+        // design tool — the geometry stays where it is.
+        if (e.altKey) editor.copyStyle();
+        else void editor.copySelection();
         return;
       }
       if (mod && e.key.toLowerCase() === 'v') {
         e.preventDefault();
-        void editor.pasteClipboard();
+        if (e.altKey) editor.pasteStyle();
+        else void editor.pasteClipboard();
+        return;
+      }
+      if (mod && e.key === ']') {
+        e.preventDefault();
+        editor.reorder(e.altKey ? 'front' : 'forward');
+        return;
+      }
+      if (mod && e.key === '[') {
+        e.preventDefault();
+        editor.reorder(e.altKey ? 'back' : 'backward');
         return;
       }
       if (mod && e.key.toLowerCase() === 'd') {
@@ -360,6 +375,20 @@ const DesignEditor: React.FC<{ design: DesignRecord }> = ({ design }) => {
         return;
       }
       if (mod) return;
+
+      // ⌥⇧L locks, ⌥1 reveals the layers panel — both mirror the menu.
+      if (e.altKey && e.shiftKey && e.key.toLowerCase() === 'l') {
+        e.preventDefault();
+        const id = editor.layers.find((l) => l.selected)?.id;
+        if (id) editor.toggleLayerLock(id);
+        return;
+      }
+      if (e.altKey && e.key === '1') {
+        e.preventDefault();
+        setTab('layers');
+        setPanelOpen(true);
+        return;
+      }
 
       if (e.key === 'Delete' || e.key === 'Backspace') {
         e.preventDefault();
@@ -680,6 +709,15 @@ const DesignEditor: React.FC<{ design: DesignRecord }> = ({ design }) => {
           )}
         </aside>
       </div>
+
+      {/* Contextual bar that tracks the selection on the artboard. */}
+      <SelectionToolbar
+        editor={editor}
+        onShowLayers={() => {
+          setTab('layers');
+          setPanelOpen(true);
+        }}
+      />
 
       {/* Right-click menu. Positioned in viewport space because the stage
           scrolls independently of the page. */}
