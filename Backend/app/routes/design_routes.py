@@ -584,6 +584,40 @@ def _sanitize_svg(markup: str) -> str:
     return cleaned
 
 
+_OG_IMAGE_RE = re.compile(
+    r"<meta[^>]+(?:property|name)\s*=\s*[\"'](?:og:image(?::secure_url)?|twitter:image)[\"'][^>]*>",
+    re.IGNORECASE,
+)
+_CONTENT_RE = re.compile(r"content\s*=\s*[\"']([^\"']+)[\"']", re.IGNORECASE)
+
+
+def _extract_preview_image(html: str, base_url: str) -> Optional[str]:
+    """
+    Pull a page's social-preview image out of its HTML.
+
+    Lets someone paste an ordinary article or gallery link instead of hunting
+    for the direct file URL. It only works for sites that render their meta
+    tags on the server; single-page apps that inject them in the browser
+    (Canva among them) hand back an empty shell, and the caller reports that
+    rather than guessing.
+    """
+    for tag in _OG_IMAGE_RE.findall(html[:400_000]):
+        found = _CONTENT_RE.search(tag)
+        if not found:
+            continue
+        candidate = found.group(1).strip()
+        if not candidate:
+            continue
+        if candidate.startswith("//"):
+            candidate = f"https:{candidate}"
+        elif candidate.startswith("/"):
+            parsed = urlparse(base_url)
+            candidate = f"{parsed.scheme}://{parsed.netloc}{candidate}"
+        if candidate.startswith(("http://", "https://")):
+            return candidate
+    return None
+
+
 def _resolve_public_ips(host: str) -> None:
     """
     Refuse anything that resolves inside the network this server sits in.
@@ -635,28 +669,59 @@ async def _validate_import_url(raw: str) -> str:
     return parsed.geturl()
 
 
-@router.post("/assets/import-url", response_model=UrlImportResponse)
-async def import_asset_from_url(
-    payload: UrlImportRequest,
-    current_admin: UserInDB = Depends(get_current_admin_user),
-):
-    """
-    Fetch an icon or image from another site and bring it into the Studio.
+# Hosts that render their pages entirely in the browser. Fetching one of
+# these server-side returns an empty shell (or a bot-check), so the request
+# is turned away with instructions that actually lead somewhere instead of a
+# generic "could not be reached".
+CLIENT_RENDERED_HOSTS = {
+    "canva.com",
+    "www.canva.com",
+    "figma.com",
+    "www.figma.com",
+}
 
-    The browser cannot do this itself — an icon CDN rarely sends CORS headers,
-    and reading SVG markup cross-origin is blocked. Fetching here also means
-    every redirect hop is re-checked against the private-address rules.
+CLIENT_RENDERED_DETAIL = (
+    "Canva and Figma build their pages in the browser, so a link to one has no image "
+    "behind it that a server can read. Download the design instead — SVG keeps the text "
+    "and shapes editable — or right-click its preview and choose \"Copy image address\", "
+    "which does work here."
+)
+
+
+def _reject_client_rendered(url: str) -> None:
+    host = (urlparse(url).hostname or "").lower()
+    if host in CLIENT_RENDERED_HOSTS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=CLIENT_RENDERED_DETAIL,
+        )
+
+
+async def _download(url: str) -> tuple:
+    """
+    Fetch a URL, re-validating every redirect hop.
+
+    Returns (final_url, content_type, body). Redirects are followed manually
+    because a server-side fetcher that follows them blindly can be walked
+    from a public host to an internal one in a single hop.
     """
     import httpx
-
-    db = _db()
-    url = await _validate_import_url(payload.url)
 
     try:
         async with httpx.AsyncClient(
             timeout=IMPORT_TIMEOUT_SECONDS,
             follow_redirects=False,
-            headers={"User-Agent": "CrochetCreation-DesignStudio/1.0"},
+            # Several large image hosts (Wikimedia among them) reject
+            # unfamiliar User-Agent strings outright, so the fetch presents
+            # itself the way the admin's own browser would.
+            headers={
+                "User-Agent": (
+                    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+                ),
+                "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,text/html;q=0.8,*/*;q=0.5",
+                "Accept-Language": "en-US,en;q=0.9",
+            },
         ) as client:
             response = None
             for _ in range(MAX_IMPORT_REDIRECTS + 1):
@@ -682,36 +747,20 @@ async def import_asset_from_url(
             detail="That link returned an error.",
         )
 
-    content_type = (response.headers.get("content-type") or "").split(";")[0].strip().lower()
     body = response.content
-
     if len(body) > MAX_IMPORT_BYTES:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
             detail="That file is larger than 8MB.",
         )
 
-    looks_like_svg = content_type == "image/svg+xml" or (
-        content_type in {"", "text/plain", "application/octet-stream", "text/html"}
-        and b"<svg" in body[:4096].lower()
-    )
+    content_type = (response.headers.get("content-type") or "").split(";")[0].strip().lower()
+    return url, content_type, body
 
-    if looks_like_svg:
-        try:
-            markup = body.decode("utf-8", errors="replace")
-        except Exception:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="That SVG could not be read.",
-            )
-        return UrlImportResponse(kind="svg", svg=_sanitize_svg(markup), asset=None)
 
-    if not content_type.startswith("image/"):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="That link is not an image. Paste a direct image or SVG link.",
-        )
-
+async def _store_imported_image(
+    body: bytes, source_url: str, filename: Optional[str], admin_email: str, db
+) -> DesignAssetResponse:
     try:
         uploaded = await upload_bytes_to_cloudinary(
             body, folder="crochetcreation/designs/imported"
@@ -728,23 +777,86 @@ async def import_asset_from_url(
         "public_id": uploaded["public_id"],
         "width": uploaded.get("width"),
         "height": uploaded.get("height"),
-        "filename": (payload.filename or urlparse(url).path.rsplit("/", 1)[-1] or "imported")[:140],
-        "created_by": str(current_admin.email),
+        "filename": (filename or urlparse(source_url).path.rsplit("/", 1)[-1] or "imported")[:140],
+        "created_by": admin_email,
         "created_at": datetime.now(timezone.utc),
     }
     result = await db[ASSETS].insert_one(doc)
     doc["_id"] = result.inserted_id
 
-    return UrlImportResponse(
-        kind="image",
-        svg=None,
-        asset=DesignAssetResponse(
-            _id=str(doc["_id"]),
-            url=doc["url"],
-            public_id=doc["public_id"],
-            width=doc.get("width"),
-            height=doc.get("height"),
-            filename=doc.get("filename"),
-            created_at=doc["created_at"],
-        ),
+    return DesignAssetResponse(
+        _id=str(doc["_id"]),
+        url=doc["url"],
+        public_id=doc["public_id"],
+        width=doc.get("width"),
+        height=doc.get("height"),
+        filename=doc.get("filename"),
+        created_at=doc["created_at"],
+    )
+
+
+def _is_svg(content_type: str, body: bytes) -> bool:
+    return content_type == "image/svg+xml" or (
+        content_type in {"", "text/plain", "application/octet-stream"}
+        and b"<svg" in body[:4096].lower()
+    )
+
+
+@router.post("/assets/import-url", response_model=UrlImportResponse)
+async def import_asset_from_url(
+    payload: UrlImportRequest,
+    current_admin: UserInDB = Depends(get_current_admin_user),
+):
+    """
+    Fetch an icon or image from another site and bring it into the Studio.
+
+    The browser cannot do this itself — an icon CDN rarely sends CORS
+    headers, and reading SVG markup cross-origin is blocked outright.
+    """
+    db = _db()
+    url = await _validate_import_url(payload.url)
+    _reject_client_rendered(url)
+    url, content_type, body = await _download(url)
+
+    if _is_svg(content_type, body):
+        markup = body.decode("utf-8", errors="replace")
+        return UrlImportResponse(kind="svg", svg=_sanitize_svg(markup), asset=None)
+
+    if content_type.startswith("image/"):
+        asset = await _store_imported_image(
+            body, url, payload.filename, str(current_admin.email), db
+        )
+        return UrlImportResponse(kind="image", svg=None, asset=asset)
+
+    if content_type in {"text/html", "application/xhtml+xml"}:
+        # An ordinary web page: fall back to its social-preview image. This is
+        # a single extra hop, never a chain — a preview that is itself a page
+        # is treated as no preview at all.
+        preview = _extract_preview_image(body.decode("utf-8", errors="replace"), url)
+        if preview:
+            preview_url = await _validate_import_url(preview)
+            preview_url, preview_type, preview_body = await _download(preview_url)
+            if _is_svg(preview_type, preview_body):
+                return UrlImportResponse(
+                    kind="svg",
+                    svg=_sanitize_svg(preview_body.decode("utf-8", errors="replace")),
+                    asset=None,
+                )
+            if preview_type.startswith("image/"):
+                asset = await _store_imported_image(
+                    preview_body, preview_url, payload.filename, str(current_admin.email), db
+                )
+                return UrlImportResponse(kind="image", svg=None, asset=asset)
+
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "That page builds itself in the browser, so the link has no image behind it. "
+                "Download the design instead, or copy the image address of its preview."
+            ),
+        )
+
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail="That link is not an image. Paste a direct image or SVG link.",
     )

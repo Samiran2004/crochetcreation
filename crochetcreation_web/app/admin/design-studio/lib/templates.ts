@@ -66,7 +66,7 @@ export type TemplateLayer =
 export interface TemplateSpec {
   id: string;
   name: string;
-  category: 'Product' | 'Social' | 'Promo' | 'Editorial' | 'Blank';
+  category: 'Product' | 'Social' | 'Promo' | 'Editorial' | 'Cinematic' | 'Blank';
   /** The preset this layout was drawn for; used to pick a default size. */
   presetKey: string;
   background: string | { from: string; to: string; angle: number };
@@ -84,6 +84,50 @@ export const TEMPLATES: TemplateSpec[] = [
     background: '#FFFCF5',
     swatch: ['#FFFCF5', '#EADFC8'],
     layers: [],
+  },
+
+
+  // -------------------------------------------------- Vintage Cinematica
+  // Wide web-hero layouts in the "vintage cinematica" idiom: a full-bleed
+  // photograph knocked back under a dark scrim, an oversized display
+  // headline mixing roman and italic, a quiet caption, and a single pale
+  // pill button. The scrim is what makes the type readable over any photo,
+  // so it is part of the layout rather than something to add afterwards.
+  {
+    id: 'cinematic-blog-hero',
+    name: 'Cinematic Blog Hero',
+    category: 'Cinematic',
+    presetKey: 'hero-banner',
+    background: '#14170F',
+    swatch: ['#1C2416', '#E9F08A'],
+    layers: [
+      { type: 'imageSlot', x: 0.5, y: 0.46, w: 1, h: 0.92, label: 'Hero photograph' },
+      { type: 'rect', x: 0.5, y: 0.46, w: 1, h: 0.92, gradient: { from: 'rgba(14,18,11,0.35)', to: 'rgba(14,18,11,0.88)', angle: 200 } },
+      { type: 'text', text: 'Notes from a', x: 0.5, y: 0.34, w: 0.8, size: 0.135, font: 'Playfair Display', weight: 400, fill: '#F6F4E8', align: 'center' },
+      { type: 'text', text: 'Life in Progress', x: 0.5, y: 0.5, w: 0.8, size: 0.135, font: 'Playfair Display', weight: 400, italic: true, fill: '#F6F4E8', align: 'center' },
+      { type: 'text', text: 'Thoughts, discoveries, and tiny joys collected along the way', x: 0.5, y: 0.62, w: 0.66, size: 0.028, font: 'Instrument Sans', weight: 400, fill: '#DCE0CD', align: 'center' },
+      { type: 'rect', x: 0.5, y: 0.735, w: 0.15, h: 0.085, fill: '#F2F5C8', radius: 999 },
+      { type: 'text', text: 'Read the latest', x: 0.5, y: 0.735, w: 0.14, size: 0.026, font: 'Instrument Sans', weight: 600, fill: '#1C2416', align: 'center' },
+      { type: 'rect', x: 0.23, y: 0.955, w: 0.46, h: 0.09, fill: '#14170F' },
+      { type: 'rect', x: 0.73, y: 0.955, w: 0.54, h: 0.09, fill: '#F2F5C8' },
+    ],
+  },
+  {
+    id: 'cinematic-about-hero',
+    name: 'Cinematic About Hero',
+    category: 'Cinematic',
+    presetKey: 'hero-banner',
+    background: '#2A1F17',
+    swatch: ['#4A3524', '#F2F0B8'],
+    layers: [
+      { type: 'imageSlot', x: 0.5, y: 0.5, w: 1, h: 1, label: 'Portrait photograph' },
+      { type: 'rect', x: 0.5, y: 0.5, w: 1, h: 1, gradient: { from: 'rgba(36,26,18,0.92)', to: 'rgba(36,26,18,0.15)', angle: 90 } },
+      { type: 'text', text: 'Hi,', x: 0.205, y: 0.245, w: 0.34, size: 0.085, font: 'Instrument Sans', weight: 400, fill: '#F4EFE4', align: 'left' },
+      { type: 'text', text: 'I\u2019m the maker.', x: 0.315, y: 0.375, w: 0.56, size: 0.105, font: 'Instrument Sans', weight: 700, fill: '#F4EFE4', align: 'left' },
+      { type: 'text', text: 'Hand-crocheted pieces, made slowly\nand sent out with care.', x: 0.295, y: 0.53, w: 0.52, size: 0.026, font: 'Instrument Sans', weight: 400, fill: '#D9CEBE', align: 'left', lineHeight: 1.55 },
+      { type: 'rect', x: 0.175, y: 0.745, w: 0.18, h: 0.085, fill: '#F2F0B8', radius: 999 },
+      { type: 'text', text: 'Explore my work', x: 0.175, y: 0.745, w: 0.17, size: 0.026, font: 'Instrument Sans', weight: 600, fill: '#2A1F17', align: 'center' },
+    ],
   },
 
   // ------------------------------------------------------------ Product
@@ -258,7 +302,14 @@ export const TEMPLATES: TemplateSpec[] = [
   },
 ];
 
-export const TEMPLATE_CATEGORIES = ['All', 'Product', 'Social', 'Promo', 'Editorial'] as const;
+export const TEMPLATE_CATEGORIES = [
+  'All',
+  'Cinematic',
+  'Product',
+  'Social',
+  'Promo',
+  'Editorial',
+] as const;
 
 export const getTemplate = (id: string): TemplateSpec | undefined =>
   TEMPLATES.find((t) => t.id === id);

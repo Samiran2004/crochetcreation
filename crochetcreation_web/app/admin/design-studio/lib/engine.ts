@@ -14,7 +14,14 @@ export type FabricObj = FabricNS.FabricObject;
  * adds must be registered on `FabricObject.customProperties` — otherwise a
  * reopened design loses every layer name and lock.
  */
-export const CUSTOM_PROPS = ['dsId', 'dsName', 'dsLocked', 'dsSlot', 'dsMask'] as const;
+export const CUSTOM_PROPS = [
+  'dsId',
+  'dsName',
+  'dsLocked',
+  'dsSlot',
+  'dsMask',
+  'dsBackground',
+] as const;
 
 let customPropsRegistered = false;
 
@@ -32,6 +39,8 @@ type Meta = {
   dsSlot?: boolean;
   /** Which entry of MASK_OPTIONS produced this object's clip path. */
   dsMask?: string;
+  /** Marks the artboard's backdrop, which is pinned to the back of the stack. */
+  dsBackground?: boolean;
 };
 
 export const meta = (obj: FabricObj): Meta => obj as unknown as Meta;
@@ -720,14 +729,16 @@ export const applyCrop = (image: FabricNS.FabricImage, ratio: number | null): vo
 export type BackgroundFit = 'cover' | 'contain' | 'stretch' | 'tile';
 
 /**
- * Lay an image behind everything on the artboard.
+ * Size and place the backdrop against the artboard.
  *
- * `backgroundImage` is drawn before the object stack and is never selectable,
- * which is what separates a backdrop from "an image at the bottom of the
- * layer list" — it cannot be picked up by a stray click while editing.
+ * The backdrop is an ordinary object rather than `canvas.backgroundImage`,
+ * so it can be dragged, rotated and scaled like anything else — fabric's
+ * built-in background is non-interactive by design and offers no way in.
+ * What keeps it *behaving* like a background is that it is pinned to the
+ * back of the stack, not that it is a different kind of thing.
  */
-export const placeBackgroundImage = (
-  image: FabricNS.FabricImage,
+export const fitBackground = (
+  image: FabricObj,
   fit: BackgroundFit,
   boardWidth: number,
   boardHeight: number,
@@ -735,6 +746,8 @@ export const placeBackgroundImage = (
   const w = image.width || 1;
   const h = image.height || 1;
 
+  // Fitting is measured against the unrotated bitmap; rotation is preserved
+  // so changing the fit never silently straightens an angled backdrop.
   if (fit === 'stretch') {
     image.set({ scaleX: boardWidth / w, scaleY: boardHeight / h });
   } else if (fit === 'contain') {
@@ -745,13 +758,39 @@ export const placeBackgroundImage = (
     image.set({ scaleX: scale, scaleY: scale });
   }
 
+  centerOn(image, boardWidth / 2, boardHeight / 2);
+};
+
+export const markAsBackground = (image: FabricObj, locked: boolean): void => {
+  meta(image).dsBackground = true;
+  meta(image).dsName = 'Background';
+  meta(image).dsLocked = locked;
   image.set({
-    originX: 'left',
-    originY: 'top',
-    left: (boardWidth - image.getScaledWidth()) / 2,
-    top: (boardHeight - image.getScaledHeight()) / 2,
-    selectable: false,
-    evented: false,
+    selectable: !locked,
+    evented: !locked,
+    hasControls: !locked,
+    lockMovementX: locked,
+    lockMovementY: locked,
+    lockRotation: locked,
+    lockScalingX: locked,
+    lockScalingY: locked,
   });
-  image.setCoords();
+};
+
+export const findBackground = (canvas: FabricCanvas): FabricObj | undefined =>
+  canvas.getObjects().find((obj) => meta(obj).dsBackground === true);
+
+/**
+ * Keep the backdrop behind everything else.
+ *
+ * Anything added later lands on top of it naturally, but undo, paste and
+ * "bring to front" can all shuffle it forward — so the invariant is
+ * re-asserted after every change rather than assumed.
+ */
+export const pinBackgroundToBack = (canvas: FabricCanvas): void => {
+  const background = findBackground(canvas);
+  if (!background) return;
+  if (canvas.getObjects().indexOf(background) !== 0) {
+    canvas.sendObjectToBack(background);
+  }
 };

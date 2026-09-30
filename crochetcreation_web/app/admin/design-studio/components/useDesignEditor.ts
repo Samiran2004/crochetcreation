@@ -21,7 +21,10 @@ import {
   makeBackgroundGradient,
   meta,
   nextId,
-  placeBackgroundImage,
+  findBackground,
+  fitBackground,
+  markAsBackground,
+  pinBackgroundToBack,
   registerCustomProps,
   type BackgroundFit,
   type FabricCanvas,
@@ -84,6 +87,7 @@ export const useDesignEditor = ({ width, height, initialScene, onDirtyChange }: 
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
   const [hasBackgroundImage, setHasBackgroundImage] = useState(false);
+  const [backgroundLocked, setBackgroundLocked] = useState(false);
   const [backgroundAdjust, setBackgroundAdjustState] = useState({
     blur: 0,
     brightness: 0,
@@ -378,48 +382,141 @@ export const useDesignEditor = ({ width, height, initialScene, onDirtyChange }: 
     [artboard.height, artboard.width, commit],
   );
 
+  const backgroundObject = useCallback((): FabricObj | undefined => {
+    const canvas = canvasRef.current;
+    return canvas ? findBackground(canvas) : undefined;
+  }, []);
+
+  const readBackgroundState = useCallback(() => {
+    const canvas = canvasRef.current;
+    const background = canvas ? findBackground(canvas) : undefined;
+    setHasBackgroundImage(!!background);
+    setBackgroundLocked(!!background && !!meta(background).dsLocked);
+    if (background) {
+      const filters = ((background as FabricNS.FabricImage).filters ?? []) as unknown as ({
+        type: string;
+      } & Record<string, number>)[];
+      const blur = filters.find((f) => f.type === 'Blur');
+      const brightness = filters.find((f) => f.type === 'Brightness');
+      setBackgroundAdjustState({
+        blur: blur ? Number(blur.blur) || 0 : 0,
+        brightness: brightness ? Number(brightness.brightness) || 0 : 0,
+        opacity: typeof background.opacity === 'number' ? background.opacity : 1,
+      });
+    }
+  }, []);
+
+  /**
+   * Put an image behind the design.
+   *
+   * It is added as a normal object pinned to the back rather than as
+   * `canvas.backgroundImage`, which fabric renders outside the object stack
+   * and refuses to make interactive — so a fabric background can never be
+   * dragged, rotated or scaled. As a pinned object it takes every transform
+   * the rest of the editor already supports.
+   */
   const setBackgroundImage = useCallback(
     async (url: string, fit: BackgroundFit = 'cover') => {
       const canvas = canvasRef.current;
       const fabric = fabricRef.current;
       if (!canvas || !fabric) return;
+
       const image = await loadImage(fabric, url);
-      placeBackgroundImage(image, fit, artboard.width, artboard.height);
+      fitBackground(image, fit, artboard.width, artboard.height);
+      markAsBackground(image, false);
       backgroundFitRef.current = fit;
-      canvas.backgroundImage = image;
+
+      const existing = findBackground(canvas);
+      if (existing) canvas.remove(existing);
+
+      canvas.add(image);
+      canvas.sendObjectToBack(image);
       canvas.requestRenderAll();
-      setHasBackgroundImage(true);
+      readBackgroundState();
       commit();
     },
-    [artboard.height, artboard.width, commit],
+    [artboard.height, artboard.width, commit, readBackgroundState],
   );
 
   const setBackgroundFit = useCallback(
     (fit: BackgroundFit) => {
       const canvas = canvasRef.current;
-      const image = canvas?.backgroundImage as FabricNS.FabricImage | undefined;
-      if (!canvas || !image) return;
+      const background = backgroundObject();
+      if (!canvas || !background) return;
       backgroundFitRef.current = fit;
-      placeBackgroundImage(image, fit, artboard.width, artboard.height);
+      // Re-fitting resets any manual nudging, which is the point of the
+      // preset — the rotation the admin applied is deliberately kept.
+      fitBackground(background, fit, artboard.width, artboard.height);
       canvas.requestRenderAll();
       commit();
     },
-    [artboard.height, artboard.width, commit],
+    [artboard.height, artboard.width, backgroundObject, commit],
+  );
+
+  /** Straighten and re-centre a backdrop that has been dragged out of frame. */
+  const resetBackgroundTransform = useCallback(() => {
+    const canvas = canvasRef.current;
+    const background = backgroundObject();
+    if (!canvas || !background) return;
+    background.set({ angle: 0, flipX: false, flipY: false, skewX: 0, skewY: 0 });
+    fitBackground(background, backgroundFitRef.current, artboard.width, artboard.height);
+    canvas.requestRenderAll();
+    commit();
+  }, [artboard.height, artboard.width, backgroundObject, commit]);
+
+  const transformBackground = useCallback(
+    (patch: Record<string, unknown>, shouldCommit = false) => {
+      const canvas = canvasRef.current;
+      const background = backgroundObject();
+      if (!canvas || !background) return;
+      background.set(patch);
+      background.setCoords();
+      canvas.requestRenderAll();
+      if (shouldCommit) commit();
+      else touch();
+    },
+    [backgroundObject, commit, touch],
+  );
+
+  /** Select the backdrop so it can be dragged with the mouse like any object. */
+  const selectBackground = useCallback(() => {
+    const canvas = canvasRef.current;
+    const background = backgroundObject();
+    if (!canvas || !background || meta(background).dsLocked) return;
+    canvas.setActiveObject(background);
+    canvas.requestRenderAll();
+    syncSelection();
+  }, [backgroundObject, syncSelection]);
+
+  const setBackgroundLock = useCallback(
+    (locked: boolean) => {
+      const canvas = canvasRef.current;
+      const background = backgroundObject();
+      if (!canvas || !background) return;
+      markAsBackground(background, locked);
+      if (locked && canvas.getActiveObjects().indexOf(background) !== -1) {
+        canvas.discardActiveObject();
+      }
+      canvas.requestRenderAll();
+      setBackgroundLocked(locked);
+      commit();
+    },
+    [backgroundObject, commit],
   );
 
   /**
-   * Blur, dim and desaturate the backdrop.
+   * Blur, dim and fade the backdrop.
    *
    * Photographic backgrounds almost always need knocking back before text
-   * sits legibly on them, so these three controls live with the background
-   * rather than in the image inspector — the backdrop is not selectable.
+   * sits legibly on them, so these live with the background rather than in
+   * the image inspector.
    */
   const setBackgroundAdjustments = useCallback(
     (next: { blur?: number; brightness?: number; opacity?: number }) => {
       const canvas = canvasRef.current;
       const fabric = fabricRef.current;
-      const image = canvas?.backgroundImage as FabricNS.FabricImage | undefined;
-      if (!canvas || !fabric || !image) return;
+      const background = backgroundObject() as FabricNS.FabricImage | undefined;
+      if (!canvas || !fabric || !background) return;
 
       const merged = { ...backgroundAdjustRef.current, ...next };
       backgroundAdjustRef.current = merged;
@@ -429,24 +526,26 @@ export const useDesignEditor = ({ width, height, initialScene, onDirtyChange }: 
       if (merged.brightness !== 0) {
         filters.push(new fabric.filters.Brightness({ brightness: merged.brightness }));
       }
-      image.filters = filters;
-      image.applyFilters();
-      image.set({ opacity: merged.opacity });
+      background.filters = filters;
+      background.applyFilters();
+      background.set({ opacity: merged.opacity });
       canvas.requestRenderAll();
       setBackgroundAdjustState(merged);
       touch();
     },
-    [touch],
+    [backgroundObject, touch],
   );
 
   const clearBackgroundImage = useCallback(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
-    canvas.backgroundImage = undefined;
+    const background = backgroundObject();
+    if (!canvas || !background) return;
+    canvas.discardActiveObject();
+    canvas.remove(background);
     canvas.requestRenderAll();
     setHasBackgroundImage(false);
     commit();
-  }, [commit]);
+  }, [backgroundObject, commit]);
 
   // ------------------------------------------------------- svg / masking
 
@@ -889,7 +988,8 @@ export const useDesignEditor = ({ width, height, initialScene, onDirtyChange }: 
           await loadFontsForScene(scene);
           await canvas.loadFromJSON(scene);
           canvas.getObjects().forEach(ensureId);
-          setHasBackgroundImage(!!canvas.backgroundImage);
+          adoptLegacyBackground(canvas);
+          pinBackgroundToBack(canvas);
           canvas.requestRenderAll();
         });
       });
@@ -971,6 +1071,26 @@ export const useDesignEditor = ({ width, height, initialScene, onDirtyChange }: 
     [commit, silently],
   );
 
+  /**
+   * Bring a design saved under the old scheme up to date.
+   *
+   * Earlier versions stored the backdrop in `canvas.backgroundImage`, which
+   * cannot be selected. Converting it to a pinned object on open means those
+   * designs gain the same drag/rotate/scale freedom as new ones, with no
+   * migration step the admin has to think about.
+   */
+  const adoptLegacyBackground = useCallback((canvas: FabricCanvas) => {
+    const legacy = canvas.backgroundImage as FabricObj | undefined;
+    if (legacy) {
+      canvas.backgroundImage = undefined;
+      ensureId(legacy);
+      markAsBackground(legacy, false);
+      canvas.add(legacy);
+      canvas.sendObjectToBack(legacy);
+    }
+    readBackgroundState();
+  }, [readBackgroundState]);
+
   // ----------------------------------------------------------------- init
 
   useEffect(() => {
@@ -1019,7 +1139,8 @@ export const useDesignEditor = ({ width, height, initialScene, onDirtyChange }: 
         instance.getObjects().forEach(ensureId);
         const bg = instance.backgroundColor;
         if (typeof bg === 'string') backgroundRef.current = { type: 'solid', color: bg };
-        setHasBackgroundImage(!!instance.backgroundImage);
+        adoptLegacyBackground(instance);
+        pinBackgroundToBack(instance);
         instance.requestRenderAll();
       }
 
@@ -1063,6 +1184,9 @@ export const useDesignEditor = ({ width, height, initialScene, onDirtyChange }: 
     const onSelection = () => syncSelection();
     const onModified = () => commit();
     const onAddedOrRemoved = () => {
+      // Undo, paste and template application can all shuffle the backdrop
+      // forward; re-assert the invariant before anything is recorded.
+      pinBackgroundToBack(canvas);
       if (suppressRef.current > 0) return;
       commit();
     };
@@ -1209,6 +1333,12 @@ export const useDesignEditor = ({ width, height, initialScene, onDirtyChange }: 
       setBackgroundAdjustments,
       backgroundAdjust,
       hasBackgroundImage,
+      backgroundLocked,
+      setBackgroundLock,
+      backgroundObject,
+      selectBackground,
+      transformBackground,
+      resetBackgroundTransform,
       clearBackgroundImage,
       addSvgMarkup,
       setMask,
@@ -1282,7 +1412,11 @@ export const useDesignEditor = ({ width, height, initialScene, onDirtyChange }: 
       setAllLayersVisible,
       setBackgroundAdjustments,
       setBackgroundFit,
+      setBackgroundLock,
       setCropRatio,
+      selectBackground,
+      resetBackgroundTransform,
+      transformBackground,
       setLayerOpacity,
       setMask,
       selectionCount,

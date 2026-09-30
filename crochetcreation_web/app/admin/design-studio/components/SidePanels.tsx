@@ -5,6 +5,10 @@ import Image from 'next/image';
 import {
   ArrowDown,
   ArrowUp,
+  FileCode,
+  FlipHorizontal,
+  FlipVertical,
+  Move,
   Check,
   ChevronDown,
   Copy,
@@ -14,6 +18,7 @@ import {
   GripVertical,
   Image as ImageIconLucide,
   Images,
+  Info,
   Layers as LayersIcon,
   Link2,
   Lock,
@@ -583,6 +588,10 @@ export const UploadsPanel: React.FC<{
         Otherwise the image lands in the centre — then use Properties to mask it into any shape.
       </p>
 
+      <CollapsibleSection title="Import from Canva or the web">
+        <CanvaImport editor={editor} onError={onError} />
+      </CollapsibleSection>
+
       {loading ? (
         <div className="flex justify-center py-8 text-gray-400">
           <Spinner className="h-5 w-5" />
@@ -634,6 +643,158 @@ export const UploadsPanel: React.FC<{
             </div>
           ))}
         </div>
+      )}
+    </div>
+  );
+};
+
+
+/* --------------------------------------------------- Canva / web import */
+
+const CANVA_PAGE = /canva\.com\/(design|templates|p)\//i;
+
+/**
+ * Bring a design in from Canva.
+ *
+ * Canva serves its template and design pages as an empty shell and fills
+ * them in the browser, so a server-side fetch of a canva.com link sees no
+ * artwork at all — there is no way to pull a template's contents from a
+ * share link. What *does* work is Canva's own exports, so this offers the
+ * two routes that actually produce something usable: an SVG export, which
+ * comes in as fully editable vectors, and an image (exported, or its direct
+ * CDN link), which comes in as a picture.
+ */
+const CanvaImport: React.FC<{
+  editor: DesignEditorApi;
+  onError: (message: string) => void;
+}> = ({ editor, onError }) => {
+  const [url, setUrl] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const isCanvaPage = CANVA_PAGE.test(url.trim());
+
+  const importFile = async (files: FileList | null) => {
+    const file = files?.[0];
+    if (!file) return;
+    setBusy(true);
+    setNote(null);
+    try {
+      if (file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg')) {
+        // Read locally: no upload, no CORS, and the markup goes straight to
+        // the vector importer so every shape and word stays editable.
+        const markup = await file.text();
+        const ok = await editor.addSvgMarkup(markup);
+        if (!ok) onError('That SVG could not be read. Re-export it from Canva as SVG.');
+        else setNote('Imported as editable vectors — every shape and word is yours to change.');
+      } else {
+        const asset = await uploadAsset(file);
+        await editor.addImage(asset.url);
+        setNote('Imported as a picture. Export the same design as SVG if you need to edit its text.');
+      }
+    } catch (error) {
+      onError(error instanceof Error ? error.message : 'Could not import that file.');
+    } finally {
+      setBusy(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  };
+
+  const importLink = async () => {
+    setBusy(true);
+    setNote(null);
+    try {
+      const result = await importFromUrl(url.trim());
+      if (result.kind === 'svg' && result.svg) {
+        await editor.addSvgMarkup(result.svg);
+        setNote('Imported as editable vectors.');
+      } else if (result.asset) {
+        await editor.addImage(result.asset.url);
+        setNote('Imported as a picture.');
+      }
+      setUrl('');
+    } catch (error) {
+      onError(error instanceof Error ? error.message : 'Could not import from that link.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <input
+        ref={fileRef}
+        type="file"
+        accept=".svg,image/svg+xml,image/png,image/jpeg,image/webp"
+        onChange={(e) => void importFile(e.target.files)}
+        className="hidden"
+      />
+
+      <TextButton variant="primary" full disabled={busy} onClick={() => fileRef.current?.click()}>
+        {busy ? <Spinner /> : <FileCode className="h-4 w-4" />}
+        Import a Canva export
+      </TextButton>
+
+      <div className="rounded-xl border border-gray-200 bg-gray-50 p-2.5 dark:border-slate-700 dark:bg-slate-950">
+        <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+          How to bring a Canva design over
+        </p>
+        <ol className="mt-1.5 space-y-1 text-[10.5px] leading-relaxed text-slate-600 dark:text-slate-300">
+          <li>
+            <span className="font-bold">1.</span> Open the template in Canva and hit{' '}
+            <span className="font-bold">Share → Download</span>.
+          </li>
+          <li>
+            <span className="font-bold">2.</span> Choose <span className="font-bold">SVG</span> to
+            keep the text and shapes editable here, or PNG for a flat picture.
+          </li>
+          <li>
+            <span className="font-bold">3.</span> Drop the file in with the button above.
+          </li>
+        </ol>
+      </div>
+
+      <div className="flex gap-1.5">
+        <input
+          value={url}
+          onChange={(e) => {
+            setUrl(e.target.value);
+            setNote(null);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && url.trim() && !isCanvaPage) void importLink();
+          }}
+          placeholder="…or paste a direct image link"
+          spellCheck={false}
+          className="min-w-0 flex-1 rounded-lg border border-gray-250 bg-white px-2.5 py-1.5 text-[11px] text-slate-700 placeholder-gray-400 focus:border-teal focus:outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
+        />
+        <TextButton
+          variant="outline"
+          size="sm"
+          disabled={busy || !url.trim() || isCanvaPage}
+          onClick={() => void importLink()}
+        >
+          Import
+        </TextButton>
+      </div>
+
+      {isCanvaPage && (
+        <p className="flex items-start gap-1.5 rounded-lg border border-terracotta/30 bg-terracotta/8 px-2.5 py-2 text-[10.5px] leading-relaxed text-terracotta-deep">
+          <Info className="mt-0.5 h-3 w-3 shrink-0" />
+          <span>
+            Canva builds its pages in the browser, so a canva.com link has nothing readable behind
+            it. Download the design from Canva instead, or right-click its preview image there and
+            choose <span className="font-bold">Copy image address</span> — that link works here.
+          </span>
+        </p>
+      )}
+
+      {note && (
+        <p className="flex items-start gap-1.5 text-[10.5px] font-semibold leading-relaxed text-teal dark:text-parchment">
+          <Check className="mt-0.5 h-3 w-3 shrink-0" />
+          {note}
+        </p>
       )}
     </div>
   );
@@ -691,12 +852,6 @@ const BackgroundImagePicker: React.FC<{
     }
   };
 
-  const fits: { value: BackgroundFit; label: string }[] = [
-    { value: 'cover', label: 'Fill' },
-    { value: 'contain', label: 'Fit' },
-    { value: 'stretch', label: 'Stretch' },
-  ];
-
   return (
     <div className="space-y-3">
       <input
@@ -751,51 +906,6 @@ const BackgroundImagePicker: React.FC<{
         </div>
       )}
 
-      {editor.hasBackgroundImage && (
-        <div className="space-y-3 rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-950 p-3">
-          <Field label="Fit">
-            <Segmented
-              value={editor.backgroundFit}
-              onChange={(v) => editor.setBackgroundFit(v)}
-              options={fits.map((f) => ({ value: f.value, label: f.label }))}
-            />
-          </Field>
-          <Field label="Blur">
-            <Slider
-              value={editor.backgroundAdjust.blur}
-              min={0}
-              max={1}
-              step={0.02}
-              onChange={(v) => editor.setBackgroundAdjustments({ blur: v })}
-              onCommit={editor.commit}
-            />
-          </Field>
-          <Field label="Brightness">
-            <Slider
-              value={editor.backgroundAdjust.brightness}
-              min={-1}
-              max={1}
-              step={0.02}
-              onChange={(v) => editor.setBackgroundAdjustments({ brightness: v })}
-              onCommit={editor.commit}
-            />
-          </Field>
-          <Field label="Opacity" hint="Lower values let the background colour show through.">
-            <Slider
-              value={editor.backgroundAdjust.opacity}
-              min={0}
-              max={1}
-              step={0.02}
-              onChange={(v) => editor.setBackgroundAdjustments({ opacity: v })}
-              onCommit={editor.commit}
-            />
-          </Field>
-          <TextButton variant="danger" size="sm" full onClick={editor.clearBackgroundImage}>
-            <Trash2 className="h-3 w-3" />
-            Remove background image
-          </TextButton>
-        </div>
-      )}
     </div>
   );
 };
@@ -809,6 +919,16 @@ export const BackgroundPanel: React.FC<{
   const [from, setFrom] = useState('#FFFCF5');
   const [to, setTo] = useState('#EADFC8');
   const [angle, setAngle] = useState(135);
+
+  // The backdrop is a live fabric object, so its transform is read straight
+  // off it on every editor tick rather than mirrored into React state.
+  const background = editor.backgroundObject();
+  const bgAngle = background ? Math.round(Number(background.angle) || 0) : 0;
+  const bgScale = background ? Math.round((Number(background.scaleX) || 1) * 100) : 100;
+
+  useEffect(() => {
+    if (editor.hasBackgroundImage) setMode('image');
+  }, [editor.hasBackgroundImage]);
 
   const applyGradient = (nextFrom: string, nextTo: string, nextAngle: number) => {
     setFrom(nextFrom);
@@ -854,7 +974,7 @@ export const BackgroundPanel: React.FC<{
                   style={{
                     backgroundImage: `linear-gradient(${preset.angle}deg, ${preset.from}, ${preset.to})`,
                   }}
-                  className="h-14 rounded-lg border border-black/10 dark:border-white/15 transition-transform duration-150 hover:scale-105"
+                  className="h-14 rounded-lg border border-black/10 transition-transform duration-150 hover:scale-105 dark:border-white/15"
                 />
               ))}
             </div>
@@ -884,9 +1004,175 @@ export const BackgroundPanel: React.FC<{
       )}
 
       {mode === 'image' && (
-        <PanelSection title="Background image">
-          <BackgroundImagePicker editor={editor} onError={onError} />
-        </PanelSection>
+        <>
+          <PanelSection title="Background image">
+            <BackgroundImagePicker editor={editor} onError={onError} />
+          </PanelSection>
+
+          {editor.hasBackgroundImage && background && (
+            <>
+              <PanelSection
+                title="Move & transform"
+                action={
+                  <button
+                    type="button"
+                    onClick={editor.resetBackgroundTransform}
+                    className="text-[10px] font-bold uppercase tracking-wider text-terracotta hover:underline"
+                  >
+                    Reset
+                  </button>
+                }
+              >
+                <div className="rounded-xl border border-teal/25 bg-teal/5 p-2.5 dark:border-parchment/25 dark:bg-parchment/5">
+                  <p className="text-[10px] leading-relaxed text-slate-600 dark:text-slate-300">
+                    The backdrop is a normal layer — drag it, spin its rotation handle, pull its
+                    corners. These controls are here for exact values.
+                  </p>
+                  <TextButton
+                    variant="primary"
+                    size="sm"
+                    full
+                    onClick={editor.selectBackground}
+                    disabled={editor.backgroundLocked}
+                  >
+                    <Move className="h-3 w-3" />
+                    Select it on the artboard
+                  </TextButton>
+                </div>
+
+                <Field label="Fit to artboard">
+                  <Segmented
+                    value={editor.backgroundFit}
+                    onChange={(v) => editor.setBackgroundFit(v as BackgroundFit)}
+                    options={[
+                      { value: 'cover', label: 'Fill' },
+                      { value: 'contain', label: 'Fit' },
+                      { value: 'stretch', label: 'Stretch' },
+                    ]}
+                  />
+                </Field>
+
+                <Field label="Rotation">
+                  <Slider
+                    value={bgAngle}
+                    min={-180}
+                    max={180}
+                    onChange={(v) => editor.transformBackground({ angle: v })}
+                    onCommit={() => editor.transformBackground({ angle: bgAngle }, true)}
+                    suffix="°"
+                  />
+                </Field>
+
+                <Field label="Scale">
+                  <Slider
+                    value={bgScale}
+                    min={5}
+                    max={400}
+                    onChange={(v) =>
+                      editor.transformBackground({ scaleX: v / 100, scaleY: v / 100 })
+                    }
+                    onCommit={() =>
+                      editor.transformBackground(
+                        { scaleX: bgScale / 100, scaleY: bgScale / 100 },
+                        true,
+                      )
+                    }
+                    suffix="%"
+                  />
+                </Field>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <Field label="X">
+                    <NumberInput
+                      value={Math.round(Number(background.left) || 0)}
+                      onChange={(v) => editor.transformBackground({ left: v })}
+                      onCommit={() =>
+                        editor.transformBackground({ left: Number(background.left) || 0 }, true)
+                      }
+                    />
+                  </Field>
+                  <Field label="Y">
+                    <NumberInput
+                      value={Math.round(Number(background.top) || 0)}
+                      onChange={(v) => editor.transformBackground({ top: v })}
+                      onCommit={() =>
+                        editor.transformBackground({ top: Number(background.top) || 0 }, true)
+                      }
+                    />
+                  </Field>
+                </div>
+
+                <div className="flex gap-1.5">
+                  <TextButton
+                    variant="outline"
+                    size="sm"
+                    full
+                    onClick={() =>
+                      editor.transformBackground({ flipX: !background.flipX }, true)
+                    }
+                  >
+                    <FlipHorizontal className="h-3 w-3" />
+                    Flip H
+                  </TextButton>
+                  <TextButton
+                    variant="outline"
+                    size="sm"
+                    full
+                    onClick={() =>
+                      editor.transformBackground({ flipY: !background.flipY }, true)
+                    }
+                  >
+                    <FlipVertical className="h-3 w-3" />
+                    Flip V
+                  </TextButton>
+                </div>
+
+                <Toggle
+                  checked={editor.backgroundLocked}
+                  onChange={editor.setBackgroundLock}
+                  label="Lock so clicks pass through"
+                />
+              </PanelSection>
+
+              <PanelSection title="Adjust">
+                <Field label="Blur">
+                  <Slider
+                    value={editor.backgroundAdjust.blur}
+                    min={0}
+                    max={1}
+                    step={0.02}
+                    onChange={(v) => editor.setBackgroundAdjustments({ blur: v })}
+                    onCommit={editor.commit}
+                  />
+                </Field>
+                <Field label="Brightness">
+                  <Slider
+                    value={editor.backgroundAdjust.brightness}
+                    min={-1}
+                    max={1}
+                    step={0.02}
+                    onChange={(v) => editor.setBackgroundAdjustments({ brightness: v })}
+                    onCommit={editor.commit}
+                  />
+                </Field>
+                <Field label="Opacity" hint="Lower values let the background colour show through.">
+                  <Slider
+                    value={editor.backgroundAdjust.opacity}
+                    min={0}
+                    max={1}
+                    step={0.02}
+                    onChange={(v) => editor.setBackgroundAdjustments({ opacity: v })}
+                    onCommit={editor.commit}
+                  />
+                </Field>
+                <TextButton variant="danger" size="sm" full onClick={editor.clearBackgroundImage}>
+                  <Trash2 className="h-3 w-3" />
+                  Remove background image
+                </TextButton>
+              </PanelSection>
+            </>
+          )}
+        </>
       )}
 
       <PanelSection title="Brand palette">
@@ -902,7 +1188,7 @@ export const BackgroundPanel: React.FC<{
                 editor.setBackground({ type: 'solid', color: c.value });
               }}
               style={{ backgroundColor: c.value }}
-              className="h-8 rounded-md border border-black/10 dark:border-white/15 transition-transform duration-150 hover:scale-110"
+              className="h-8 rounded-md border border-black/10 transition-transform duration-150 hover:scale-110 dark:border-white/15"
             />
           ))}
         </div>
