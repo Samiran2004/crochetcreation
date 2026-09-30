@@ -28,7 +28,11 @@ from app.models.design import (
     RenderUploadRequest,
 )
 from app.models.user import UserInDB
-from app.services.storage import delete_asset, upload_bytes, upload_image
+from app.services.cloudinary_upload import (
+    delete_image_from_cloudinary,
+    upload_bytes_to_cloudinary,
+    upload_image_and_get_details,
+)
 
 logger = logging.getLogger("app.designs")
 
@@ -284,7 +288,7 @@ async def update_design(
     if payload.thumbnail_data_url:
         raw = _decode_data_url(payload.thumbnail_data_url, MAX_RENDER_BYTES)
         try:
-            uploaded = await upload_bytes(
+            uploaded = await upload_bytes_to_cloudinary(
                 raw,
                 folder="crochetcreation/designs/thumbnails",
                 public_id=f"design_{design_id}",
@@ -380,7 +384,7 @@ async def delete_design(
     # the original's thumbnail, which has a different public_id.
     thumb_id = doc.get("thumbnail_public_id")
     if thumb_id:
-        await delete_asset(thumb_id, doc.get("thumbnail_url"))
+        await delete_image_from_cloudinary(thumb_id)
 
     return {"detail": "Design deleted.", "id": design_id}
 
@@ -444,7 +448,7 @@ async def upload_design_asset(
     await file.seek(0)
 
     try:
-        details = await upload_image(
+        details = await upload_image_and_get_details(
             file, folder="crochetcreation/designs/assets"
         )
     except HTTPException:
@@ -496,7 +500,7 @@ async def delete_design_asset(
 
     await db[ASSETS].delete_one({"_id": oid})
     if doc.get("public_id"):
-        await delete_asset(doc["public_id"], doc.get("url"))
+        await delete_image_from_cloudinary(doc["public_id"])
 
     return {"detail": "Upload deleted.", "id": asset_id}
 
@@ -518,7 +522,7 @@ async def upload_rendered_design(
     raw = _decode_data_url(payload.data_url, MAX_RENDER_BYTES)
 
     try:
-        uploaded = await upload_bytes(
+        uploaded = await upload_bytes_to_cloudinary(
             raw, folder="crochetcreation/designs/renders"
         )
     except Exception:
@@ -758,7 +762,7 @@ async def _store_imported_image(
     body: bytes, source_url: str, filename: Optional[str], admin_email: str, db
 ) -> DesignAssetResponse:
     try:
-        uploaded = await upload_bytes(
+        uploaded = await upload_bytes_to_cloudinary(
             body, folder="crochetcreation/designs/imported"
         )
     except Exception:
