@@ -18,6 +18,9 @@ from app.api.deps import get_current_admin_user
 from app.core.db import get_database
 from app.models.design import (
     DesignAssetResponse,
+    DesignElementCreate,
+    DesignElementResponse,
+    DesignElementSummary,
     UrlImportRequest,
     UrlImportResponse,
     DesignCreate,
@@ -29,6 +32,7 @@ from app.models.design import (
 )
 from app.models.user import UserInDB
 from app.services.cloudinary_upload import (
+    delete_image_by_url,
     delete_image_from_cloudinary,
     upload_bytes_to_cloudinary,
     upload_image_and_get_details,
@@ -40,6 +44,7 @@ router = APIRouter(prefix="/api/admin/designs", tags=["designs"])
 
 DESIGNS = "designs"
 ASSETS = "design_assets"
+ELEMENTS = "design_elements"
 
 # A fabric scene is JSON, so it is cheap until someone drops a base64 image
 # into it. Images belong in Cloudinary; this ceiling keeps a runaway document
@@ -47,6 +52,8 @@ ASSETS = "design_assets"
 MAX_CANVAS_JSON_BYTES = 4 * 1024 * 1024
 MAX_RENDER_BYTES = 12 * 1024 * 1024
 MAX_ASSET_BYTES = 12 * 1024 * 1024
+# Markup and animation JSON are stored whole, well inside MongoDB's ceiling.
+MAX_ELEMENT_CONTENT_BYTES = 3 * 1024 * 1024
 
 ALLOWED_IMAGE_TYPES = {
     "image/png",
@@ -795,6 +802,27 @@ async def _store_imported_image(
     )
 
 
+
+def _looks_like_lottie(content_type: str, body: bytes) -> bool:
+    """
+    Recognise a Bodymovin animation.
+
+    Checked by shape rather than by file extension, because Lottie is served
+    as plain JSON from every host that carries it and the URL often says
+    nothing useful about what is behind it.
+    """
+    if content_type not in {"application/json", "text/json", "text/plain", "application/octet-stream", ""}:
+        return False
+    head = body[:4096].lstrip()
+    if not head.startswith(b"{"):
+        return False
+    try:
+        parsed = json.loads(body.decode("utf-8", errors="replace"))
+    except (ValueError, UnicodeDecodeError):
+        return False
+    return isinstance(parsed, dict) and {"v", "fr", "op", "layers"} <= set(parsed)
+
+
 def _is_svg(content_type: str, body: bytes) -> bool:
     return content_type == "image/svg+xml" or (
         content_type in {"", "text/plain", "application/octet-stream"}
@@ -821,6 +849,16 @@ async def import_asset_from_url(
     if _is_svg(content_type, body):
         markup = body.decode("utf-8", errors="replace")
         return UrlImportResponse(kind="svg", svg=_sanitize_svg(markup), asset=None)
+
+    if _looks_like_lottie(content_type, body):
+        if len(body) > MAX_ELEMENT_CONTENT_BYTES:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail="That animation is too large to import.",
+            )
+        return UrlImportResponse(
+            kind="lottie", lottie=body.decode("utf-8", errors="replace"), asset=None
+        )
 
     if content_type.startswith("image/"):
         asset = await _store_imported_image(
@@ -860,3 +898,148 @@ async def import_asset_from_url(
         status_code=status.HTTP_400_BAD_REQUEST,
         detail="That link is not an image. Paste a direct image or SVG link.",
     )
+
+
+# ----------------------------------------------------------- element library
+
+def _element_summary(doc: Dict[str, Any]) -> DesignElementSummary:
+    return DesignElementSummary(
+        _id=str(doc.get("_id")),
+        name=doc.get("name", "Imported element"),
+        kind=doc.get("kind", "svg"),
+        preview_url=doc.get("preview_url"),
+        source_url=doc.get("source_url"),
+        created_at=doc.get("created_at") or datetime.now(timezone.utc),
+    )
+
+
+@router.get("/elements/library", response_model=List[DesignElementSummary])
+async def list_design_elements(
+    limit: int = Query(200, ge=1, le=500),
+    current_admin: UserInDB = Depends(get_current_admin_user),
+):
+    db = _db()
+    try:
+        cursor = db[ELEMENTS].find({}).sort([("created_at", -1)]).limit(limit)
+        docs = await cursor.to_list(length=limit)
+        return [_element_summary(d) for d in docs]
+    except Exception:
+        logger.exception("Failed to list design elements")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not load your saved elements. Please try again.",
+        )
+
+
+@router.post(
+    "/elements",
+    response_model=DesignElementResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_design_element(
+    payload: DesignElementCreate,
+    current_admin: UserInDB = Depends(get_current_admin_user),
+):
+    """
+    Save an imported element so it is available in every design from now on.
+
+    Without this, an icon pasted into one artboard would have to be fetched
+    and pasted again for the next — the import would be a one-off rather
+    than something the shop actually owns.
+    """
+    db = _db()
+
+    raw = payload.content or ""
+    if len(raw.encode("utf-8")) > MAX_ELEMENT_CONTENT_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="That element is too large to save. Try a simpler file.",
+        )
+
+    if payload.kind == "svg":
+        content = _sanitize_svg(raw)
+    else:
+        try:
+            parsed = json.loads(raw)
+        except (TypeError, ValueError):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="That does not look like a Lottie animation.",
+            )
+        # Bodymovin always carries a frame rate, an out point and layers.
+        if not isinstance(parsed, dict) or not {"v", "fr", "op", "layers"} <= set(parsed):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="That JSON is not a Lottie animation.",
+            )
+        content = raw
+
+    preview_url = None
+    if payload.preview_data_url:
+        try:
+            preview_bytes = _decode_data_url(payload.preview_data_url, MAX_RENDER_BYTES)
+            uploaded = await upload_bytes_to_cloudinary(
+                preview_bytes, folder="crochetcreation/designs/elements"
+            )
+            preview_url = uploaded["url"]
+        except HTTPException:
+            raise
+        except Exception:
+            # A missing thumbnail costs a nicer grid, not the element itself.
+            logger.exception("Could not store an element preview")
+
+    doc = {
+        "name": payload.name,
+        "kind": payload.kind,
+        "content": content,
+        "source_url": payload.source_url,
+        "preview_url": preview_url,
+        "created_by": str(current_admin.email),
+        "created_at": datetime.now(timezone.utc),
+    }
+    result = await db[ELEMENTS].insert_one(doc)
+    doc["_id"] = result.inserted_id
+
+    summary = _element_summary(doc)
+    return DesignElementResponse(**summary.model_dump(by_alias=True), content=content)
+
+
+@router.get("/elements/{element_id}", response_model=DesignElementResponse)
+async def get_design_element(
+    element_id: str,
+    current_admin: UserInDB = Depends(get_current_admin_user),
+):
+    db = _db()
+    oid = _object_id(element_id)
+    doc = await db[ELEMENTS].find_one({"_id": oid})
+    if not doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="That element no longer exists.",
+        )
+    summary = _element_summary(doc)
+    return DesignElementResponse(
+        **summary.model_dump(by_alias=True), content=doc.get("content")
+    )
+
+
+@router.delete("/elements/{element_id}", status_code=status.HTTP_200_OK)
+async def delete_design_element(
+    element_id: str,
+    current_admin: UserInDB = Depends(get_current_admin_user),
+):
+    db = _db()
+    oid = _object_id(element_id)
+
+    doc = await db[ELEMENTS].find_one({"_id": oid})
+    if not doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="That element no longer exists.",
+        )
+
+    await db[ELEMENTS].delete_one({"_id": oid})
+    if doc.get("preview_url"):
+        await delete_image_by_url(doc["preview_url"])
+
+    return {"detail": "Element deleted.", "id": element_id}

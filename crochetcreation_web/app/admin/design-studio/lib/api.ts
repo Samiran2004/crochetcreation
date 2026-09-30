@@ -118,8 +118,9 @@ export const publishRender = async (
 };
 
 export interface UrlImportResult {
-  kind: 'svg' | 'image';
+  kind: 'svg' | 'lottie' | 'image';
   svg: string | null;
+  lottie: string | null;
   asset: DesignAsset | null;
 }
 
@@ -145,6 +146,62 @@ export const importFromUrl = async (
   return {
     kind: data.kind,
     svg: data.svg ?? null,
+    lottie: data.lottie ?? null,
     asset: data.asset ? (withId(data.asset) as DesignAsset) : null,
   };
+};
+
+/* ---------------------------------------------------- element library */
+
+export interface DesignElementSummary {
+  id: string;
+  name: string;
+  kind: 'svg' | 'lottie';
+  preview_url?: string | null;
+  source_url?: string | null;
+  created_at: string;
+}
+
+export interface DesignElement extends DesignElementSummary {
+  content?: string | null;
+}
+
+export const listElements = async (): Promise<DesignElementSummary[]> => {
+  const res = await apiFetch(`${base()}/elements/library`);
+  if (!res.ok) return fail(res, 'Could not load your saved elements.');
+  return ((await res.json()) ?? []).map(withId) as DesignElementSummary[];
+};
+
+export const getElement = async (id: string): Promise<DesignElement> => {
+  const res = await apiFetch(`${base()}/elements/${id}`);
+  if (!res.ok) return fail(res, 'Could not open that element.');
+  return withId(await res.json()) as DesignElement;
+};
+
+/**
+ * Keep an imported element for good.
+ *
+ * Every import path funnels through here, so anything brought in from a
+ * file, a link or the clipboard is available in every design afterwards
+ * rather than being a one-off paste.
+ */
+export const saveElement = async (payload: {
+  name: string;
+  kind: 'svg' | 'lottie';
+  content: string;
+  source_url?: string | null;
+  preview_data_url?: string | null;
+}): Promise<DesignElement> => {
+  const res = await apiFetch(`${base()}/elements`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) return fail(res, 'Could not save that element.');
+  return withId(await res.json()) as DesignElement;
+};
+
+export const deleteElement = async (id: string): Promise<void> => {
+  const res = await apiFetch(`${base()}/elements/${id}`, { method: 'DELETE' });
+  if (!res.ok) await fail(res, 'Could not delete that element.');
 };

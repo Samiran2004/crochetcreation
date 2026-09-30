@@ -17,12 +17,14 @@ import {
   EyeOff,
   GripVertical,
   Image as ImageIconLucide,
+  Film,
   Images,
   Info,
   Layers as LayersIcon,
   Link2,
   Lock,
   Search,
+  Shapes,
   Sparkles,
   Trash2,
   Type as TypeIcon,
@@ -47,7 +49,18 @@ import {
 import { BRAND_COLORS, GRADIENT_PRESETS, SIZE_PRESETS, PRESET_GROUPS } from '../lib/presets';
 import { PRIMITIVES, SHAPE_GROUPS } from '../lib/shapes';
 import { TEMPLATES, TEMPLATE_CATEGORIES, type TemplateSpec } from '../lib/templates';
-import { deleteAsset, importFromUrl, listAssets, uploadAsset } from '../lib/api';
+import {
+  deleteAsset,
+  deleteElement,
+  getElement,
+  importFromUrl,
+  listAssets,
+  listElements,
+  saveElement,
+  uploadAsset,
+  type DesignElementSummary,
+} from '../lib/api';
+import { LottieImport } from './LottieImport';
 import type { DesignAsset, LayerNode } from '../lib/types';
 import type { BackgroundFit } from '../lib/engine';
 import type { DesignEditorApi } from './useDesignEditor';
@@ -188,29 +201,66 @@ const ImportElement: React.FC<{
   editor: DesignEditorApi;
   color: string;
   onError: (message: string) => void;
-}> = ({ editor, color, onError }) => {
+  onSaved: () => void;
+}> = ({ editor, color, onError, onSaved }) => {
   const [mode, setMode] = useState<'url' | 'code'>('url');
   const [url, setUrl] = useState('');
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [recolor, setRecolor] = useState(true);
 
+  /**
+   * File it in the library as well as on the artboard.
+   *
+   * An import that only lands on the current canvas has to be hunted down
+   * and fetched again for the next design; saving it here means it is
+   * brought in once and owned from then on. A failure to save must not undo
+   * a successful placement, so it is reported and otherwise let go.
+   */
+  const keep = async (
+    label: string,
+    kind: 'svg' | 'lottie',
+    content: string,
+    source?: string,
+  ) => {
+    try {
+      await saveElement({ name: label, kind, content, source_url: source ?? null });
+      onSaved();
+    } catch {
+      onError('Added to the artboard, but it could not be saved to your library.');
+    }
+  };
+
   const run = async () => {
     setBusy(true);
     try {
       if (mode === 'code') {
         const ok = await editor.addSvgMarkup(code, recolor ? color : undefined);
-        if (!ok) onError('That SVG could not be read. Paste the full <svg>…</svg> markup.');
-        else setCode('');
+        if (!ok) {
+          onError('That SVG could not be read. Paste the full <svg>…</svg> markup.');
+          return;
+        }
+        await keep('Pasted icon', 'svg', code);
+        setCode('');
         return;
       }
 
-      const result = await importFromUrl(url.trim());
+      const link = url.trim();
+      const result = await importFromUrl(link);
+
       if (result.kind === 'svg' && result.svg) {
         const ok = await editor.addSvgMarkup(result.svg, recolor ? color : undefined);
-        if (!ok) onError('That link returned an SVG the editor could not read.');
-        else setUrl('');
+        if (!ok) {
+          onError('That link returned an SVG the editor could not read.');
+          return;
+        }
+        await keep(link.split('/').pop() || 'Imported icon', 'svg', result.svg, link);
+        setUrl('');
+      } else if (result.kind === 'lottie' && result.lottie) {
+        onError('That is a Lottie animation — load it in the Animations section just below.');
       } else if (result.asset) {
+        // Images already live in the media library, so they are reusable
+        // without any extra bookkeeping here.
         await editor.addImage(result.asset.url);
         setUrl('');
       }
@@ -289,12 +339,145 @@ const ImportElement: React.FC<{
   );
 };
 
+
+/**
+ * Everything imported so far, ready to drop into any design.
+ *
+ * This is the difference between importing an icon and owning it: the
+ * library is per-shop rather than per-design, so a thing brought in once
+ * never has to be found again.
+ */
+const SavedElements: React.FC<{
+  editor: DesignEditorApi;
+  version: number;
+  onError: (message: string) => void;
+  onPickLottie: (element: { name: string; content: string }) => void;
+}> = ({ editor, version, onError, onPickLottie }) => {
+  const [items, setItems] = useState<DesignElementSummary[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    void listElements()
+      .then((rows) => {
+        if (!cancelled) setItems(rows);
+      })
+      .catch(() => {
+        /* an unreachable library should not break the rest of the panel */
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [version]);
+
+  const use = async (row: DesignElementSummary) => {
+    setBusyId(row.id);
+    try {
+      const full = await getElement(row.id);
+      if (!full.content) return;
+      if (row.kind === 'lottie') {
+        onPickLottie({ name: row.name, content: full.content });
+      } else {
+        const ok = await editor.addSvgMarkup(full.content);
+        if (!ok) onError('That saved element could not be placed.');
+      }
+    } catch (error) {
+      onError(error instanceof Error ? error.message : 'Could not open that element.');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const remove = async (row: DesignElementSummary) => {
+    try {
+      await deleteElement(row.id);
+      setItems((prev) => prev.filter((r) => r.id !== row.id));
+    } catch (error) {
+      onError(error instanceof Error ? error.message : 'Could not delete that element.');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-6 text-gray-400">
+        <Spinner className="h-5 w-5" />
+      </div>
+    );
+  }
+
+  if (!items.length) {
+    return (
+      <p className="rounded-xl border border-dashed border-gray-250 px-3 py-5 text-center text-[10.5px] leading-relaxed text-gray-450 dark:border-slate-700 dark:text-slate-500">
+        Nothing saved yet. Anything you import above is kept here and stays available in every
+        design you make.
+      </p>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-4 gap-2">
+      {items.map((row) => (
+        <div key={row.id} className="group relative">
+          <button
+            type="button"
+            title={`${row.name} · ${row.kind === 'lottie' ? 'animation' : 'vector'}`}
+            disabled={busyId === row.id}
+            onClick={() => void use(row)}
+            className="flex aspect-square w-full items-center justify-center overflow-hidden rounded-lg border border-gray-200 bg-white p-1.5 transition-all duration-150 hover:-translate-y-0.5 hover:border-teal hover:shadow-soft disabled:opacity-40 dark:border-slate-700 dark:bg-slate-950 dark:hover:border-parchment"
+          >
+            {busyId === row.id ? (
+              <Spinner className="h-4 w-4" />
+            ) : row.preview_url ? (
+              <Image
+                src={row.preview_url}
+                alt={row.name}
+                width={80}
+                height={80}
+                className="h-full w-full object-contain"
+                unoptimized
+              />
+            ) : row.kind === 'lottie' ? (
+              <Film className="h-5 w-5 text-teal dark:text-parchment" />
+            ) : (
+              <Shapes className="h-5 w-5 text-teal dark:text-parchment" />
+            )}
+          </button>
+          {row.kind === 'lottie' && (
+            <span className="pointer-events-none absolute left-1 top-1 rounded bg-teal/90 px-1 text-[7px] font-black uppercase tracking-wider text-parchment">
+              Anim
+            </span>
+          )}
+          <button
+            type="button"
+            title="Remove from library"
+            onClick={() => void remove(row)}
+            className="absolute right-0.5 top-0.5 rounded bg-black/55 p-0.5 text-white opacity-0 backdrop-blur-sm transition-opacity hover:bg-terracotta group-hover:opacity-100"
+          >
+            <Trash2 className="h-2.5 w-2.5" />
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 export const ElementsPanel: React.FC<{
   editor: DesignEditorApi;
   onError: (message: string) => void;
 }> = ({ editor, onError }) => {
   const [color, setColor] = useState('#1F4E4A');
   const [query, setQuery] = useState('');
+  const [libraryVersion, setLibraryVersion] = useState(0);
+  const [pendingLottie, setPendingLottie] = useState<{ name: string; content: string } | null>(
+    null,
+  );
+
+  const refreshLibrary = useCallback(() => setLibraryVersion((v) => v + 1), []);
 
   const groups = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -309,13 +492,42 @@ export const ElementsPanel: React.FC<{
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2 rounded-lg border border-gray-250 dark:border-slate-700 bg-gray-50 dark:bg-slate-950 px-2.5 py-1.5">
+      {/* Bringing things in comes first: it is what people reach for most,
+          and it should not be buried under a hundred built-in shapes. */}
+      <CollapsibleSection title="Import from anywhere" defaultOpen>
+        <ImportElement
+          editor={editor}
+          color={color}
+          onError={onError}
+          onSaved={refreshLibrary}
+        />
+      </CollapsibleSection>
+
+      <CollapsibleSection title="Lottie animations">
+        <LottieImport
+          editor={editor}
+          onError={onError}
+          onSaved={refreshLibrary}
+          preload={pendingLottie}
+        />
+      </CollapsibleSection>
+
+      <CollapsibleSection title="Your saved elements" defaultOpen>
+        <SavedElements
+          editor={editor}
+          version={libraryVersion}
+          onError={onError}
+          onPickLottie={setPendingLottie}
+        />
+      </CollapsibleSection>
+
+      <div className="flex items-center gap-2 rounded-lg border border-gray-250 bg-gray-50 px-2.5 py-1.5 dark:border-slate-700 dark:bg-slate-950">
         <Search className="h-3.5 w-3.5 shrink-0 text-gray-400" />
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={`Search ${totalShapes} elements...`}
-          className="w-full bg-transparent text-[11px] font-medium text-slate-700 dark:text-slate-200 placeholder-gray-400 focus:outline-none"
+          className="w-full bg-transparent text-[11px] font-medium text-slate-700 placeholder-gray-400 focus:outline-none dark:text-slate-200"
         />
       </div>
 
@@ -325,7 +537,7 @@ export const ElementsPanel: React.FC<{
           trigger={() => (
             <button
               type="button"
-              className="flex w-full items-center gap-2 rounded-lg border border-gray-250 dark:border-slate-700 bg-white dark:bg-slate-950 px-2.5 py-1.5 transition-colors hover:border-teal dark:hover:border-parchment"
+              className="flex w-full items-center gap-2 rounded-lg border border-gray-250 bg-white px-2.5 py-1.5 transition-colors hover:border-teal dark:border-slate-700 dark:bg-slate-950 dark:hover:border-parchment"
             >
               <span
                 style={{ backgroundColor: color }}
@@ -357,12 +569,12 @@ export const ElementsPanel: React.FC<{
         </CollapsibleSection>
       )}
 
-      {groups.map((group, index) => (
+      {groups.map((group) => (
         <CollapsibleSection
           key={group.id}
           title={group.label}
           count={group.items.length}
-          defaultOpen={!!query || index === 0}
+          defaultOpen={!!query}
         >
           <div className="grid grid-cols-4 gap-2">
             {group.items.map((shape) => (
@@ -377,12 +589,6 @@ export const ElementsPanel: React.FC<{
           </div>
         </CollapsibleSection>
       ))}
-
-      {!query && (
-        <CollapsibleSection title="Import from anywhere">
-          <ImportElement editor={editor} color={color} onError={onError} />
-        </CollapsibleSection>
-      )}
     </div>
   );
 };
@@ -559,6 +765,12 @@ export const UploadsPanel: React.FC<{
         className="hidden"
       />
 
+      {/* Import first, for the same reason as in Elements: it is the thing
+          people come to this panel to do. */}
+      <CollapsibleSection title="Import from Canva or the web" defaultOpen>
+        <CanvaImport editor={editor} onError={onError} />
+      </CollapsibleSection>
+
       <div
         onDragOver={(e) => {
           e.preventDefault();
@@ -587,10 +799,6 @@ export const UploadsPanel: React.FC<{
         Select an image slot on the artboard first and a click here fills it, cropped to the slot.
         Otherwise the image lands in the centre — then use Properties to mask it into any shape.
       </p>
-
-      <CollapsibleSection title="Import from Canva or the web">
-        <CanvaImport editor={editor} onError={onError} />
-      </CollapsibleSection>
 
       {loading ? (
         <div className="flex justify-center py-8 text-gray-400">
@@ -686,8 +894,22 @@ const CanvaImport: React.FC<{
         // the vector importer so every shape and word stays editable.
         const markup = await file.text();
         const ok = await editor.addSvgMarkup(markup);
-        if (!ok) onError('That SVG could not be read. Re-export it from Canva as SVG.');
-        else setNote('Imported as editable vectors — every shape and word is yours to change.');
+        if (!ok) {
+          onError('That SVG could not be read. Re-export it from Canva as SVG.');
+          return;
+        }
+        // Kept in the library too, so the same artwork is one click away in
+        // every future design rather than another export from Canva.
+        try {
+          await saveElement({
+            name: file.name.replace(/\.svg$/i, ''),
+            kind: 'svg',
+            content: markup,
+          });
+        } catch {
+          /* placement succeeded; the library copy is a bonus */
+        }
+        setNote('Imported as editable vectors, and saved to your library.');
       } else {
         const asset = await uploadAsset(file);
         await editor.addImage(asset.url);

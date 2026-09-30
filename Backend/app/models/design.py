@@ -98,8 +98,57 @@ class UrlImportRequest(BaseModel):
 class UrlImportResponse(BaseModel):
     """
     SVG comes back as markup so the editor can turn it into real, recolourable
-    vector objects; a raster arrives as an ordinary media-library asset.
+    vector objects, a Lottie as its animation JSON, and a raster as an
+    ordinary media-library asset.
     """
-    kind: str  # "svg" | "image"
+    kind: str  # "svg" | "lottie" | "image"
     svg: Optional[str] = None
+    lottie: Optional[str] = None
     asset: Optional[DesignAssetResponse] = None
+
+
+class DesignElementCreate(BaseModel):
+    """
+    A reusable vector or animation saved to the shared element library.
+
+    Images live in `design_assets` because they are files on a CDN. These are
+    markup and JSON the editor turns into objects, so they are kept whole and
+    handed back verbatim rather than rasterised on the way in.
+    """
+    name: str = Field(default="Imported element", max_length=140)
+    kind: str = Field(..., description='"svg" or "lottie"')
+    content: str = Field(..., description="SVG markup, or a Lottie animation as JSON")
+    source_url: Optional[str] = Field(default=None, max_length=2048)
+    # A small PNG of the element, so the library grid does not have to render
+    # every animation just to draw a thumbnail.
+    preview_data_url: Optional[str] = None
+
+    @field_validator("kind")
+    @classmethod
+    def known_kind(cls, v: str) -> str:
+        v = (v or "").strip().lower()
+        if v not in {"svg", "lottie"}:
+            raise ValueError('kind must be "svg" or "lottie"')
+        return v
+
+    @field_validator("name")
+    @classmethod
+    def clean_name(cls, v: str) -> str:
+        return (v or "").strip() or "Imported element"
+
+
+class DesignElementSummary(BaseModel):
+    """What the library grid needs — deliberately without `content`."""
+    id: Optional[PyObjectId] = Field(alias="_id", default=None)
+    name: str
+    kind: str
+    preview_url: Optional[str] = None
+    source_url: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    class Config:
+        populate_by_name = True
+
+
+class DesignElementResponse(DesignElementSummary):
+    content: Optional[str] = None

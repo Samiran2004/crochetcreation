@@ -314,6 +314,7 @@ async def ensure_indexes():
         # Design Studio: the gallery sorts by recency, the media library too.
         await db["designs"].create_index([("updated_at", -1)])
         await db["design_assets"].create_index([("created_at", -1)])
+        await db["design_elements"].create_index([("created_at", -1)])
         print("Database indexes ensured.")
     except Exception as e:
         # A failed index build must never stop the app from serving.
