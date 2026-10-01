@@ -8,6 +8,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Clipboard,
+  Eye,
   Copy,
   Image as ImageIcon,
   Layers as LayersIcon,
@@ -28,6 +29,9 @@ import { Spinner, TextButton } from './ui';
 import { TopBar, type ExportFormat } from './TopBar';
 import { Inspector } from './Inspector';
 import { SelectionToolbar } from './SelectionToolbar';
+import { ShareDialog } from './ShareDialog';
+import { CollabCursors, PresenceBar } from './CollabOverlay';
+import { useCollaboration } from './useCollaboration';
 import {
   BackgroundPanel,
   ElementsPanel,
@@ -38,7 +42,7 @@ import {
   UploadsPanel,
 } from './SidePanels';
 import { useDesignEditor } from './useDesignEditor';
-import { publishRender, updateDesign } from '../lib/api';
+import { publishRender, saveSharedDesign, updateDesign } from '../lib/api';
 import type { DesignRecord } from '../lib/types';
 import type { TemplateSpec } from '../lib/templates';
 
@@ -107,7 +111,14 @@ const ContextItem: React.FC<{
   </button>
 );
 
-const DesignEditor: React.FC<{ design: DesignRecord }> = ({ design }) => {
+const DesignEditor: React.FC<{
+  design: DesignRecord;
+  /** Set when this session arrived through a share link. */
+  shareToken?: string;
+  /** False for a view-only collaborator. */
+  canEdit?: boolean;
+  collaboratorName?: string;
+}> = ({ design, shareToken, canEdit = true, collaboratorName }) => {
   const [name, setName] = useState(design.name);
   const [tab, setTab] = useState<RailTab>(design.canvas_json ? 'elements' : 'templates');
   const [panelOpen, setPanelOpen] = useState(true);
@@ -117,6 +128,7 @@ const DesignEditor: React.FC<{ design: DesignRecord }> = ({ design }) => {
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirmTemplate, setConfirmTemplate] = useState<TemplateSpec | null>(null);
+  const [shareOpen, setShareOpen] = useState(false);
   const [inspectorOpen, setInspectorOpen] = useState(true);
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
 
@@ -127,6 +139,13 @@ const DesignEditor: React.FC<{ design: DesignRecord }> = ({ design }) => {
   });
 
   const showError = useCallback((message: string) => setError(message), []);
+
+  const collab = useCollaboration(editor, {
+    designId: design.id,
+    shareToken,
+    enabled: true,
+    displayName: collaboratorName,
+  });
 
   /* ------------------------------------------------------------- saving */
 
@@ -140,7 +159,7 @@ const DesignEditor: React.FC<{ design: DesignRecord }> = ({ design }) => {
 
   const save = useCallback(
     async (silent = false) => {
-      if (!editor.ready) return;
+      if (!editor.ready || !canEdit) return;
 
       // Two-second autosave means a slow write can still be running when the
       // next one is due. Rather than stacking requests, remember that another
@@ -173,13 +192,19 @@ const DesignEditor: React.FC<{ design: DesignRecord }> = ({ design }) => {
           lastThumbnailAtRef.current = now;
         }
 
-        await updateDesign(design.id, {
-          name: name.trim() || 'Untitled design',
-          width: editor.artboard.width,
-          height: editor.artboard.height,
-          canvas_json: scene,
-          thumbnail_data_url: thumbnail,
-        });
+        if (shareToken) {
+          // A collaborator may change the artboard and nothing else — not
+          // the name, the size, or the gallery preview.
+          await saveSharedDesign(shareToken, scene);
+        } else {
+          await updateDesign(design.id, {
+            name: name.trim() || 'Untitled design',
+            width: editor.artboard.width,
+            height: editor.artboard.height,
+            canvas_json: scene,
+            thumbnail_data_url: thumbnail,
+          });
+        }
         editor.markClean();
         setLastSavedAt(new Date());
       } catch (err) {
@@ -193,7 +218,7 @@ const DesignEditor: React.FC<{ design: DesignRecord }> = ({ design }) => {
         }
       }
     },
-    [design.id, editor, name],
+    [canEdit, design.id, editor, name, shareToken],
   );
 
   saveRef.current = save;
@@ -504,6 +529,9 @@ const DesignEditor: React.FC<{ design: DesignRecord }> = ({ design }) => {
         editor={editor}
         name={name}
         onNameChange={setName}
+        readOnly={!canEdit}
+        presence={<PresenceBar collab={collab} />}
+        onShare={shareToken ? undefined : () => setShareOpen(true)}
         saving={saving}
         lastSavedAt={lastSavedAt}
         onSave={() => void save()}
@@ -512,6 +540,33 @@ const DesignEditor: React.FC<{ design: DesignRecord }> = ({ design }) => {
         publishing={publishing}
         publishedUrl={publishedUrl}
       />
+
+      {!canEdit && (
+        <div className="flex shrink-0 items-center gap-2 border-b border-teal/25 bg-teal/8 px-4 py-2 dark:border-parchment/25 dark:bg-parchment/8">
+          <Eye className="h-3.5 w-3.5 shrink-0 text-teal dark:text-parchment" />
+          <p className="text-[11px] font-semibold text-teal dark:text-parchment">
+            You are watching this design. Changes other people make appear live, but you cannot
+            edit it.
+          </p>
+        </div>
+      )}
+
+      {collab.revokedMessage && (
+        <div className="flex shrink-0 items-start gap-2 border-b border-terracotta/30 bg-terracotta/10 px-4 py-2.5">
+          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-terracotta" />
+          <p className="flex-1 text-[11px] font-semibold text-terracotta-deep">
+            {collab.revokedMessage}
+          </p>
+          <button
+            type="button"
+            onClick={collab.dismissRevoked}
+            className="shrink-0 text-terracotta hover:text-terracotta-deep"
+            aria-label="Dismiss"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
 
       {error && (
         <div className="flex shrink-0 items-start gap-2 border-b border-terracotta/30 bg-terracotta/10 px-4 py-2.5">
@@ -592,6 +647,13 @@ const DesignEditor: React.FC<{ design: DesignRecord }> = ({ design }) => {
             style={stageStyle}
           >
             <canvas ref={editor.elementRef} />
+
+            <CollabCursors
+              collab={collab}
+              editor={editor}
+              width={stageStyle.width}
+              height={stageStyle.height}
+            />
 
             {/* Smart guides live in their own overlay rather than being drawn
                 into fabric's context, so they can never end up in an export. */}
@@ -709,6 +771,24 @@ const DesignEditor: React.FC<{ design: DesignRecord }> = ({ design }) => {
           )}
         </aside>
       </div>
+
+      {shareOpen && (
+        <div
+          className="fixed inset-0 z-[85] flex items-start justify-center bg-slate-900/60 p-4 pt-20 backdrop-blur-sm"
+          onClick={() => setShareOpen(false)}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl border border-gray-200 bg-white p-5 shadow-2xl dark:border-slate-700 dark:bg-slate-900"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <ShareDialog
+              designId={design.id}
+              onError={showError}
+              close={() => setShareOpen(false)}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Contextual bar that tracks the selection on the artboard. */}
       <SelectionToolbar

@@ -205,3 +205,74 @@ export const deleteElement = async (id: string): Promise<void> => {
   const res = await apiFetch(`${base()}/elements/${id}`, { method: 'DELETE' });
   if (!res.ok) await fail(res, 'Could not delete that element.');
 };
+
+/* ------------------------------------------------------------- sharing */
+
+export interface ShareSettings {
+  enabled: boolean;
+  role: 'viewer' | 'editor';
+  token: string | null;
+  url: string | null;
+}
+
+export interface SharedDesign {
+  id: string;
+  name: string;
+  width: number;
+  height: number;
+  canvas_json?: Record<string, unknown> | null;
+  role: 'viewer' | 'editor';
+  updated_at: string;
+}
+
+export const getShareSettings = async (id: string): Promise<ShareSettings> => {
+  const res = await apiFetch(`${base()}/${id}/share`);
+  if (!res.ok) return fail(res, 'Could not read the sharing settings.');
+  return (await res.json()) as ShareSettings;
+};
+
+export const enableSharing = async (
+  id: string,
+  role: 'viewer' | 'editor',
+): Promise<ShareSettings> => {
+  const res = await apiFetch(`${base()}/${id}/share`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ role }),
+  });
+  if (!res.ok) return fail(res, 'Could not turn on sharing.');
+  return (await res.json()) as ShareSettings;
+};
+
+export const disableSharing = async (id: string, rotate = false): Promise<ShareSettings> => {
+  const res = await apiFetch(`${base()}/${id}/share${rotate ? '?rotate=true' : ''}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) return fail(res, 'Could not turn off sharing.');
+  return (await res.json()) as ShareSettings;
+};
+
+/**
+ * Open a design through a share link.
+ *
+ * Deliberately not routed through `apiFetch`: a collaborator has no session,
+ * and attaching a stale admin token here would be both pointless and a way
+ * to confuse the server about who is asking.
+ */
+export const getSharedDesign = async (token: string): Promise<SharedDesign> => {
+  const res = await fetch(`${getApiUrl()}/api/designs/shared/${encodeURIComponent(token)}`);
+  if (!res.ok) return fail(res, 'This link is no longer active.');
+  return withId(await res.json()) as unknown as SharedDesign;
+};
+
+export const saveSharedDesign = async (
+  token: string,
+  canvasJson: Record<string, unknown>,
+): Promise<void> => {
+  const res = await fetch(`${getApiUrl()}/api/designs/shared/${encodeURIComponent(token)}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ canvas_json: canvasJson }),
+  });
+  if (!res.ok) await fail(res, 'Could not save your changes.');
+};

@@ -1,6 +1,7 @@
 import asyncio
 import base64
 import binascii
+import secrets
 import ipaddress
 import json
 import logging
@@ -18,6 +19,10 @@ from app.api.deps import get_current_admin_user
 from app.core.db import get_database
 from app.models.design import (
     DesignAssetResponse,
+    ShareSettingsRequest,
+    ShareSettingsResponse,
+    SharedDesignResponse,
+    SharedDesignUpdate,
     DesignElementCreate,
     DesignElementResponse,
     DesignElementSummary,
@@ -38,7 +43,12 @@ from app.services.cloudinary_upload import (
     upload_image_and_get_details,
 )
 
+from app.utils.collab import collab
+
 logger = logging.getLogger("app.designs")
+
+# Where share links point. Matches the storefront's deployed origin.
+FRONTEND_ORIGIN = "https://crochetcreation.vercel.app"
 
 router = APIRouter(prefix="/api/admin/designs", tags=["designs"])
 
@@ -1043,3 +1053,172 @@ async def delete_design_element(
         await delete_image_by_url(doc["preview_url"])
 
     return {"detail": "Element deleted.", "id": element_id}
+
+
+# ----------------------------------------------------------------- sharing
+
+# The token *is* the credential for a shared design, so it has to be long
+# enough that guessing one is hopeless. 32 bytes is ~256 bits of entropy.
+SHARE_TOKEN_BYTES = 32
+
+
+def _share_url(token: str) -> str:
+    return f"{FRONTEND_ORIGIN}/design/{token}"
+
+
+def _share_response(doc: Dict[str, Any]) -> ShareSettingsResponse:
+    enabled = bool(doc.get("share_enabled")) and bool(doc.get("share_token"))
+    return ShareSettingsResponse(
+        enabled=enabled,
+        role=doc.get("share_role", "editor"),
+        token=doc.get("share_token") if enabled else None,
+        url=_share_url(doc["share_token"]) if enabled else None,
+    )
+
+
+@router.get("/{design_id}/share", response_model=ShareSettingsResponse)
+async def get_share_settings(
+    design_id: str,
+    current_admin: UserInDB = Depends(get_current_admin_user),
+):
+    db = _db()
+    doc = await db[DESIGNS].find_one({"_id": _object_id(design_id)})
+    if not doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="That design no longer exists."
+        )
+    return _share_response(doc)
+
+
+@router.post("/{design_id}/share", response_model=ShareSettingsResponse)
+async def enable_sharing(
+    design_id: str,
+    payload: ShareSettingsRequest,
+    current_admin: UserInDB = Depends(get_current_admin_user),
+):
+    """
+    Turn on the share link, or change what it allows.
+
+    The token is kept across a role change so a link already sent out does
+    not quietly stop working; rotating it is a separate, deliberate act.
+    """
+    db = _db()
+    oid = _object_id(design_id)
+    doc = await db[DESIGNS].find_one({"_id": oid})
+    if not doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="That design no longer exists."
+        )
+
+    token = doc.get("share_token") or secrets.token_urlsafe(SHARE_TOKEN_BYTES)
+    update = {
+        "share_token": token,
+        "share_role": payload.role,
+        "share_enabled": True,
+        "share_created_at": doc.get("share_created_at") or datetime.now(timezone.utc),
+    }
+    await db[DESIGNS].update_one({"_id": oid}, {"$set": update})
+
+    # Downgrading to view-only has to reach the people already in the room.
+    if payload.role != "editor":
+        await collab.broadcast(
+            design_id, {"type": "role", "canEdit": False, "reason": "view-only"}
+        )
+
+    return _share_response({**doc, **update})
+
+
+@router.delete("/{design_id}/share", response_model=ShareSettingsResponse)
+async def disable_sharing(
+    design_id: str,
+    rotate: bool = Query(False, description="Also replace the token, killing old links"),
+    current_admin: UserInDB = Depends(get_current_admin_user),
+):
+    db = _db()
+    oid = _object_id(design_id)
+    doc = await db[DESIGNS].find_one({"_id": oid})
+    if not doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="That design no longer exists."
+        )
+
+    update: Dict[str, Any] = {"share_enabled": False}
+    if rotate:
+        update["share_token"] = None
+    await db[DESIGNS].update_one({"_id": oid}, {"$set": update})
+
+    # Revoking must remove the people already inside, not just bar new ones.
+    await collab.close_shared_connections(design_id)
+
+    return _share_response({**doc, **update})
+
+
+# ------------------------------------------------- opening a shared design
+
+
+async def _design_for_share_token(token: str) -> Dict[str, Any]:
+    db = _db()
+    if not token or len(token) < 20:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="This link is not valid."
+        )
+    doc = await db[DESIGNS].find_one({"share_token": token})
+    if not doc or not doc.get("share_enabled"):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="This link has been turned off, or never existed.",
+        )
+    return doc
+
+
+# Mounted outside the admin router: a collaborator holds a share token, not
+# an account, so none of these may sit behind the admin dependency.
+shared_router = APIRouter(prefix="/api/designs/shared", tags=["designs"])
+
+
+@shared_router.get("/{token}", response_model=SharedDesignResponse)
+async def open_shared_design(token: str):
+    doc = await _design_for_share_token(token)
+    return SharedDesignResponse(
+        _id=str(doc["_id"]),
+        name=doc.get("name", "Untitled design"),
+        width=int(doc.get("width", 1080)),
+        height=int(doc.get("height", 1080)),
+        canvas_json=doc.get("canvas_json"),
+        role=doc.get("share_role", "editor"),
+        updated_at=doc.get("updated_at") or datetime.now(timezone.utc),
+    )
+
+
+@shared_router.put("/{token}", response_model=SharedDesignResponse)
+async def save_shared_design(token: str, payload: SharedDesignUpdate):
+    """
+    Let a collaborator persist the artboard.
+
+    Only the artboard: the name, the size and everything else about the
+    design stay with its owner, so a share link cannot be used to rename or
+    reshape someone's work.
+    """
+    doc = await _design_for_share_token(token)
+    if doc.get("share_role") != "editor":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This link is view-only.",
+        )
+
+    _validate_canvas_json(payload.canvas_json)
+
+    db = _db()
+    await db[DESIGNS].update_one(
+        {"_id": doc["_id"]},
+        {"$set": {"canvas_json": payload.canvas_json, "updated_at": datetime.now(timezone.utc)}},
+    )
+    return SharedDesignResponse(
+        _id=str(doc["_id"]),
+        name=doc.get("name", "Untitled design"),
+        width=int(doc.get("width", 1080)),
+        height=int(doc.get("height", 1080)),
+        canvas_json=payload.canvas_json,
+        role="editor",
+        updated_at=datetime.now(timezone.utc),
+    )

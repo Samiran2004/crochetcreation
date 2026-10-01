@@ -152,3 +152,50 @@ class DesignElementSummary(BaseModel):
 
 class DesignElementResponse(DesignElementSummary):
     content: Optional[str] = None
+
+
+SHARE_ROLES = {"viewer", "editor"}
+
+
+class ShareSettingsRequest(BaseModel):
+    """Turn a design into a link other people can open — or edit."""
+    role: str = Field(default="editor", description='"viewer" or "editor"')
+
+    @field_validator("role")
+    @classmethod
+    def known_role(cls, v: str) -> str:
+        v = (v or "").strip().lower()
+        if v not in SHARE_ROLES:
+            raise ValueError('role must be "viewer" or "editor"')
+        return v
+
+
+class ShareSettingsResponse(BaseModel):
+    enabled: bool
+    role: str = "editor"
+    token: Optional[str] = None
+    url: Optional[str] = None
+
+
+class SharedDesignResponse(BaseModel):
+    """
+    A design opened through a share link.
+
+    Deliberately narrower than DesignResponse: a collaborator gets the
+    artboard and nothing about the shop around it.
+    """
+    id: Optional[PyObjectId] = Field(alias="_id", default=None)
+    name: str
+    width: int
+    height: int
+    canvas_json: Optional[Dict[str, Any]] = None
+    role: str
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    class Config:
+        populate_by_name = True
+
+
+class SharedDesignUpdate(BaseModel):
+    """What a collaborator is allowed to change: the artboard, nothing else."""
+    canvas_json: Dict[str, Any]

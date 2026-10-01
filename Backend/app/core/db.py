@@ -315,6 +315,8 @@ async def ensure_indexes():
         await db["designs"].create_index([("updated_at", -1)])
         await db["design_assets"].create_index([("created_at", -1)])
         await db["design_elements"].create_index([("created_at", -1)])
+        # Share links are resolved by token on every open and socket join.
+        await db["designs"].create_index("share_token", sparse=True)
         print("Database indexes ensured.")
     except Exception as e:
         # A failed index build must never stop the app from serving.

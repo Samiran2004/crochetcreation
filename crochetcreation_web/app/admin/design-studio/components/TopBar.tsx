@@ -14,6 +14,7 @@ import {
   Save,
   Share2,
   Undo2,
+  Users,
   ZoomIn,
   ZoomOut,
 } from 'lucide-react';
@@ -59,6 +60,9 @@ export const TopBar: React.FC<{
   onPublish: () => void;
   publishing: boolean;
   publishedUrl: string | null;
+  readOnly?: boolean;
+  presence?: React.ReactNode;
+  onShare?: () => void;
 }> = ({
   editor,
   name,
@@ -70,6 +74,9 @@ export const TopBar: React.FC<{
   onPublish,
   publishing,
   publishedUrl,
+  readOnly,
+  presence,
+  onShare,
 }) => {
   const router = useRouter();
   const [format, setFormat] = useState<ExportFormat>('png');
@@ -159,6 +166,19 @@ export const TopBar: React.FC<{
       </div>
 
       <div className="flex-1" />
+
+      {presence}
+
+      {onShare && (
+        <button
+          type="button"
+          onClick={onShare}
+          className="inline-flex items-center gap-2 rounded-lg border border-gray-250 px-3 py-2 text-xs font-bold text-slate-700 transition-colors hover:border-teal dark:border-slate-700 dark:text-slate-300 dark:hover:border-parchment"
+        >
+          <Users className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">Share</span>
+        </button>
+      )}
 
       <div className="hidden lg:block">
         <Popover
@@ -309,10 +329,12 @@ export const TopBar: React.FC<{
         )}
       </Popover>
 
-      <TextButton variant="primary" onClick={onSave} disabled={saving}>
-        {saving ? <Spinner /> : <Save className="h-3.5 w-3.5" />}
-        <span className="hidden sm:inline">Save</span>
-      </TextButton>
+      {!readOnly && (
+        <TextButton variant="primary" onClick={onSave} disabled={saving}>
+          {saving ? <Spinner /> : <Save className="h-3.5 w-3.5" />}
+          <span className="hidden sm:inline">Save</span>
+        </TextButton>
+      )}
     </header>
   );
 };
