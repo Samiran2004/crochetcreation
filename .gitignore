@@ -361,3 +361,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Vendored at build time by crochetcreation_web/scripts/copy-fabric.mjs
+crochetcreation_web/public/vendor/

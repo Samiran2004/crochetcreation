@@ -11,17 +11,9 @@ const withPWA = withPWAInit({
 const nextConfig = {
   optimizeFonts: false,
   reactStrictMode: true,
-  // fabric.js ships a Node build that `require`s the native `canvas` package.
-  // The browser entry never touches it, but webpack still tries to resolve the
-  // specifier while bundling, so point it at nothing.
-  webpack: (config) => {
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      canvas: false,
-      encoding: false,
-    };
-    return config;
-  },
+  // fabric.js is loaded straight from `public/vendor` instead of being
+  // bundled (see scripts/copy-fabric.mjs), so webpack never sees it and
+  // needs no aliasing for its optional Node dependencies.
   images: {
     unoptimized: true,
     remotePatterns: [

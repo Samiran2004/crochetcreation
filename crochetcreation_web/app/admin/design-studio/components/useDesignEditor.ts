@@ -59,6 +59,9 @@ interface Options {
   onDirtyChange?: (dirty: boolean) => void;
 }
 
+/** Served from `public/vendor`, kept in step by the prebuild step. */
+const FABRIC_MODULE_URL = '/vendor/fabric.min.mjs';
+
 const SNAP_THRESHOLD = 6;
 const MIN_ZOOM = 0.05;
 const MAX_ZOOM = 5;
@@ -1213,9 +1216,13 @@ export const useDesignEditor = ({ width, height, initialScene, onDirtyChange }: 
     let instance: FabricCanvas | null = null;
 
     const boot = async () => {
-      // fabric touches `window` at module scope, so it can only be imported
-      // once we know we are in the browser.
-      const fabric = (await import('fabric')) as unknown as FabricModule;
+      // Loaded from `public/` rather than through the bundler: webpack's
+      // minifier breaks fabric's SVG parser, silently turning every SVG
+      // import into zero objects. See scripts/copy-fabric.mjs. The comment
+      // is what tells webpack to leave the request to the browser.
+      const fabric = (await import(
+        /* webpackIgnore: true */ FABRIC_MODULE_URL
+      )) as unknown as FabricModule;
       if (disposed || !elementRef.current) return;
 
       registerCustomProps(fabric);
